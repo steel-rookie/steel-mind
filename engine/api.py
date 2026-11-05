@@ -4,6 +4,7 @@ POST /judge   본문: {"run": {"t": [...], "setpoint": [...], "torque": [...], "
                     "coupled": false, "checks": [{"channel": "vib", "value": 3.1, "record": "평균"}],
                     "event_id": "...", "equipment_id": "..."}
               응답: 판정 카드
+POST /judge?view=evidence   같은 요청, 응답: 정비 가이드에 넘기는 근거 카드 (handoff.py)
 GET  /health  엔진·모델 정보
 """
 from __future__ import annotations
@@ -14,6 +15,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import numpy as np
 
 from . import __version__
+from .handoff import evidence_card
 from .judge import judge
 from .model import NormalModel
 
@@ -43,9 +45,11 @@ def make_handler(model: NormalModel, model_path: str):
                 self._send(404, {"error": "없는 주소입니다. GET /health, POST /judge"})
 
         def do_POST(self):
-            if self.path != "/judge":
+            path, _, query = self.path.partition("?")
+            if path != "/judge":
                 self._send(404, {"error": "없는 주소입니다. POST /judge"})
                 return
+            evidence = "view=evidence" in query.split("&")
             try:
                 length = int(self.headers.get("Content-Length", 0))
                 req = json.loads(self.rfile.read(length) or b"{}")
@@ -61,7 +65,7 @@ def make_handler(model: NormalModel, model_path: str):
                 run = {k: np.asarray(raw[k], dtype=float) for k in REQUIRED}
                 card = judge(run, model, coupled=bool(req.get("coupled", False)), checks=req.get("checks"),
                              event_id=req.get("event_id"), equipment_id=req.get("equipment_id"))
-                self._send(200, card)
+                self._send(200, evidence_card(card) if evidence else card)
             except (ValueError, KeyError, TypeError) as exc:
                 self._send(400, {"error": f"요청을 읽지 못했습니다: {exc}"})
 

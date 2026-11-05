@@ -1,0 +1,59 @@
+{
+  "engine_version": "1.1.0",
+  "event_id": "example-06",
+  "equipment_id": "finishing-mill-drive",
+  "measurement_status": "정보 부족",
+  "equipment_status": "판단 보류",
+  "equipment_basis": null,
+  "handoff_to_guide": false,
+  "handoff_note": null,
+  "observed": [
+    "온도 값이 변하지 않음",
+    "진동이 운전 조건 대비 높음",
+    "온도가 토크 이력 대비 낮음"
+  ],
+  "confirmed_sensor_faults": [
+    "온도센서 고착"
+  ],
+  "candidates": [
+    "베어링 열화(설비) + 온도센서 고착(센서)",
+    "온도센서 고착(센서) + 진동센서 편향(센서)"
+  ],
+  "suspect_sensors": [
+    "온도센서"
+  ],
+  "next_steps": [
+    "현장 확인"
+  ],
+  "check": {
+    "tool": "휴대용 진동계",
+    "where": "구동측 베어링 하우징 (설치 센서 바로 옆)",
+    "seconds": 30,
+    "record": "평균",
+    "read_rule": "30초 평균을 적는다. 설치 센서 값과의 차이가 허용오차(±0.05 mm/s 또는 ±5% 중 큰 값) 이내면 센서 정상. 넘으면 설치 센서 값과 가상센서 값 중 휴대용 값에 가까운 쪽으로 본다",
+    "example_note": "측정 시간·기록 방식·허용오차는 예시값이다. 현업 절차와 실제 계측기 사양을 확인하기 전까지 현장 기준으로 쓰지 않는다.",
+    "if_sensor_faulty": [
+      "온도센서 고착 + 진동센서 편향"
+    ],
+    "if_sensor_ok": [
+      "베어링 열화 + 온도센서 고착"
+    ]
+  },
+  "wait_minutes": null,
+  "values": {
+    "vib": {
+      "installed": 3.925,
+      "expected": 2.919,
+      "unit": "mm/s"
+    },
+    "temp": {
+      "excluded": true,
+      "reason": "온도센서 값은 믿을 수 없어 뺌",
+      "unit": "°C"
+    }
+  },
+  "reasons": [
+    "지금 징후는 여러 원인으로 설명됨: 베어링 열화 + 온도센서 고착 / 온도센서 고착 + 진동센서 편향",
+    "지금 있는 측정으로는 끝까지 가를 수 없음. 현장에서 한 번 재면 갈림"
+  ]
+}

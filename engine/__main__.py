@@ -3,9 +3,9 @@
   sim       내부 모의 데이터 만들기 (개발용)
   train     정상 운전 회차로 모델 배우기
   judge     한 회차 판정 → 판정 카드 출력
-  batch     폴더 전체 판정 → 판정 카드 JSONL (정답 없이)
-  score     판정 카드 JSONL + 라벨로 지표 계산 (데이터·검증 담당용)
-  evaluate  sim 형식 폴더를 판정·현장 확인까지 평가 (정답이 든 폴더에만)
+  batch     폴더 전체 판정 → 판정 카드 JSONL (정답 없이). --rule baseline이면 비교 기준 규칙으로
+  score     판정 카드 JSONL + 라벨로 지표 계산 (데이터·검증 담당용). --pred-after를 주면 보류 해소도
+  evaluate  sim 형식 폴더를 비교 기준·도구만·현장 확인 1회 후로 평가 (정답이 든 폴더에만)
   serve     판정 카드 API 띄우기
 """
 from __future__ import annotations
@@ -17,10 +17,12 @@ from pathlib import Path
 
 import numpy as np
 
+from .baseline import baseline_judge
 from .evaluate import evaluate_dir
 from .files import read_jsonl, read_run, run_files, write_jsonl, write_run
+from .handoff import evidence_card
 from .judge import judge
-from .metrics import format_table, predicted_category, summarize
+from .metrics import format_resolution, format_table, hold_resolution, predicted_category, summarize
 from .model import NormalModel, fit
 from .sim import make_equipment, scenario_mix, simulate_run
 
@@ -69,34 +71,57 @@ def cmd_judge(a):
     checks = [_parse_check(c) for c in (a.check or [])]
     card = judge(read_run(a.run), model, coupled=a.coupled, checks=checks or None,
                  event_id=Path(a.run).stem, equipment_id=a.equipment_id)
-    print(json.dumps(card, ensure_ascii=False, indent=2))
+    if a.evidence:
+        card = evidence_card(card)
+    print(json.dumps(card, ensure_ascii=False, indent=None if a.jsonl else 2))
 
 
 def cmd_batch(a):
     model = NormalModel.load(a.model)
-    cards = [judge(read_run(p), model, coupled=a.coupled, event_id=p.stem) for p in run_files(a.runs)]
+    if a.rule == "baseline":
+        cards = [baseline_judge(read_run(p), model, event_id=p.stem) for p in run_files(a.runs)]
+    else:
+        cards = [judge(read_run(p), model, coupled=a.coupled, event_id=p.stem) for p in run_files(a.runs)]
     write_jsonl(a.out, cards)
-    print(f"{len(cards)}회 판정 → {a.out}")
+    print(f"{len(cards)}회 판정 ({a.rule}) → {a.out}")
+
+
+def _cards_by_id(path) -> dict:
+    return {c["event_id"]: c for c in read_jsonl(path)}
 
 
 def cmd_score(a):
-    cards = {c["event_id"]: c for c in read_jsonl(a.pred)}
-    rows = []
+    cards = _cards_by_id(a.pred)
+    after = _cards_by_id(a.pred_after) if a.pred_after else None
+    rows, pairs = [], []
     for lab in read_jsonl(a.labels):
         card = cards.get(lab["run_id"])
         if card is None:
             print(f"판정 카드가 없습니다: {lab['run_id']}", file=sys.stderr)
             continue
-        rows.append({"truth": lab["category"], "faults": lab["faults"], "pred": predicted_category(card)})
-    print(format_table({"판정": summarize(rows)}))
+        row = {"truth": lab["category"], "faults": lab["faults"], "pred": predicted_category(card)}
+        rows.append(row)
+        if after is not None:
+            # 현장 확인을 하지 않은 회차는 처음 판정이 그대로 남는다.
+            final = after.get(lab["run_id"], card)
+            pairs.append({**row, "pred_after": predicted_category(final)})
+    named = {"판정": summarize(rows)}
+    if after is not None:
+        named["현장 확인 후"] = summarize([{**r, "pred": r["pred_after"]} for r in pairs], n_checks=len(after))
+    print(format_table(named))
+    if after is not None:
+        print()
+        print(format_resolution(hold_resolution(pairs)))
 
 
 def cmd_evaluate(a):
     model = NormalModel.load(a.model)
-    before, after, details = evaluate_dir(model, a.data, coupled=a.coupled, field_check=not a.no_check, seed=a.seed)
-    print(format_table({"도구만": before, "현장 확인 1회 후": after}))
+    res = evaluate_dir(model, a.data, coupled=a.coupled, field_check=not a.no_check, seed=a.seed)
+    print(format_table({"비교 기준": res["baseline"], "도구만": res["before"], "현장 확인 1회 후": res["after"]}))
+    print()
+    print(format_resolution(res["resolution"]))
     if a.details:
-        write_jsonl(a.details, details)
+        write_jsonl(a.details, res["details"])
         print(f"회차별 결과 → {a.details}")
 
 
@@ -129,6 +154,8 @@ def main(argv=None):
     s.add_argument("--coupled", action="store_true", help="토크 추정값이 측정 전류에서 계산됨 (결합 모드)")
     s.add_argument("--check", action="append", help="현장 확인 결과. 예: vib=3.1 또는 vib=4.8:최댓값")
     s.add_argument("--equipment-id")
+    s.add_argument("--jsonl", action="store_true", help="카드를 한 줄로 출력 (>> after.jsonl 로 모을 때)")
+    s.add_argument("--evidence", action="store_true", help="정비 가이드에 넘기는 근거 카드로 출력")
     s.set_defaults(fn=cmd_judge)
 
     s = sub.add_parser("batch", help="폴더 전체 판정 (정답 없이)")
@@ -136,11 +163,14 @@ def main(argv=None):
     s.add_argument("--out", required=True)
     s.add_argument("--model", default=str(DEFAULT_MODEL))
     s.add_argument("--coupled", action="store_true")
+    s.add_argument("--rule", choices=("engine", "baseline"), default="engine",
+                   help="engine: 판정 엔진, baseline: 비교 기준(현장 첫 판단 규칙)")
     s.set_defaults(fn=cmd_batch)
 
     s = sub.add_parser("score", help="판정 카드 + 라벨로 지표 계산")
     s.add_argument("--pred", required=True)
     s.add_argument("--labels", required=True)
+    s.add_argument("--pred-after", help="현장 확인을 넣고 다시 판정한 카드 JSONL (보류 해소 계산용)")
     s.set_defaults(fn=cmd_score)
 
     s = sub.add_parser("evaluate", help="정답이 든 폴더 평가 (현장 확인 1회 포함)")

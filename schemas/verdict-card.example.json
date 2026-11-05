@@ -1,5 +1,5 @@
 {
-  "engine_version": "1.0.0",
+  "engine_version": "1.1.0",
   "event_id": "example-06",
   "equipment_id": "finishing-mill-drive",
   "coupled_torque": false,
@@ -25,10 +25,16 @@
       "z_now": -5.57
     }
   ],
+  "measurement_status": "정보 부족",
+  "equipment_status": "판단 보류",
+  "equipment_basis": null,
+  "next_steps": [
+    "현장 확인"
+  ],
+  "handoff_to_guide": false,
+  "handoff_note": null,
   "verdict": "정보 부족",
   "verdict_detail": null,
-  "evidence_status": "정보 부족",
-  "handoff_to_guide": false,
   "candidates": [
     [
       {
@@ -78,13 +84,22 @@
       "status": "후보"
     }
   ],
-  "suspect_sensors": [],
+  "suspect_sensors": [
+    "온도센서"
+  ],
   "check": {
     "tool": "휴대용 진동계",
     "where": "구동측 베어링 하우징 (설치 센서 바로 옆)",
     "seconds": 30,
     "record": "평균",
     "channel": "vib",
+    "read_rule": "30초 평균을 적는다. 설치 센서 값과의 차이가 허용오차(±0.05 mm/s 또는 ±5% 중 큰 값) 이내면 센서 정상. 넘으면 설치 센서 값과 가상센서 값 중 휴대용 값에 가까운 쪽으로 본다",
+    "example_values": [
+      "seconds",
+      "record",
+      "read_rule"
+    ],
+    "example_note": "측정 시간·기록 방식·허용오차는 예시값이다. 현업 절차와 실제 계측기 사양을 확인하기 전까지 현장 기준으로 쓰지 않는다.",
     "if_sensor_faulty": [
       [
         "온도센서 고착",

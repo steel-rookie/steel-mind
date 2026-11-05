@@ -72,6 +72,36 @@ def _tolerance(channel: str, value: float, record: str) -> float:
     return max(abs_tol, rel_tol * abs(value))
 
 
+EXAMPLE_NOTE = ("측정 시간·기록 방식·허용오차는 예시값이다. 현업 절차와 실제 계측기 사양을 확인하기 전까지 "
+                "현장 기준으로 쓰지 않는다.")
+
+
+def _tol_text(channel: str, record: str) -> str:
+    abs_tol, rel_tol = TOLERANCE.get((channel, record), TOLERANCE[(channel, "평균")])
+    unit = UNITS[channel]
+    if rel_tol:
+        return f"허용오차(±{abs_tol:g} {unit} 또는 ±{100 * rel_tol:g}% 중 큰 값)"
+    return f"허용오차(±{abs_tol:g} {unit})"
+
+
+def _check_spec(channel: str, obs=()) -> dict:
+    """현장 확인 지시 한 장. 시간·기록 방식·허용오차는 예시값으로 표시한다 (기획서 4.2 ③)."""
+    spec = dict(CHECK_TOOLS[channel])
+    if channel == "vib" and "vibspk" in obs:
+        spec.update(seconds=60, record="최댓값")  # 간헐 튐은 한 순간 측정으로 못 잡는다 (E19)
+    spec["channel"] = channel
+    tol = _tol_text(channel, spec["record"])
+    if spec["record"] == "최댓값":
+        spec["read_rule"] = (f"{spec['seconds']}초 동안 최댓값을 적는다. 설치 센서의 같은 구간 최댓값과의 차이가 "
+                             f"{tol} 이내면 센서 정상, 넘으면 센서 이상")
+    else:
+        spec["read_rule"] = (f"{spec['seconds']}초 평균을 적는다. 설치 센서 값과의 차이가 {tol} 이내면 센서 정상. "
+                             "넘으면 설치 센서 값과 가상센서 값 중 휴대용 값에 가까운 쪽으로 본다")
+    spec["example_values"] = ["seconds", "record", "read_rule"]
+    spec["example_note"] = EXAMPLE_NOTE
+    return spec
+
+
 def choose_check(cands, table, used=(), obs=()) -> dict | None:
     """후보를 가장 고르게 나누는 계측기 하나를 고른다 (E12: 후보가 2개면 고정 규칙과 같다)."""
     best = None
@@ -86,10 +116,7 @@ def choose_check(cands, table, used=(), obs=()) -> dict | None:
     if best is None:
         return None
     _, ch, a, b = best
-    spec = dict(CHECK_TOOLS[ch])
-    if ch == "vib" and "vibspk" in obs:
-        spec.update(seconds=60, record="최댓값")  # 간헐 튐은 한 순간 측정으로 못 잡는다 (E19)
-    spec["channel"] = ch
+    spec = _check_spec(ch, obs)
     spec["if_sensor_faulty"] = [_names(H, table) for H in a]
     spec["if_sensor_ok"] = [_names(H, table) for H in b]
     return spec
@@ -106,7 +133,7 @@ def _apply_checks(checks, feats: Features, model: NormalModel, run, table):
         tol = _tolerance(ch, installed, record)
         d_inst = abs(value - installed)
         res = {"channel": ch, "record": record, "portable": value, "installed": round(installed, 3),
-               "tolerance": round(tol, 3)}
+               "tolerance": round(tol, 3), "tolerance_is_example": True}
         if record == "최댓값":
             sensor_ok = d_inst <= tol
         else:
@@ -155,6 +182,9 @@ def _e25_hold(feats: Features, cfg: Config) -> bool:
 
 
 # ---------- 카드 ----------
+CHANNEL_SENSOR = {"vib": "진동센서", "temp": "온도센서", "cur": "전류센서"}
+
+
 def _channel_of(code: str) -> str:
     return {"vibspk": "vib", "tstuck": "temp", "load+": "cur"}.get(code, code[:-1])
 
@@ -182,10 +212,25 @@ def _symptom_list(feats: Features):
     return out
 
 
+def _finding(f, status: str) -> dict:
+    return {"code": f.code, "name": f.name, "kind": f.kind, "target": f.target, "status": status}
+
+
+def _set(card, measurement, equipment, steps, verdict, detail=None, handoff=False, basis=None, note=None):
+    card.update(measurement_status=measurement, equipment_status=equipment, next_steps=list(steps),
+                verdict=verdict, verdict_detail=detail, handoff_to_guide=handoff,
+                equipment_basis=basis, handoff_note=note)
+
+
 def judge(run, model: NormalModel, coupled: bool = False, checks=None,
           event_id: str | None = None, equipment_id: str | None = None,
           cfg: Config = CONFIG) -> dict:
     """한 회차를 판정해 판정 카드(JSON으로 바꿀 수 있는 dict)를 돌려준다.
+
+    카드는 두 상태를 따로 적는다 (기획서 4.3, 센서 정상 ≠ 설비 고장 확정).
+    - measurement_status: 센서 값을 믿어도 되는가. 확인됨 / 의심 / 일부 의심 / 확인 대기 / 정보 부족
+    - equipment_status:   설비 쪽 이상이 있는가. 후보 있음 / 징후 없음 / 판단 보류. 설비 원인은 "확정"이라 쓰지 않는다.
+    verdict·verdict_detail은 채점용 범주다. 화면과 정비 가이드는 두 상태를 쓴다.
 
     checks: 현장 확인 결과 목록. 예: [{"channel": "vib", "value": 3.1, "record": "평균"}]
     """
@@ -200,10 +245,14 @@ def judge(run, model: NormalModel, coupled: bool = False, checks=None,
         "decided_at_s": t_end,
         "onset_s": feats.onset,
         "symptoms": _symptom_list(feats),
+        "measurement_status": "확인됨",
+        "equipment_status": "징후 없음",
+        "equipment_basis": None,
+        "next_steps": [],
+        "handoff_to_guide": False,
+        "handoff_note": None,
         "verdict": "정상",
         "verdict_detail": None,
-        "evidence_status": None,
-        "handoff_to_guide": False,
         "candidates": [],
         "findings": [],
         "suspect_sensors": [],
@@ -230,6 +279,7 @@ def judge(run, model: NormalModel, coupled: bool = False, checks=None,
                     r["note"] = "토크 추정값이 문턱 아래로 올라 있어 부하 증가도 함께 있다고 봄 (E25)"
         obs |= extra
     card["checks_applied"] = results
+    excluded = [CHANNEL_SENSOR[r["channel"]] for r in results if r["sensor_ok"]]
     cands = explain(obs, table, constraints)
     cls = classify(cands, table)
 
@@ -243,66 +293,81 @@ def judge(run, model: NormalModel, coupled: bool = False, checks=None,
                           for H in cands]
     certain = frozenset.intersection(*cands) if cands else frozenset()
     possible = frozenset().union(*cands) - certain if cands else frozenset()
-    card["findings"] = ([{"code": c, "name": table[c].name, "kind": table[c].kind,
-                          "target": table[c].target, "status": "확정"} for c in sorted(certain)]
-                        + [{"code": c, "name": table[c].name, "kind": table[c].kind,
-                            "target": table[c].target, "status": "후보"} for c in sorted(possible)])
+    # 센서 이상은 현장 계측이나 물리적으로 불가능한 신호(고착)로 확정할 수 있다.
+    # 설비 원인은 정비 점검으로만 확정되므로 엔진은 언제나 "후보"로 적는다.
+    sure_sensors = {c for c in certain if table[c].kind == SENSOR}
     used = {ch for ch, _ in constraints}
+    hold_current = False
 
     coupled_needs_clamp = (coupled and "cur" not in used and cls != "없음"
                            and any("S_CUR" in H for H in cands))
     if coupled_needs_clamp:
         # 결합 모드: 토크 추정값이 측정 전류에서 계산되므로 설치 센서만으로는 전류센서 이상과 실제 부하 변화를 가를 수 없다.
         # 전류센서가 후보에 있으면 엔진 혼자 확정하지 않고 클램프미터를 요구한다 (H4).
-        card.update(verdict="정보 부족", evidence_status="정보 부족")
+        hold_current = True
+        _set(card, "정보 부족", "판단 보류", ["현장 확인"], "정보 부족")
         card["reasons"].append("결합 모드: 토크 추정값이 측정 전류에서 계산돼 전류센서 이상과 실제 부하 변화를 "
                                "설치 센서만으로 가를 수 없음. 클램프미터로 실제 전류를 잼")
-        spec = dict(CHECK_TOOLS["cur"])
-        spec.update(channel="cur",
-                    if_sensor_faulty=[["전류센서 편향 (실제 전류로 부하 증가 여부를 함께 판단)"]],
+        spec = _check_spec("cur")
+        spec.update(if_sensor_faulty=[["전류센서 편향 (실제 전류로 부하 증가 여부를 함께 판단)"]],
                     if_sensor_ok=[_names(H, table) for H in cands if "S_CUR" not in H] or [["다시 판정"]])
         card["check"] = spec
     elif cls == "없음":
-        card["verdict"] = "정보 부족"
-        card["evidence_status"] = "정보 부족"
+        _set(card, "정보 부족", "판단 보류", ["현업 판단"], "정보 부족")
         card["reasons"].append("알려진 고장 유형(단일·이중)으로 설명되지 않음" if not results
                                else "현장 확인 결과와 맞는 고장 유형이 없음")
-        card["check"] = None
     elif cls == "설비":
-        card.update(verdict="확정", verdict_detail="설비", evidence_status="측정 확인됨", handoff_to_guide=True)
-        card["reasons"].append("후보가 모두 설비 쪽이라 측정은 믿을 수 있음")
+        basis = "센서 배제로 남은 후보" if excluded else "설비 쪽 징후"
+        note = ("원인은 후보다. 현장 확인으로 " + ", ".join(excluded) + " 이상을 배제했을 뿐 설비 원인은 확정하지 않았다"
+                if excluded else "원인은 후보다. 정비 점검으로 확정한다")
+        _set(card, "확인됨", "후보 있음", ["정비 가이드로 넘김"], "확정", "설비", True, basis, note)
+        card["reasons"].append("후보가 모두 설비 쪽이라 측정은 믿을 수 있음" if not excluded
+                               else "현장 확인으로 " + ", ".join(excluded) + " 정상. 남은 설명은 설비 쪽뿐")
+        card["reasons"].append("설비 원인은 후보로만 넘김. 확정은 정비 점검에서 함")
     elif cls == "동시":
         sensors = sorted({c for H in cands for c in H if table[c].kind == SENSOR})
-        card.update(verdict="확정", verdict_detail="동시", evidence_status="측정 확인됨", handoff_to_guide=True)
-        card["suspect_sensors"] = [table[c].target for c in sensors]
+        suspect = sorted({table[c].target for c in sensors})
+        basis = "센서 배제로 남은 후보" if excluded else "설비 쪽 징후"
+        _set(card, "일부 의심", "후보 있음", ["정비 가이드로 넘김", "계측 점검"], "확정", "동시", True, basis,
+             "의심 센서(" + ", ".join(suspect) + ") 값은 빼고 넘긴다. 설비 원인은 후보다")
+        card["suspect_sensors"] = suspect
         card["reasons"].append("설비 이상과 센서 이상이 함께 있음. 정비 가이드에는 의심 센서 값을 빼고 넘김")
     elif cls == "센서":
         if "S_CUR" in certain and "cur" not in used and not coupled and _e25_hold(feats, cfg):
-            card.update(verdict="정보 부족", evidence_status="정보 부족")
+            hold_current = True
+            _set(card, "정보 부족", "판단 보류", ["현장 확인"], "정보 부족")
             card["reasons"].append("전류센서 편향으로 확정하기 전, 토크 추정값이 최근 30초 동안 3σ 이상 올라 있음. "
                                    "실제 부하 증가가 가려졌을 수 있음 (E25)")
-            spec = dict(CHECK_TOOLS["cur"])
-            spec.update(channel="cur", if_sensor_faulty=[["전류센서 편향 (+ 부하 증가 여부를 함께 판단)"]],
+            spec = _check_spec("cur")
+            spec.update(if_sensor_faulty=[["전류센서 편향 (+ 부하 증가 여부를 함께 판단)"]],
                         if_sensor_ok=[["전류센서 정상 → 다시 판정"]])
             card["check"] = spec
         else:
-            card.update(verdict="확정", verdict_detail="센서", evidence_status="측정 의심")
-            card["suspect_sensors"] = sorted({table[c].target for c in certain})
+            _set(card, "의심", "징후 없음", ["계측 점검"], "확정", "센서")
             card["reasons"].append("후보가 모두 센서 쪽. 설비 정비·정지를 권하지 않고 계측 점검으로 보냄")
     else:  # 혼합
         names = " / ".join(" + ".join(_names(H, table)) for H in cands)
         card["reasons"].append(f"지금 징후는 여러 원인으로 설명됨: {names}")
         w = None if results else _wait(cands, obs, table, feats, model, cfg, constraints)
+        card["check"] = choose_check(cands, table, used, obs)
         if w is not None:
-            card.update(verdict="확인 대기", evidence_status="확인 대기", wait_until_s=w["until"])
+            steps = ["재판정 대기"] + (["현장 확인"] if card["check"] else [])
+            _set(card, "확인 대기", "판단 보류", steps, "확인 대기")
+            card["wait_until_s"] = w["until"]
             card["reasons"].append(f"'{SYMPTOM_LABELS[w['symptom']]}'이 나타나면 갈림. "
                                    f"약 {int(w['until'] - t_end)}초 더 지켜봄 (온도 지연의 {cfg.wait_factor:g}배까지)")
         else:
-            card.update(verdict="정보 부족", evidence_status="정보 부족")
+            _set(card, "정보 부족", "판단 보류", ["현장 확인"] if card["check"] else ["현업 판단"], "정보 부족")
             card["reasons"].append("지금 있는 측정으로는 끝까지 가를 수 없음. 현장에서 한 번 재면 갈림")
-        card["check"] = choose_check(cands, table, used, obs)
         if card["check"] is None and card["verdict"] == "정보 부족":
             card["reasons"].append("가를 수 있는 휴대용 계측기가 없음. 현업 판단 필요")
+
+    if hold_current:
+        sure_sensors.discard("S_CUR")  # 부하 증가가 가려졌을 수 있어 전류센서도 아직 확정하지 않는다
+    card["findings"] = ([_finding(table[c], "확정") for c in sorted(sure_sensors)]
+                        + [_finding(table[c], "후보") for c in sorted((certain | possible) - sure_sensors)])
+    if not card["suspect_sensors"]:
+        card["suspect_sensors"] = sorted({table[c].target for c in sure_sensors})
 
     shown = list(symptom_channels)
     if card["check"] and card["check"]["channel"] not in shown:

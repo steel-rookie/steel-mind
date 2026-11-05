@@ -1,5 +1,5 @@
 {
-  "engine_version": "1.0.0",
+  "engine_version": "1.1.0",
   "event_id": "example-06",
   "equipment_id": "finishing-mill-drive",
   "coupled_torque": false,
@@ -25,10 +25,17 @@
       "z_now": -5.57
     }
   ],
+  "measurement_status": "일부 의심",
+  "equipment_status": "후보 있음",
+  "equipment_basis": "센서 배제로 남은 후보",
+  "next_steps": [
+    "정비 가이드로 넘김",
+    "계측 점검"
+  ],
+  "handoff_to_guide": true,
+  "handoff_note": "의심 센서(온도센서) 값은 빼고 넘긴다. 설비 원인은 후보다",
   "verdict": "확정",
   "verdict_detail": "동시",
-  "evidence_status": "측정 확인됨",
-  "handoff_to_guide": true,
   "candidates": [
     [
       {
@@ -45,18 +52,18 @@
   ],
   "findings": [
     {
-      "code": "E_BRG",
-      "name": "베어링 열화",
-      "kind": "설비",
-      "target": "베어링",
-      "status": "확정"
-    },
-    {
       "code": "S_TST",
       "name": "온도센서 고착",
       "kind": "센서",
       "target": "온도센서",
       "status": "확정"
+    },
+    {
+      "code": "E_BRG",
+      "name": "베어링 열화",
+      "kind": "설비",
+      "target": "베어링",
+      "status": "후보"
     }
   ],
   "suspect_sensors": [
@@ -71,6 +78,7 @@
       "portable": 3.95,
       "installed": 3.925,
       "tolerance": 0.196,
+      "tolerance_is_example": true,
       "virtual": 2.919,
       "sensor_ok": true
     }
