@@ -1,0 +1,15 @@
+{
+  "event_id": "B8-06",
+  "equipment_id": "finishing_mill",
+  "verdict": "정보 부족",
+  "evidence_status": "정보 부족",
+  "handoff_to_guide": false,
+  "candidates": ["베어링 열화", "진동센서 이상"],
+  "check": {
+    "tool": "휴대용 진동계",
+    "where": "구동측 베어링 하우징",
+    "seconds": 30,
+    "record": "최댓값"
+  },
+  "values": { "installed_vib": 7.8, "virtual_vib": 4.1, "unit": "mm/s" }
+}
