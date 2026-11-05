@@ -1,0 +1,93 @@
+{
+  "engine_version": "1.0.0",
+  "event_id": "example-06",
+  "equipment_id": "finishing-mill-drive",
+  "coupled_torque": false,
+  "decided_at_s": 469.0,
+  "onset_s": 230.0,
+  "symptoms": [
+    {
+      "code": "tstuck",
+      "label": "온도 값이 변하지 않음",
+      "onset_s": 230.0,
+      "z_now": -5.57
+    },
+    {
+      "code": "vib+",
+      "label": "진동이 운전 조건 대비 높음",
+      "onset_s": 239.0,
+      "z_now": 32.02
+    },
+    {
+      "code": "temp-",
+      "label": "온도가 토크 이력 대비 낮음",
+      "onset_s": 243.0,
+      "z_now": -5.57
+    }
+  ],
+  "verdict": "확정",
+  "verdict_detail": "동시",
+  "evidence_status": "측정 확인됨",
+  "handoff_to_guide": true,
+  "candidates": [
+    [
+      {
+        "code": "E_BRG",
+        "name": "베어링 열화",
+        "kind": "설비"
+      },
+      {
+        "code": "S_TST",
+        "name": "온도센서 고착",
+        "kind": "센서"
+      }
+    ]
+  ],
+  "findings": [
+    {
+      "code": "E_BRG",
+      "name": "베어링 열화",
+      "kind": "설비",
+      "target": "베어링",
+      "status": "확정"
+    },
+    {
+      "code": "S_TST",
+      "name": "온도센서 고착",
+      "kind": "센서",
+      "target": "온도센서",
+      "status": "확정"
+    }
+  ],
+  "suspect_sensors": [
+    "온도센서"
+  ],
+  "check": null,
+  "wait_until_s": null,
+  "checks_applied": [
+    {
+      "channel": "vib",
+      "record": "평균",
+      "portable": 3.95,
+      "installed": 3.925,
+      "tolerance": 0.196,
+      "virtual": 2.919,
+      "sensor_ok": true
+    }
+  ],
+  "values": {
+    "vib": {
+      "installed": 3.925,
+      "virtual": 2.919,
+      "unit": "mm/s"
+    },
+    "temp": {
+      "installed": 44.8,
+      "virtual": 45.21,
+      "unit": "°C"
+    }
+  },
+  "reasons": [
+    "설비 이상과 센서 이상이 함께 있음. 정비 가이드에는 의심 센서 값을 빼고 넘김"
+  ]
+}
