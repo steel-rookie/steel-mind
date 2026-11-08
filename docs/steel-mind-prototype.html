@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>STEEL MIND · 압연 미션 시안</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" rel="stylesheet">
+<!--
+  STEEL MIND MVP 시안: 압연 공정 미션 1개(사건 2개)를 처음부터 결과까지 돌려 본다.
+  디자인 토큰은 ST-ROOKIE 평가 시험 화면(frontend/login_ui/exam.css)과 같다.
+  에이전트 문장은 시안용 고정 문장이다. 실제 구현에서는 LLM이 같은 형식(추천 행동 + 근거)으로 만든다.
+  점수는 아래 RULES 표로만 계산한다. LLM은 점수와 상태를 바꾸지 않는다.
+-->
+<style>
+:root {
+  --font-ko: "Montserrat", "Pretendard", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  --bg: #121213;
+  --panel: rgba(34, 31, 29, .62); --panel2: rgba(255, 255, 255, .06); --chip-on: rgba(255, 255, 255, .16);
+  --line: rgba(255, 255, 255, .1); --text: #f2f2f2; --muted: #b9b9be; --dim: #9a9aa0;
+  --accent: #6cc3b0; --accent-ink: #062520; --accent-text: #7fd3c0; --accent-soft: rgba(108, 195, 176, .14);
+  --heat: #f0a04b; --heat-soft: rgba(240, 160, 75, .16);
+  --ok: #6fcf97; --mid: #e8c25a; --bad: #ff6b6b;
+  --r: 18px; --r-s: 12px;
+  --page-bg:
+    radial-gradient(900px 620px at 80% 6%, rgba(108, 195, 176, .12), transparent 62%),
+    radial-gradient(760px 560px at 6% 0%, rgba(150, 132, 118, .16), transparent 60%),
+    linear-gradient(rgba(255, 255, 255, .035) 1px, transparent 1px) 0 0 / 64px 64px,
+    linear-gradient(90deg, rgba(255, 255, 255, .035) 1px, transparent 1px) 0 0 / 64px 64px,
+    linear-gradient(180deg, #1b1816, #0f0f11 70%);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; }
+body {
+  background: var(--page-bg); background-color: var(--bg); background-attachment: fixed;
+  color: var(--text); font-family: var(--font-ko); font-size: 15px; line-height: 1.55;
+  letter-spacing: -0.01em; -webkit-font-smoothing: antialiased;
+}
+button { font-family: inherit; letter-spacing: inherit; cursor: pointer; }
+.wrap { max-width: 1080px; margin: 0 auto; padding: 24px 16px 64px; }
+
+/* 머리 */
+.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.brand { font-weight: 800; font-size: 20px; letter-spacing: .06em; }
+.brand small { display: block; font-size: 13px; font-weight: 600; color: var(--muted); letter-spacing: 0; }
+.status { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 999px; background: var(--panel2); font-weight: 600; font-size: 14px; }
+.status::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--st, var(--ok)); box-shadow: 0 0 10px var(--st, var(--ok)); }
+
+/* 단계 표시 */
+.steps { display: flex; gap: 6px; margin: 20px 0 16px; flex-wrap: wrap; }
+.steps span { padding: 6px 12px; border-radius: 999px; background: var(--panel2); color: var(--dim); font-size: 14px; font-weight: 600; }
+.steps span.on { background: var(--accent-soft); color: var(--accent-text); }
+.steps span.done { color: var(--muted); }
+
+.panel { background: var(--panel); backdrop-filter: blur(18px) saturate(1.15); border-radius: var(--r); padding: 20px; }
+.panel + .panel { margin-top: 14px; }
+h2 { margin: 0 0 4px; font-size: 20px; }
+.lead { margin: 0; color: var(--muted); }
+.eyebrow { font-size: 13px; font-weight: 700; color: var(--dim); letter-spacing: .08em; text-transform: uppercase; }
+
+/* 지표 */
+.kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 14px; }
+.kpi { background: var(--panel2); border-radius: var(--r-s); padding: 12px 14px; }
+.kpi .k { font-size: 14px; color: var(--muted); font-weight: 600; display: flex; justify-content: space-between; }
+.kpi .k em { font-style: normal; color: var(--dim); font-family: var(--mono); font-size: 13px; }
+.kpi .v { font-size: 28px; font-weight: 800; font-variant-numeric: tabular-nums; }
+.kpi .d { font-size: 14px; font-weight: 700; margin-left: 6px; }
+.bar { height: 6px; border-radius: 6px; background: rgba(255,255,255,.08); overflow: hidden; margin-top: 6px; }
+.bar i { display: block; height: 100%; border-radius: 6px; background: var(--c, var(--accent)); transition: width .5s ease; }
+.kpi.safety .bar { position: relative; overflow: visible; }
+.kpi.safety .bar::after { content: ""; position: absolute; left: 60%; top: -3px; bottom: -3px; width: 2px; background: var(--bad); }
+.up { color: var(--ok); } .down { color: var(--bad); }
+
+/* 압연 라인 */
+.line { margin-top: 14px; overflow-x: auto; }
+.line svg { display: block; width: 100%; min-width: 560px; height: auto; }
+.line .box { fill: rgba(255,255,255,.06); }
+.line .hot { fill: var(--heat-soft); stroke: var(--heat); stroke-width: 1.5; animation: pulse 1.4s ease-in-out infinite; }
+.line text { fill: var(--muted); font-family: var(--font-ko); font-size: 13px; font-weight: 600; }
+.line .hot + text { fill: var(--heat); }
+.line .worker { fill: var(--mid); }
+@keyframes pulse { 50% { opacity: .55; } }
+
+.event { margin-top: 14px; display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; border-radius: var(--r-s); background: var(--heat-soft); }
+.event b { color: var(--heat); }
+.event p { margin: 2px 0 0; }
+
+/* 에이전트 */
+.agents { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin-top: 14px; }
+.agent { background: var(--panel2); border-radius: var(--r-s); padding: 14px; display: flex; flex-direction: column; gap: 8px; opacity: 0; transform: translateY(6px); animation: in .35s ease forwards; }
+.agent .who { display: flex; align-items: center; gap: 10px; }
+.agent .ic { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; font-size: 14px; color: #111; background: var(--c); }
+.agent .nm { font-weight: 700; }
+.agent .goal { font-size: 13px; color: var(--dim); }
+.agent .say { margin: 0; }
+.agent .why { margin: 0; color: var(--muted); font-size: 14px; }
+.agent .rec { margin-top: auto; font-size: 14px; font-weight: 700; color: var(--c); }
+@keyframes in { to { opacity: 1; transform: none; } }
+.chief { margin-top: 14px; padding: 14px 16px; border-radius: var(--r-s); background: var(--accent-soft); }
+.chief b { color: var(--accent-text); }
+.chief p { margin: 4px 0 0; }
+
+/* 선택지 */
+.choices { display: grid; gap: 10px; margin-top: 14px; }
+.choice { text-align: left; border: 0; border-radius: var(--r-s); padding: 14px 16px; background: var(--panel2); color: var(--text); display: grid; grid-template-columns: 1fr auto; gap: 4px 16px; align-items: center; transition: background .15s; }
+.choice:hover, .choice:focus-visible { background: var(--chip-on); outline: none; }
+.choice .t { font-weight: 700; font-size: 16px; }
+.choice .s { color: var(--muted); font-size: 14px; grid-column: 1; }
+.choice .tags { grid-row: 1 / span 2; grid-column: 2; display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.tag { font-size: 13px; font-weight: 700; padding: 3px 9px; border-radius: 999px; background: rgba(255,255,255,.06); white-space: nowrap; }
+.tag.up { background: rgba(111,207,151,.12); } .tag.down { background: rgba(255,107,107,.12); }
+.note { margin: 12px 0 0; font-size: 14px; color: var(--dim); }
+
+/* 결과 */
+.grade { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; margin-top: 14px; }
+.grade .g { width: 88px; height: 88px; border-radius: 22px; display: grid; place-items: center; font-size: 44px; font-weight: 800; background: var(--gc); color: #111; }
+.grade .sc { font-size: 15px; color: var(--muted); }
+.grade .sc b { display: block; font-size: 30px; color: var(--text); font-variant-numeric: tabular-nums; }
+.log { margin: 14px 0 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+.log li { background: var(--panel2); border-radius: var(--r-s); padding: 12px 14px; }
+.log li span { color: var(--muted); font-size: 14px; display: block; }
+.actions { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
+.btn { border: 0; border-radius: 999px; padding: 12px 22px; font-weight: 700; font-size: 15px; background: var(--accent); color: var(--accent-ink); }
+.btn.ghost { background: var(--panel2); color: var(--text); }
+.foot { margin-top: 18px; font-size: 13px; color: var(--dim); text-align: center; }
+
+@media (max-width: 720px) {
+  .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .choice { grid-template-columns: 1fr; }
+  .choice .tags { grid-row: auto; grid-column: 1; justify-content: flex-start; }
+}
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } .agent { opacity: 1; transform: none; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">STEEL MIND<small>AI 제철소 운영 시뮬레이션 · 압연 미션 시안</small></div>
+    <div class="status" id="status">공정 정상 가동</div>
+  </header>
+  <nav class="steps" id="steps" aria-label="진행 단계"></nav>
+  <main id="app" aria-live="polite"></main>
+  <p class="foot">수치와 결과는 게임 밸런스를 위한 가상 값입니다. 실제 제철소 운영 기준이 아닙니다.</p>
+</div>
+
+<script>
+// ── 설정: 지표, 가중치, 안전 하한선 ─────────────────────────────
+const METRICS = [
+  { id: 'production', name: '생산량', weight: 0.30 },
+  { id: 'quality', name: '품질', weight: 0.25 },
+  { id: 'safety', name: '안전', weight: 0.35 },
+  { id: 'cost', name: '비용 효율', weight: 0.10 },
+];
+const START = { production: 70, quality: 80, safety: 90, cost: 75 };
+const SAFETY_FLOOR = 60;           // 이 아래면 점수와 상관없이 실패
+const GRADES = [[90, 'S', '#6cc3b0'], [80, 'A', '#6fcf97'], [65, 'B', '#e8c25a']];
+
+const AGENTS = {
+  production: { name: '생산 에이전트', goal: '생산량·납기', ic: '생', c: '#7aa7ff' },
+  quality: { name: '품질 에이전트', goal: '제품 품질 기준', ic: '품', c: '#c99bff' },
+  equipment: { name: '설비 에이전트', goal: '설비 안정성·가동률', ic: '설', c: '#f0a04b' },
+  safety: { name: '안전 에이전트', goal: '작업자 위험 최소화', ic: '안', c: '#6fcf97' },
+};
+
+// ── 미션: 압연 공정 (사건 2개, LEVEL 1 → LEVEL 2 사건 하나 추가) ──
+// effect는 게임 엔진 규칙이다. LLM은 이 값을 만들거나 바꾸지 않는다.
+const EVENTS = [
+  {
+    id: 'rolling_temperature', level: 'LEVEL 1', hot: 'finishing_mill',
+    title: '사상압연기 온도 상승',
+    desc: '사상압연기 롤 온도가 기준보다 빠르게 오르고 있습니다. 오늘 출하할 코일 주문이 아직 남아 있습니다.',
+    agents: [
+      { a: 'production', say: '지금 속도를 유지해야 오늘 주문량을 맞출 수 있습니다.', why: '속도를 낮추면 남은 코일 출하가 늦어집니다.', rec: 'continue_production' },
+      { a: 'equipment', say: '속도를 낮추고 롤 냉각 상태를 확인해야 합니다.', why: '온도가 계속 오르면 롤 손상으로 더 긴 정지가 생길 수 있습니다.', rec: 'reduce_speed' },
+      { a: 'safety', say: '과열 구역 주변 작업자를 먼저 빼 주세요.', why: '설비 이상이 커지면 근처 작업자가 가장 먼저 위험해집니다.', rec: 'stop_and_inspect' },
+      { a: 'quality', say: '온도 변화가 강판 두께에 영향을 줬는지 확인이 필요합니다.', why: '롤 온도가 흔들리면 두께 편차가 생길 수 있습니다.', rec: 'reduce_speed' },
+    ],
+    chief: '생산 에이전트는 납기를, 설비·안전 에이전트는 더 큰 정지와 사고를 걱정합니다. 품질 에이전트는 속도 조정 쪽입니다.',
+    choices: [
+      { id: 'continue_production', t: '생산 우선: 속도 유지', s: '그대로 가동하며 온도만 지켜본다', effect: { production: 12, quality: -6, safety: -18, cost: 4 }, flag: 'overheated' },
+      { id: 'reduce_speed', t: '균형 대응: 속도 조정 후 점검', s: '속도를 낮추고 롤 냉각 상태를 확인한다', effect: { production: -5, quality: 3, safety: 6, cost: -6 } },
+      { id: 'stop_and_inspect', t: '안전 우선: 일시 정지·구역 통제', s: '라인을 멈추고 과열 구역 출입을 막는다', effect: { production: -14, quality: 4, safety: 12, cost: -10 } },
+    ],
+  },
+  {
+    id: 'worker_in_zone', level: 'LEVEL 2', hot: 'runout_table', worker: true,
+    title: '작업자 위험 구역 접근',
+    desc: '런아웃 테이블 옆 출입 통제 구역에 작업자 한 명이 들어왔습니다. 라인은 가동 중입니다.',
+    agents: [
+      { a: 'production', say: '작업자에게 무전으로 알리고 라인은 계속 돌립시다.', why: '다시 멈추면 오늘 목표를 맞추기 어렵습니다.', rec: 'continue_with_radio' },
+      { a: 'safety', say: '즉시 라인을 멈춰야 합니다.', why: '가동 중인 런아웃 테이블 옆은 사람이 있으면 안 되는 구역입니다.', rec: 'emergency_stop' },
+      { a: 'equipment', say: '속도를 낮추고 작업자가 나간 것을 확인한 뒤 올립시다.', why: '급정지는 설비에 부담을 주지만, 감속은 위험을 줄입니다.', rec: 'slow_and_clear' },
+    ],
+    chief: '이 사건에서 안전은 점수가 아니라 지켜야 할 조건입니다. 안전 지수가 하한선 아래로 떨어지면 미션은 실패합니다.',
+    choices: [
+      { id: 'continue_with_radio', t: '생산 우선: 무전 경고 후 계속 가동', s: '작업자에게 알리고 라인은 그대로 둔다', effect: { production: 6, quality: 0, safety: -45, cost: 2 } }, // 어느 경로에서 와도 하한선 아래: 사람이 있는 구역을 그대로 돌리는 선택은 항상 실패
+      { id: 'slow_and_clear', t: '균형 대응: 감속 후 구역 비우기', s: '속도를 낮추고 작업자 이동을 확인한다', effect: { production: -4, quality: 0, safety: 4, cost: -3 } },
+      { id: 'emergency_stop', t: '안전 우선: 즉시 정지', s: '라인을 멈추고 구역을 통제한다', effect: { production: -12, quality: 0, safety: 14, cost: -8 } },
+    ],
+    // 앞 사건에서 속도를 유지했다면 설비가 이미 달아올라 위험이 더 크다
+    carry: (flags) => flags.overheated ? { safety: -5, note: '앞 사건에서 속도를 유지해 설비 온도가 높은 상태로 시작합니다. (안전 -5)' } : null,
+  },
+];
+
+const LINE = [
+  ['reheating_furnace', '재가열로'], ['descaler', '스케일 제거기'], ['roughing_mill', '조압연기'],
+  ['finishing_mill', '사상압연기'], ['runout_table', '런아웃 테이블'], ['coiler', '권취기'],
+];
+
+// ── 게임 엔진 ────────────────────────────────────────────────
+const clamp = (v) => Math.max(0, Math.min(100, v));
+const score = (s) => Math.round(METRICS.reduce((t, m) => t + s[m.id] * m.weight, 0) * 10) / 10;
+function grade(s) {
+  if (s.safety < SAFETY_FLOOR) return { g: '실패', c: '#ff6b6b', why: `안전 지수가 하한선(${SAFETY_FLOOR}) 아래로 떨어졌습니다.` };
+  const total = score(s);
+  for (const [min, g, c] of GRADES) if (total >= min) return { g, c, why: `안전을 지키며 종합 ${min}점 이상을 냈습니다.` };
+  return { g: 'C', c: '#9a9aa0', why: '안전은 지켰지만 종합 점수가 65점보다 낮습니다.' };
+}
+function apply(state, effect) {
+  const next = { ...state };
+  for (const m of METRICS) next[m.id] = clamp(next[m.id] + (effect[m.id] || 0));
+  return next;
+}
+
+// ── 상태 ────────────────────────────────────────────────────
+let G;
+function reset() { G = { state: { ...START }, flags: {}, i: 0, phase: 'dashboard', log: [], prev: null, carryNote: null }; render(); }
+
+// ── 화면 ────────────────────────────────────────────────────
+const $app = document.getElementById('app');
+const PHASES = [['dashboard', '① 공장 대시보드'], ['agents', '② 에이전트 회의실'], ['decide', '③ 의사결정'], ['result', '④ 결과 보고서']];
+const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const sign = (n) => (n > 0 ? '+' : '') + n;
+
+function kpis(state, prev) {
+  return `<div class="kpis">${METRICS.map((m) => {
+    const v = state[m.id], d = prev ? v - prev[m.id] : 0;
+    const c = m.id === 'safety' && v < SAFETY_FLOOR ? 'var(--bad)' : 'var(--accent)';
+    return `<div class="kpi ${m.id}"><div class="k">${m.name}<em>${Math.round(m.weight * 100)}%</em></div>
+      <div><span class="v">${v}</span>${d ? `<span class="d ${d > 0 ? 'up' : 'down'}">${sign(d)}</span>` : ''}</div>
+      <div class="bar"><i style="width:${v}%;--c:${c}"></i></div></div>`;
+  }).join('')}</div>`;
+}
+
+function line(ev) {
+  const w = 120, gap = 14, y = 26, h = 44;
+  const boxes = LINE.map(([id, nm], k) => {
+    const x = 10 + k * (w + gap), hot = ev && ev.hot === id;
+    const arrow = k < LINE.length - 1 ? `<path d="M${x + w + 2} ${y + h / 2}h${gap - 4}" stroke="rgba(255,255,255,.25)" stroke-width="2" marker-end="url(#ah)"/>` : '';
+    const worker = ev && ev.worker && hot ? `<circle class="worker" cx="${x + w / 2}" cy="${y + h + 16}" r="6"/><text x="${x + w / 2}" y="${y + h + 38}" text-anchor="middle">작업자</text>` : '';
+    return `<rect class="${hot ? 'hot' : 'box'}" x="${x}" y="${y}" width="${w}" height="${h}" rx="10"/><text x="${x + w / 2}" y="${y + h / 2 + 5}" text-anchor="middle">${nm}</text>${arrow}${worker}`;
+  }).join('');
+  return `<div class="line" aria-label="열간압연 라인"><svg viewBox="0 0 ${10 + LINE.length * (w + gap)} 124">
+    <defs><marker id="ah" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0 0L6 3L0 6z" fill="rgba(255,255,255,.35)"/></marker></defs>
+    <text x="10" y="14">슬라브</text><text x="${LINE.length * (w + gap) - 4}" y="14" text-anchor="end">열연 코일</text>${boxes}</svg></div>`;
+}
+
+function steps() {
+  const k = PHASES.findIndex(([p]) => p === G.phase);
+  document.getElementById('steps').innerHTML = G.phase === 'final' ? '<span class="on">최종 운영 평가</span>'
+    : PHASES.map(([, nm], j) => `<span class="${j === k ? 'on' : j < k ? 'done' : ''}">${nm}</span>`).join('');
+  const st = document.getElementById('status');
+  const danger = G.phase !== 'final' && G.phase !== 'dashboard' || (G.phase === 'dashboard' && G.i > 0);
+  st.textContent = G.phase === 'final' ? '미션 종료' : G.phase === 'result' ? '조치 완료' : G.phase === 'dashboard' && G.i === 0 ? '공정 정상 가동' : '이상 상황 발생';
+  st.style.setProperty('--st', G.phase === 'final' || G.phase === 'result' ? 'var(--accent)' : danger ? 'var(--heat)' : 'var(--ok)');
+}
+
+function render() {
+  steps();
+  const ev = EVENTS[G.i];
+  if (G.phase === 'dashboard') {
+    const carry = ev.carry && ev.carry(G.flags);
+    if (carry && G.carryNote === null) { G.state = apply(G.state, { safety: carry.safety }); G.carryNote = carry.note; }
+    $app.innerHTML = `<section class="panel">
+      <div class="eyebrow">DAY 01 · 열간압연 공정 · 사건 ${G.i + 1}/${EVENTS.length} · ${ev.level}</div>
+      <h2>공장 현황</h2><p class="lead">생산 목표 달성률은 생산량 지수로 봅니다. 안전 막대의 빨간 선이 하한선(${SAFETY_FLOOR})입니다.</p>
+      ${kpis(G.state)}${line(ev)}
+      <div class="event" role="alert"><div><b>⚠ ${esc(ev.title)}</b><p>${esc(ev.desc)}</p>${G.carryNote ? `<p class="note">${esc(G.carryNote)}</p>` : ''}</div></div>
+      <div class="actions"><button class="btn" data-go="agents">에이전트 회의 열기</button></div></section>`;
+  } else if (G.phase === 'agents') {
+    $app.innerHTML = `<section class="panel">
+      <div class="eyebrow">${esc(ev.title)}</div><h2>에이전트 회의실</h2>
+      <p class="lead">같은 상황을 에이전트마다 자기 목표로 읽고 행동을 제안합니다.</p>
+      <div class="agents">${ev.agents.map((x, k) => {
+        const A = AGENTS[x.a], rec = ev.choices.find((c) => c.id === x.rec);
+        return `<article class="agent" style="--c:${A.c};animation-delay:${k * 120}ms">
+          <div class="who"><span class="ic">${A.ic}</span><div><div class="nm">${A.name}</div><div class="goal">목표: ${A.goal}</div></div></div>
+          <p class="say">“${esc(x.say)}”</p><p class="why">근거: ${esc(x.why)}</p><div class="rec">추천 → ${esc(rec.t.split(':')[0])}</div></article>`;
+      }).join('')}</div>
+      <div class="chief"><b>공장장 에이전트 정리</b><p>${esc(ev.chief)}</p></div>
+      <div class="actions"><button class="btn" data-go="decide">결정하러 가기</button><button class="btn ghost" data-go="dashboard">현황 다시 보기</button></div></section>`;
+  } else if (G.phase === 'decide') {
+    $app.innerHTML = `<section class="panel">
+      <div class="eyebrow">${esc(ev.title)}</div><h2>어떻게 대응할까요?</h2>
+      <p class="lead">에이전트 제안은 참고 자료입니다. 최종 결정은 운영 책임자인 당신이 합니다.</p>
+      <div class="choices">${ev.choices.map((c) => `<button class="choice" data-pick="${c.id}">
+        <span class="t">${esc(c.t)}</span><span class="s">${esc(c.s)}</span>
+        <span class="tags">${METRICS.filter((m) => c.effect[m.id]).map((m) => `<span class="tag ${c.effect[m.id] > 0 ? 'up' : 'down'}">${m.name} ${c.effect[m.id] > 0 ? '▲' : '▼'}</span>`).join('')}</span></button>`).join('')}</div>
+      <p class="note">▲▼는 예상 방향만 보여 줍니다. 실제 변화량은 결과 보고서에서 확인합니다.</p></section>`;
+  } else if (G.phase === 'result') {
+    const last = G.log[G.log.length - 1], failed = G.state.safety < SAFETY_FLOOR, more = G.i < EVENTS.length - 1 && !failed;
+    $app.innerHTML = `<section class="panel">
+      <div class="eyebrow">${esc(ev.title)} · 결과 보고서</div><h2>${esc(last.choice)}</h2>
+      <p class="lead">${failed ? '안전 지수가 하한선 아래로 떨어져 라인이 강제로 멈췄습니다.' : '게임 엔진이 정해진 규칙으로 지표를 다시 계산했습니다.'}</p>
+      ${kpis(G.state, G.prev)}
+      <ul class="log"><li>이 결정을 추천한 에이전트<span>${last.backers.length ? last.backers.map((a) => AGENTS[a].name).join(', ') : '없음: 에이전트 제안과 다른 결정'}</span></li>
+      <li>현재 종합 점수<span>${score(G.state)}점 (생산 30% · 품질 25% · 안전 35% · 비용 10%)</span></li></ul>
+      <div class="actions"><button class="btn" data-go="${more ? 'next' : 'final'}">${more ? '다음 사건으로' : '최종 평가 보기'}</button></div></section>`;
+  } else if (G.phase === 'final') {
+    const r = grade(G.state), total = score(G.state);
+    $app.innerHTML = `<section class="panel">
+      <div class="eyebrow">최종 공장 운영 평가</div><h2>압연 미션 결과</h2>
+      <div class="grade"><div class="g" style="--gc:${r.c}">${r.g}</div><div class="sc">종합 운영 점수<b>${total} / 100</b>${esc(r.why)}</div></div>
+      ${kpis(G.state, START)}
+      <ul class="log">${G.log.map((l) => `<li>${esc(l.event)}: ${esc(l.choice)}<span>${METRICS.map((m) => l.effect[m.id] ? `${m.name} ${sign(l.effect[m.id])}` : '').filter(Boolean).join(' · ')}</span></li>`).join('')}</ul>
+      <p class="note">등급: S 90+ · A 80+ · B 65+ (모두 안전 지수 ${SAFETY_FLOOR} 이상일 때). 안전이 하한선 아래면 점수와 상관없이 실패입니다.</p>
+      <div class="actions"><button class="btn" data-go="restart">처음부터 다시</button></div></section>`;
+  }
+  $app.querySelector('.btn, .choice')?.focus({ preventScroll: true });
+}
+
+$app.addEventListener('click', (e) => {
+  const go = e.target.closest('[data-go]')?.dataset.go, pick = e.target.closest('[data-pick]')?.dataset.pick;
+  if (pick) {
+    const ev = EVENTS[G.i], c = ev.choices.find((x) => x.id === pick);
+    G.prev = G.state; G.state = apply(G.state, c.effect);
+    if (c.flag) G.flags[c.flag] = true;
+    G.log.push({ event: ev.title, choice: c.t, effect: c.effect, backers: ev.agents.filter((a) => a.rec === pick).map((a) => a.a) });
+    G.phase = 'result';
+  } else if (go === 'next') { G.i += 1; G.phase = 'dashboard'; G.carryNote = null; G.prev = null; }
+  else if (go === 'restart') return reset();
+  else if (go) G.phase = go;
+  else return;
+  render(); window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+
+reset();
+</script>
+</body>
+</html>
