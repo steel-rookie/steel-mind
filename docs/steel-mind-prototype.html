@@ -5,149 +5,169 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>STEEL MIND · 압연 미션 시안</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" rel="stylesheet">
 <!--
-  STEEL MIND MVP 시안: 압연 공정 미션 1개(사건 2개)를 처음부터 결과까지 돌려 본다.
-  디자인 토큰은 ST-ROOKIE 평가 시험 화면(frontend/login_ui/exam.css)과 같다.
-  에이전트 문장은 시안용 고정 문장이다. 실제 구현에서는 LLM이 같은 형식(추천 행동 + 근거)으로 만든다.
-  점수는 아래 RULES 표로만 계산한다. LLM은 점수와 상태를 바꾸지 않는다.
+  STEEL MIND MVP 시안: 압연 라인이 실시간으로 돌고, 사건이 터지면 제한 시간 안에 결정한다.
+  - 점수는 RULES(각 선택지의 effect)로만 계산한다. LLM은 점수와 상태를 바꾸지 않는다.
+  - 에이전트 문장은 시안용 고정 문장이다. 실제 구현에서는 LLM이 { say, why, rec } 형식으로 만든다.
+  - 디자인 토큰은 ST-ROOKIE 평가 시험 화면(frontend/login_ui/exam.css), 설비 이름은 data_v2.js의 압연 설비 6개.
+  - 키보드: 1·2·3으로 선택, Enter로 다음.
 -->
 <style>
 :root {
-  --font-ko: "Montserrat", "Pretendard", -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --font: "Montserrat", "Pretendard", -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
   --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
-  --bg: #121213;
-  --panel: rgba(34, 31, 29, .62); --panel2: rgba(255, 255, 255, .06); --chip-on: rgba(255, 255, 255, .16);
+  --bg: #121213; --panel: rgba(34, 31, 29, .72); --panel2: rgba(255, 255, 255, .06); --chip-on: rgba(255, 255, 255, .14);
   --line: rgba(255, 255, 255, .1); --text: #f2f2f2; --muted: #b9b9be; --dim: #9a9aa0;
   --accent: #6cc3b0; --accent-ink: #062520; --accent-text: #7fd3c0; --accent-soft: rgba(108, 195, 176, .14);
-  --heat: #f0a04b; --heat-soft: rgba(240, 160, 75, .16);
-  --ok: #6fcf97; --mid: #e8c25a; --bad: #ff6b6b;
+  --heat: #f0a04b; --hot: #ff7a2f; --ok: #6fcf97; --mid: #e8c25a; --bad: #ff6b6b;
   --r: 18px; --r-s: 12px;
-  --page-bg:
-    radial-gradient(900px 620px at 80% 6%, rgba(108, 195, 176, .12), transparent 62%),
-    radial-gradient(760px 560px at 6% 0%, rgba(150, 132, 118, .16), transparent 60%),
-    linear-gradient(rgba(255, 255, 255, .035) 1px, transparent 1px) 0 0 / 64px 64px,
-    linear-gradient(90deg, rgba(255, 255, 255, .035) 1px, transparent 1px) 0 0 / 64px 64px,
-    linear-gradient(180deg, #1b1816, #0f0f11 70%);
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
-html, body { margin: 0; min-height: 100%; }
+html, body { margin: 0; height: 100%; }
 body {
-  background: var(--page-bg); background-color: var(--bg); background-attachment: fixed;
-  color: var(--text); font-family: var(--font-ko); font-size: 15px; line-height: 1.55;
-  letter-spacing: -0.01em; -webkit-font-smoothing: antialiased;
+  background:
+    radial-gradient(900px 620px at 80% 6%, rgba(108, 195, 176, .1), transparent 62%),
+    radial-gradient(760px 560px at 6% 0%, rgba(150, 132, 118, .16), transparent 60%),
+    linear-gradient(rgba(255,255,255,.03) 1px, transparent 1px) 0 0 / 64px 64px,
+    linear-gradient(90deg, rgba(255,255,255,.03) 1px, transparent 1px) 0 0 / 64px 64px,
+    linear-gradient(180deg, #1b1816, #0f0f11 70%);
+  background-color: var(--bg); background-attachment: fixed;
+  color: var(--text); font-family: var(--font); font-size: 15px; line-height: 1.5; letter-spacing: -0.01em;
+  -webkit-font-smoothing: antialiased; overflow-x: hidden;
 }
+body.alarm { animation: alarm 1s steps(2) infinite; }
+@keyframes alarm { 50% { box-shadow: inset 0 0 0 4px rgba(255, 107, 107, .55), inset 0 0 120px rgba(255, 107, 107, .12); } }
 button { font-family: inherit; letter-spacing: inherit; cursor: pointer; }
-.wrap { max-width: 1080px; margin: 0 auto; padding: 24px 16px 64px; }
+.wrap { max-width: 1100px; margin: 0 auto; padding: 16px 16px 40px; }
 
-/* 머리 */
-.top { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
-.brand { font-weight: 800; font-size: 20px; letter-spacing: .06em; }
-.brand small { display: block; font-size: 13px; font-weight: 600; color: var(--muted); letter-spacing: 0; }
-.status { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px; border-radius: 999px; background: var(--panel2); font-weight: 600; font-size: 14px; }
-.status::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--st, var(--ok)); box-shadow: 0 0 10px var(--st, var(--ok)); }
-
-/* 단계 표시 */
-.steps { display: flex; gap: 6px; margin: 20px 0 16px; flex-wrap: wrap; }
-.steps span { padding: 6px 12px; border-radius: 999px; background: var(--panel2); color: var(--dim); font-size: 14px; font-weight: 600; }
-.steps span.on { background: var(--accent-soft); color: var(--accent-text); }
-.steps span.done { color: var(--muted); }
-
-.panel { background: var(--panel); backdrop-filter: blur(18px) saturate(1.15); border-radius: var(--r); padding: 20px; }
-.panel + .panel { margin-top: 14px; }
-h2 { margin: 0 0 4px; font-size: 20px; }
-.lead { margin: 0; color: var(--muted); }
-.eyebrow { font-size: 13px; font-weight: 700; color: var(--dim); letter-spacing: .08em; text-transform: uppercase; }
-
-/* 지표 */
-.kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 14px; }
-.kpi { background: var(--panel2); border-radius: var(--r-s); padding: 12px 14px; }
-.kpi .k { font-size: 14px; color: var(--muted); font-weight: 600; display: flex; justify-content: space-between; }
-.kpi .k em { font-style: normal; color: var(--dim); font-family: var(--mono); font-size: 13px; }
-.kpi .v { font-size: 28px; font-weight: 800; font-variant-numeric: tabular-nums; }
-.kpi .d { font-size: 14px; font-weight: 700; margin-left: 6px; }
-.bar { height: 6px; border-radius: 6px; background: rgba(255,255,255,.08); overflow: hidden; margin-top: 6px; }
-.bar i { display: block; height: 100%; border-radius: 6px; background: var(--c, var(--accent)); transition: width .5s ease; }
-.kpi.safety .bar { position: relative; overflow: visible; }
-.kpi.safety .bar::after { content: ""; position: absolute; left: 60%; top: -3px; bottom: -3px; width: 2px; background: var(--bad); }
+/* HUD */
+.hud { display: grid; grid-template-columns: auto repeat(4, minmax(0, 1fr)) auto; gap: 10px; align-items: stretch; }
+.brand { display: flex; flex-direction: column; justify-content: center; padding-right: 6px; }
+.brand b { font-weight: 900; letter-spacing: .08em; font-size: 18px; }
+.brand span { font-size: 13px; color: var(--muted); font-weight: 600; }
+.m { position: relative; background: var(--panel); border-radius: var(--r-s); padding: 8px 12px; }
+.m .k { font-size: 13px; color: var(--muted); font-weight: 600; display: flex; justify-content: space-between; }
+.m .k em { font-style: normal; color: var(--dim); font-family: var(--mono); font-size: 12px; }
+.m .v { font-size: 24px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1.2; }
+.bar { height: 5px; border-radius: 5px; background: rgba(255,255,255,.08); margin-top: 4px; position: relative; }
+.bar i { display: block; height: 100%; border-radius: 5px; background: var(--c, var(--accent)); transition: width .6s cubic-bezier(.2,.8,.2,1); }
+.m.safety .bar::after { content: ""; position: absolute; left: 60%; top: -3px; bottom: -3px; width: 2px; background: var(--bad); }
+.m.hit { animation: hit .5s; }
+@keyframes hit { 30% { transform: scale(1.06); } }
+.coils { background: var(--panel); border-radius: var(--r-s); padding: 8px 14px; text-align: right; }
+.coils .k { font-size: 13px; color: var(--muted); font-weight: 600; }
+.coils .v { font-family: var(--mono); font-size: 24px; font-weight: 700; }
+.float { position: absolute; right: 10px; top: 4px; font-weight: 900; font-size: 20px; pointer-events: none; animation: float 1.4s ease-out forwards; }
+@keyframes float { from { opacity: 0; transform: translateY(10px); } 15% { opacity: 1; } to { opacity: 0; transform: translateY(-26px); } }
 .up { color: var(--ok); } .down { color: var(--bad); }
 
-/* 압연 라인 */
-.line { margin-top: 14px; overflow-x: auto; }
-.line svg { display: block; width: 100%; min-width: 560px; height: auto; }
-.line .box { fill: rgba(255,255,255,.06); }
-.line .hot { fill: var(--heat-soft); stroke: var(--heat); stroke-width: 1.5; animation: pulse 1.4s ease-in-out infinite; }
-.line text { fill: var(--muted); font-family: var(--font-ko); font-size: 13px; font-weight: 600; }
-.line .hot + text { fill: var(--heat); }
-.line .worker { fill: var(--mid); }
-@keyframes pulse { 50% { opacity: .55; } }
+/* 무대 */
+.stage { position: relative; margin-top: 12px; background: var(--panel); border-radius: var(--r); overflow: hidden; }
+.stage svg { display: block; width: 100%; height: auto; }
+.st-label { fill: var(--muted); font: 600 13px var(--font); }
+.st-eq { fill: rgba(255,255,255,.07); stroke: rgba(255,255,255,.12); }
+.st-eq.warn { fill: rgba(255,122,47,.18); stroke: var(--hot); animation: blink .6s steps(2) infinite; }
+@keyframes blink { 50% { fill: rgba(255,122,47,.05); } }
+.st-zone { fill: rgba(232,194,90,.06); stroke: var(--mid); stroke-dasharray: 6 5; }
+.roller { fill: rgba(255,255,255,.18); }
+.topbar { position: absolute; left: 14px; right: 14px; top: 12px; display: flex; justify-content: space-between; align-items: center; gap: 10px; pointer-events: none; }
+.chip { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px; background: rgba(0,0,0,.35); font-weight: 700; font-size: 14px; }
+.chip::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--st, var(--ok)); box-shadow: 0 0 10px var(--st, var(--ok)); }
+.gauge { position: absolute; right: 16px; bottom: 14px; width: 180px; background: rgba(0,0,0,.4); border-radius: var(--r-s); padding: 8px 12px; }
+.gauge .k { font-size: 13px; color: var(--muted); font-weight: 600; display: flex; justify-content: space-between; }
+.gauge .t { font-family: var(--mono); font-weight: 700; }
+.gauge .bar i { transition: width .2s linear; }
 
-.event { margin-top: 14px; display: flex; gap: 12px; align-items: flex-start; padding: 14px 16px; border-radius: var(--r-s); background: var(--heat-soft); }
-.event b { color: var(--heat); }
-.event p { margin: 2px 0 0; }
-
-/* 에이전트 */
-.agents { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin-top: 14px; }
-.agent { background: var(--panel2); border-radius: var(--r-s); padding: 14px; display: flex; flex-direction: column; gap: 8px; opacity: 0; transform: translateY(6px); animation: in .35s ease forwards; }
-.agent .who { display: flex; align-items: center; gap: 10px; }
-.agent .ic { width: 34px; height: 34px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; font-size: 14px; color: #111; background: var(--c); }
-.agent .nm { font-weight: 700; }
-.agent .goal { font-size: 13px; color: var(--dim); }
-.agent .say { margin: 0; }
-.agent .why { margin: 0; color: var(--muted); font-size: 14px; }
-.agent .rec { margin-top: auto; font-size: 14px; font-weight: 700; color: var(--c); }
-@keyframes in { to { opacity: 1; transform: none; } }
-.chief { margin-top: 14px; padding: 14px 16px; border-radius: var(--r-s); background: var(--accent-soft); }
+/* 사건 패널 */
+.event { margin-top: 12px; background: var(--panel); border-radius: var(--r); padding: 16px; display: none; }
+.event.on { display: block; animation: rise .35s ease; }
+@keyframes rise { from { opacity: 0; transform: translateY(10px); } }
+.ev-head { display: flex; align-items: center; gap: 14px; }
+.timer { --p: 1; width: 56px; height: 56px; border-radius: 50%; flex: none; display: grid; place-items: center; font: 700 18px var(--mono);
+  background: conic-gradient(var(--tc, var(--accent)) calc(var(--p) * 360deg), rgba(255,255,255,.08) 0); position: relative; }
+.timer::before { content: ""; position: absolute; inset: 5px; border-radius: 50%; background: #1d1a18; }
+.timer span { position: relative; }
+.ev-head h2 { margin: 0; font-size: 20px; }
+.ev-head p { margin: 2px 0 0; color: var(--muted); }
+.lvl { font-size: 12px; font-weight: 800; color: var(--heat); letter-spacing: .1em; }
+.agents { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; margin-top: 14px; }
+.agent { display: flex; gap: 10px; align-items: flex-start; opacity: 0; transform: translateY(8px) scale(.98); }
+.agent.in { animation: pop .3s cubic-bezier(.2,.9,.3,1.2) forwards; }
+@keyframes pop { to { opacity: 1; transform: none; } }
+.face { width: 42px; height: 42px; border-radius: 50%; flex: none; display: grid; place-items: center; font-weight: 900; color: #111; background: var(--c); box-shadow: 0 0 0 3px rgba(0,0,0,.3); }
+.bubble { background: var(--panel2); border-radius: 4px 14px 14px 14px; padding: 10px 12px; flex: 1; }
+.bubble .nm { font-size: 13px; font-weight: 700; color: var(--c); }
+.bubble p { margin: 2px 0 0; }
+.bubble .why { color: var(--muted); font-size: 14px; }
+.chief { margin-top: 10px; padding: 10px 14px; border-radius: var(--r-s); background: var(--accent-soft); opacity: 0; }
+.chief.in { animation: pop .3s ease forwards; }
 .chief b { color: var(--accent-text); }
-.chief p { margin: 4px 0 0; }
-
-/* 선택지 */
-.choices { display: grid; gap: 10px; margin-top: 14px; }
-.choice { text-align: left; border: 0; border-radius: var(--r-s); padding: 14px 16px; background: var(--panel2); color: var(--text); display: grid; grid-template-columns: 1fr auto; gap: 4px 16px; align-items: center; transition: background .15s; }
-.choice:hover, .choice:focus-visible { background: var(--chip-on); outline: none; }
-.choice .t { font-weight: 700; font-size: 16px; }
-.choice .s { color: var(--muted); font-size: 14px; grid-column: 1; }
-.choice .tags { grid-row: 1 / span 2; grid-column: 2; display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
-.tag { font-size: 13px; font-weight: 700; padding: 3px 9px; border-radius: 999px; background: rgba(255,255,255,.06); white-space: nowrap; }
+.choices { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 12px; }
+.choice { position: relative; text-align: left; border: 0; border-radius: var(--r-s); padding: 14px 14px 12px; background: var(--panel2); color: var(--text); display: flex; flex-direction: column; gap: 6px; transition: transform .12s, background .12s; }
+.choice:hover:not(:disabled), .choice:focus-visible { background: var(--chip-on); transform: translateY(-2px); outline: none; }
+.choice:disabled { opacity: .4; cursor: default; }
+.choice.picked { opacity: 1; box-shadow: 0 0 0 2px var(--accent); }
+.choice .key { position: absolute; right: 12px; top: 12px; font: 700 12px var(--mono); color: var(--dim); border: 1px solid var(--line); border-radius: 6px; padding: 1px 6px; }
+.choice .t { font-weight: 800; font-size: 16px; padding-right: 28px; }
+.choice .s { color: var(--muted); font-size: 14px; }
+.tags { display: flex; gap: 5px; flex-wrap: wrap; margin-top: auto; }
+.tag { font-size: 12px; font-weight: 700; padding: 2px 8px; border-radius: 999px; }
 .tag.up { background: rgba(111,207,151,.12); } .tag.down { background: rgba(255,107,107,.12); }
-.note { margin: 12px 0 0; font-size: 14px; color: var(--dim); }
+.backers { font-size: 12px; color: var(--dim); }
+.hint { margin: 10px 0 0; font-size: 13px; color: var(--dim); }
 
-/* 결과 */
-.grade { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; margin-top: 14px; }
-.grade .g { width: 88px; height: 88px; border-radius: 22px; display: grid; place-items: center; font-size: 44px; font-weight: 800; background: var(--gc); color: #111; }
-.grade .sc { font-size: 15px; color: var(--muted); }
-.grade .sc b { display: block; font-size: 30px; color: var(--text); font-variant-numeric: tabular-nums; }
-.log { margin: 14px 0 0; padding: 0; list-style: none; display: grid; gap: 8px; }
-.log li { background: var(--panel2); border-radius: var(--r-s); padding: 12px 14px; }
-.log li span { color: var(--muted); font-size: 14px; display: block; }
-.actions { display: flex; gap: 10px; margin-top: 16px; flex-wrap: wrap; }
-.btn { border: 0; border-radius: 999px; padding: 12px 22px; font-weight: 700; font-size: 15px; background: var(--accent); color: var(--accent-ink); }
+/* 오버레이 */
+.overlay { position: fixed; inset: 0; display: grid; place-items: center; padding: 16px; background: rgba(10,10,12,.72); backdrop-filter: blur(6px); z-index: 10; }
+.overlay[hidden] { display: none; }
+.card { width: min(560px, 100%); background: #1d1a18; border-radius: 22px; padding: 26px; text-align: center; animation: rise .4s ease; max-height: calc(100vh - 32px); overflow: auto; }
+.card h1 { margin: 0; font-size: 38px; font-weight: 900; letter-spacing: .1em; }
+.card .sub { color: var(--muted); margin: 6px 0 18px; }
+.brief { text-align: left; background: var(--panel2); border-radius: var(--r-s); padding: 14px 16px; margin: 0 0 18px; }
+.brief li { margin: 4px 0; }
+.btn { border: 0; border-radius: 999px; padding: 13px 26px; font-weight: 800; font-size: 16px; background: var(--accent); color: var(--accent-ink); }
 .btn.ghost { background: var(--panel2); color: var(--text); }
-.foot { margin-top: 18px; font-size: 13px; color: var(--dim); text-align: center; }
+.stamp { width: 120px; height: 120px; margin: 6px auto 10px; border-radius: 28px; display: grid; place-items: center; font-size: 60px; font-weight: 900; color: #111; background: var(--gc); animation: stamp .5s cubic-bezier(.2,1.6,.4,1); }
+.stamp.fail { font-size: 34px; }
+@keyframes stamp { from { transform: scale(2.2) rotate(-12deg); opacity: 0; } }
+.total { font: 800 30px var(--mono); }
+.rows { text-align: left; margin: 16px 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.rows li { background: var(--panel2); border-radius: 10px; padding: 9px 12px; font-size: 14px; }
+.rows li span { display: block; color: var(--muted); font-size: 13px; }
+.foot { margin-top: 14px; font-size: 13px; color: var(--dim); text-align: center; }
 
-@media (max-width: 720px) {
-  .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-  .choice { grid-template-columns: 1fr; }
-  .choice .tags { grid-row: auto; grid-column: 1; justify-content: flex-start; }
+@media (max-width: 820px) {
+  .hud { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .brand { grid-column: 1 / -1; }
+  .coils { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; }
+  .choices { grid-template-columns: 1fr; }
+  .gauge { width: 150px; }
 }
-@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } .agent { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { *, body.alarm { animation: none !important; } .agent, .chief { opacity: 1; transform: none; } }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <header class="top">
-    <div class="brand">STEEL MIND<small>AI 제철소 운영 시뮬레이션 · 압연 미션 시안</small></div>
-    <div class="status" id="status">공정 정상 가동</div>
+  <header class="hud" id="hud">
+    <div class="brand"><b>STEEL MIND</b><span id="day">DAY 01 · 열간압연</span></div>
   </header>
-  <nav class="steps" id="steps" aria-label="진행 단계"></nav>
-  <main id="app" aria-live="polite"></main>
+
+  <section class="stage" aria-label="열간압연 라인">
+    <svg id="svg" viewBox="0 0 1000 300" role="img" aria-label="슬라브가 재가열로에서 권취기까지 흘러가는 압연 라인"></svg>
+    <div class="topbar"><span class="chip" id="status">공정 정상 가동</span><span class="chip" id="speed" style="--st:var(--accent)">라인 속도 100%</span></div>
+    <div class="gauge"><div class="k">사상압연기 롤 온도 <span class="t" id="temp">820℃</span></div><div class="bar"><i id="tempbar"></i></div></div>
+  </section>
+
+  <section class="event" id="event" aria-live="assertive"></section>
   <p class="foot">수치와 결과는 게임 밸런스를 위한 가상 값입니다. 실제 제철소 운영 기준이 아닙니다.</p>
 </div>
 
+<div class="overlay" id="overlay"></div>
+
 <script>
-// ── 설정: 지표, 가중치, 안전 하한선 ─────────────────────────────
+// ── 규칙 (게임 엔진만 읽는다) ────────────────────────────────
 const METRICS = [
   { id: 'production', name: '생산량', weight: 0.30 },
   { id: 'quality', name: '품질', weight: 0.25 },
@@ -155,189 +175,285 @@ const METRICS = [
   { id: 'cost', name: '비용 효율', weight: 0.10 },
 ];
 const START = { production: 70, quality: 80, safety: 90, cost: 75 };
-const SAFETY_FLOOR = 60;           // 이 아래면 점수와 상관없이 실패
+const SAFETY_FLOOR = 60;
 const GRADES = [[90, 'S', '#6cc3b0'], [80, 'A', '#6fcf97'], [65, 'B', '#e8c25a']];
+const DECIDE_SECONDS = 20;
 
 const AGENTS = {
-  production: { name: '생산 에이전트', goal: '생산량·납기', ic: '생', c: '#7aa7ff' },
-  quality: { name: '품질 에이전트', goal: '제품 품질 기준', ic: '품', c: '#c99bff' },
-  equipment: { name: '설비 에이전트', goal: '설비 안정성·가동률', ic: '설', c: '#f0a04b' },
-  safety: { name: '안전 에이전트', goal: '작업자 위험 최소화', ic: '안', c: '#6fcf97' },
+  production: { name: '생산', ic: '생', c: '#7aa7ff' },
+  quality: { name: '품질', ic: '품', c: '#c99bff' },
+  equipment: { name: '설비', ic: '설', c: '#f0a04b' },
+  safety: { name: '안전', ic: '안', c: '#6fcf97' },
 };
 
-// ── 미션: 압연 공정 (사건 2개, LEVEL 1 → LEVEL 2 사건 하나 추가) ──
-// effect는 게임 엔진 규칙이다. LLM은 이 값을 만들거나 바꾸지 않는다.
+// 사건이 터지는 시점(초), 시간이 다 되면 실행되는 선택(timeout), 선택마다 화면 반응(fx)
 const EVENTS = [
   {
-    id: 'rolling_temperature', level: 'LEVEL 1', hot: 'finishing_mill',
-    title: '사상압연기 온도 상승',
-    desc: '사상압연기 롤 온도가 기준보다 빠르게 오르고 있습니다. 오늘 출하할 코일 주문이 아직 남아 있습니다.',
+    id: 'rolling_temperature', at: 5, level: 'LEVEL 1', warn: 'finishing_mill', timeout: 'continue_production',
+    title: '사상압연기 온도 상승', desc: '롤 온도가 기준보다 빠르게 오릅니다. 오늘 출하할 코일 주문이 남아 있습니다.',
     agents: [
-      { a: 'production', say: '지금 속도를 유지해야 오늘 주문량을 맞출 수 있습니다.', why: '속도를 낮추면 남은 코일 출하가 늦어집니다.', rec: 'continue_production' },
-      { a: 'equipment', say: '속도를 낮추고 롤 냉각 상태를 확인해야 합니다.', why: '온도가 계속 오르면 롤 손상으로 더 긴 정지가 생길 수 있습니다.', rec: 'reduce_speed' },
-      { a: 'safety', say: '과열 구역 주변 작업자를 먼저 빼 주세요.', why: '설비 이상이 커지면 근처 작업자가 가장 먼저 위험해집니다.', rec: 'stop_and_inspect' },
-      { a: 'quality', say: '온도 변화가 강판 두께에 영향을 줬는지 확인이 필요합니다.', why: '롤 온도가 흔들리면 두께 편차가 생길 수 있습니다.', rec: 'reduce_speed' },
+      { a: 'production', say: '속도를 유지해야 오늘 주문량을 맞춥니다.', why: '감속하면 남은 코일 출하가 늦어져요.', rec: 'continue_production' },
+      { a: 'equipment', say: '속도를 낮추고 롤 냉각부터 확인하죠.', why: '이대로 오르면 롤이 상해 더 오래 멈춥니다.', rec: 'reduce_speed' },
+      { a: 'safety', say: '과열 구역 주변 인원부터 빼 주세요.', why: '설비 이상이 커지면 근처 사람이 먼저 다칩니다.', rec: 'stop_and_inspect' },
+      { a: 'quality', say: '온도가 흔들리면 강판 두께가 고르지 않아요.', why: '속도를 조정해 조건을 안정시키는 게 좋습니다.', rec: 'reduce_speed' },
     ],
-    chief: '생산 에이전트는 납기를, 설비·안전 에이전트는 더 큰 정지와 사고를 걱정합니다. 품질 에이전트는 속도 조정 쪽입니다.',
+    chief: '납기를 지킬지, 더 큰 정지와 사고를 막을지가 쟁점입니다.',
     choices: [
-      { id: 'continue_production', t: '생산 우선: 속도 유지', s: '그대로 가동하며 온도만 지켜본다', effect: { production: 12, quality: -6, safety: -18, cost: 4 }, flag: 'overheated' },
-      { id: 'reduce_speed', t: '균형 대응: 속도 조정 후 점검', s: '속도를 낮추고 롤 냉각 상태를 확인한다', effect: { production: -5, quality: 3, safety: 6, cost: -6 } },
-      { id: 'stop_and_inspect', t: '안전 우선: 일시 정지·구역 통제', s: '라인을 멈추고 과열 구역 출입을 막는다', effect: { production: -14, quality: 4, safety: 12, cost: -10 } },
+      { id: 'continue_production', t: '속도 유지', s: '그대로 돌리며 온도만 지켜본다', effect: { production: 12, quality: -6, safety: -18, cost: 4 }, flag: 'overheated', fx: { speed: 1, temp: 975 } },
+      { id: 'reduce_speed', t: '감속 후 점검', s: '속도를 낮추고 롤 냉각을 확인한다', effect: { production: -5, quality: 3, safety: 6, cost: -6 }, fx: { speed: .55, temp: 870 } },
+      { id: 'stop_and_inspect', t: '일시 정지·구역 통제', s: '라인을 멈추고 과열 구역 출입을 막는다', effect: { production: -14, quality: 4, safety: 12, cost: -10 }, fx: { speed: 0, temp: 800, resume: 3 } },
     ],
   },
   {
-    id: 'worker_in_zone', level: 'LEVEL 2', hot: 'runout_table', worker: true,
-    title: '작업자 위험 구역 접근',
-    desc: '런아웃 테이블 옆 출입 통제 구역에 작업자 한 명이 들어왔습니다. 라인은 가동 중입니다.',
+    id: 'worker_in_zone', at: 9, level: 'LEVEL 2', warn: 'runout_table', worker: true, timeout: 'continue_with_radio',
+    title: '작업자 위험 구역 진입', desc: '가동 중인 런아웃 테이블 옆 통제 구역에 작업자 한 명이 들어왔습니다.',
     agents: [
-      { a: 'production', say: '작업자에게 무전으로 알리고 라인은 계속 돌립시다.', why: '다시 멈추면 오늘 목표를 맞추기 어렵습니다.', rec: 'continue_with_radio' },
-      { a: 'safety', say: '즉시 라인을 멈춰야 합니다.', why: '가동 중인 런아웃 테이블 옆은 사람이 있으면 안 되는 구역입니다.', rec: 'emergency_stop' },
-      { a: 'equipment', say: '속도를 낮추고 작업자가 나간 것을 확인한 뒤 올립시다.', why: '급정지는 설비에 부담을 주지만, 감속은 위험을 줄입니다.', rec: 'slow_and_clear' },
+      { a: 'production', say: '무전으로 알리고 라인은 계속 돌립시다.', why: '또 멈추면 오늘 목표는 못 맞춥니다.', rec: 'continue_with_radio' },
+      { a: 'safety', say: '지금 바로 라인을 멈춰야 합니다!', why: '사람이 있는 구역에서 설비를 돌리면 안 됩니다.', rec: 'emergency_stop' },
+      { a: 'equipment', say: '감속하고, 작업자가 나간 걸 확인한 뒤 올리죠.', why: '급정지는 설비에 부담이지만 감속은 위험을 줄입니다.', rec: 'slow_and_clear' },
     ],
-    chief: '이 사건에서 안전은 점수가 아니라 지켜야 할 조건입니다. 안전 지수가 하한선 아래로 떨어지면 미션은 실패합니다.',
+    chief: '여기서 안전은 점수가 아니라 조건입니다. 안전이 60 아래로 떨어지면 미션 실패입니다.',
     choices: [
-      { id: 'continue_with_radio', t: '생산 우선: 무전 경고 후 계속 가동', s: '작업자에게 알리고 라인은 그대로 둔다', effect: { production: 6, quality: 0, safety: -45, cost: 2 } }, // 어느 경로에서 와도 하한선 아래: 사람이 있는 구역을 그대로 돌리는 선택은 항상 실패
-      { id: 'slow_and_clear', t: '균형 대응: 감속 후 구역 비우기', s: '속도를 낮추고 작업자 이동을 확인한다', effect: { production: -4, quality: 0, safety: 4, cost: -3 } },
-      { id: 'emergency_stop', t: '안전 우선: 즉시 정지', s: '라인을 멈추고 구역을 통제한다', effect: { production: -12, quality: 0, safety: 14, cost: -8 } },
+      { id: 'continue_with_radio', t: '무전 경고 후 계속', s: '작업자에게 알리고 라인은 그대로', effect: { production: 6, quality: 0, safety: -45, cost: 2 }, fx: { speed: 1, accident: true } },
+      { id: 'slow_and_clear', t: '감속 후 구역 비우기', s: '속도를 낮추고 작업자 이동을 확인', effect: { production: -4, quality: 0, safety: 4, cost: -3 }, fx: { speed: .4, workerOut: true, resume: 3 } },
+      { id: 'emergency_stop', t: '즉시 정지', s: '라인을 멈추고 구역을 통제', effect: { production: -12, quality: 0, safety: 14, cost: -8 }, fx: { speed: 0, workerOut: true, resume: 4 } },
     ],
-    // 앞 사건에서 속도를 유지했다면 설비가 이미 달아올라 위험이 더 크다
-    carry: (flags) => flags.overheated ? { safety: -5, note: '앞 사건에서 속도를 유지해 설비 온도가 높은 상태로 시작합니다. (안전 -5)' } : null,
+    carry: (flags) => flags.overheated ? { safety: -5, note: '앞에서 속도를 유지해 설비가 달아오른 채로 시작합니다 (안전 −5)' } : null,
   },
 ];
 
 const LINE = [
-  ['reheating_furnace', '재가열로'], ['descaler', '스케일 제거기'], ['roughing_mill', '조압연기'],
-  ['finishing_mill', '사상압연기'], ['runout_table', '런아웃 테이블'], ['coiler', '권취기'],
+  ['reheating_furnace', '재가열로', 40, 120], ['descaler', '스케일 제거기', 200, 90], ['roughing_mill', '조압연기', 330, 100],
+  ['finishing_mill', '사상압연기', 470, 130], ['runout_table', '런아웃 테이블', 640, 180], ['coiler', '권취기', 860, 100],
 ];
 
-// ── 게임 엔진 ────────────────────────────────────────────────
+// ── 엔진 ────────────────────────────────────────────────────
 const clamp = (v) => Math.max(0, Math.min(100, v));
 const score = (s) => Math.round(METRICS.reduce((t, m) => t + s[m.id] * m.weight, 0) * 10) / 10;
 function grade(s) {
-  if (s.safety < SAFETY_FLOOR) return { g: '실패', c: '#ff6b6b', why: `안전 지수가 하한선(${SAFETY_FLOOR}) 아래로 떨어졌습니다.` };
+  if (s.safety < SAFETY_FLOOR) return { g: '실패', c: '#ff6b6b', why: `안전 지수가 하한선(${SAFETY_FLOOR}) 아래로 떨어졌습니다. 점수와 상관없이 실패입니다.` };
   const total = score(s);
-  for (const [min, g, c] of GRADES) if (total >= min) return { g, c, why: `안전을 지키며 종합 ${min}점 이상을 냈습니다.` };
+  for (const [min, g, c] of GRADES) if (total >= min) return { g, c, why: `안전을 지키면서 종합 ${min}점 이상을 냈습니다.` };
   return { g: 'C', c: '#9a9aa0', why: '안전은 지켰지만 종합 점수가 65점보다 낮습니다.' };
 }
-function apply(state, effect) {
-  const next = { ...state };
-  for (const m of METRICS) next[m.id] = clamp(next[m.id] + (effect[m.id] || 0));
-  return next;
-}
+const apply = (s, e) => Object.fromEntries(METRICS.map((m) => [m.id, clamp(s[m.id] + (e[m.id] || 0))]));
 
-// ── 상태 ────────────────────────────────────────────────────
-let G;
-function reset() { G = { state: { ...START }, flags: {}, i: 0, phase: 'dashboard', log: [], prev: null, carryNote: null }; render(); }
-
-// ── 화면 ────────────────────────────────────────────────────
-const $app = document.getElementById('app');
-const PHASES = [['dashboard', '① 공장 대시보드'], ['agents', '② 에이전트 회의실'], ['decide', '③ 의사결정'], ['result', '④ 결과 보고서']];
+// ── 화면 요소 ────────────────────────────────────────────────
+const $ = (id) => document.getElementById(id);
 const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const sign = (n) => (n > 0 ? '+' : '') + n;
+const NS = 'http://www.w3.org/2000/svg';
+const el = (tag, attrs, parent) => { const n = document.createElementNS(NS, tag); for (const k in attrs) n.setAttribute(k, attrs[k]); parent && parent.appendChild(n); return n; };
 
-function kpis(state, prev) {
-  return `<div class="kpis">${METRICS.map((m) => {
-    const v = state[m.id], d = prev ? v - prev[m.id] : 0;
-    const c = m.id === 'safety' && v < SAFETY_FLOOR ? 'var(--bad)' : 'var(--accent)';
-    return `<div class="kpi ${m.id}"><div class="k">${m.name}<em>${Math.round(m.weight * 100)}%</em></div>
-      <div><span class="v">${v}</span>${d ? `<span class="d ${d > 0 ? 'up' : 'down'}">${sign(d)}</span>` : ''}</div>
-      <div class="bar"><i style="width:${v}%;--c:${c}"></i></div></div>`;
-  }).join('')}</div>`;
+$('hud').insertAdjacentHTML('beforeend', METRICS.map((m) => `<div class="m ${m.id}" id="m-${m.id}"><div class="k">${m.name}<em>${Math.round(m.weight * 100)}%</em></div><div class="v">0</div><div class="bar"><i></i></div></div>`).join('')
+  + '<div class="coils"><div class="k">생산 코일</div><div class="v" id="coils">0</div></div>');
+
+const svg = $('svg');
+const Y = 170;
+el('rect', { x: 0, y: Y + 14, width: 1000, height: 6, fill: 'rgba(255,255,255,.06)' }, svg);
+for (let x = 10; x < 1000; x += 22) el('circle', { class: 'roller', cx: x, cy: Y + 17, r: 4 }, svg);
+const eqNodes = {};
+for (const [id, nm, x, w] of LINE) {
+  if (id === 'runout_table') eqNodes.zone = el('rect', { class: 'st-zone', x: x - 6, y: Y + 30, width: w + 12, height: 70, rx: 10, opacity: 0 }, svg);
+  const top = id === 'coiler' ? Y - 40 : Y - 56;
+  eqNodes[id] = el('rect', { class: 'st-eq', x, y: top, width: w, height: id === 'runout_table' ? 40 : 66, rx: 10 }, svg);
+  el('text', { class: 'st-label', x: x + w / 2, y: top - 10, 'text-anchor': 'middle' }, svg).textContent = nm;
+}
+el('text', { class: 'st-label', x: 14, y: 56 }, svg).textContent = '슬라브 투입';
+const coilStack = el('g', {}, svg);
+const slabLayer = el('g', {}, svg);
+const worker = el('g', { opacity: 0 }, svg);
+el('circle', { cx: 0, cy: -16, r: 7, fill: '#e8c25a' }, worker);
+el('rect', { x: -7, y: -8, width: 14, height: 20, rx: 5, fill: '#e8c25a' }, worker);
+el('text', { class: 'st-label', x: 0, y: 30, 'text-anchor': 'middle' }, worker).textContent = '작업자';
+const flash = el('rect', { x: 0, y: 0, width: 1000, height: 300, fill: '#ff6b6b', opacity: 0 }, svg);
+
+// ── 상태 ────────────────────────────────────────────────────
+let G, raf, last;
+function reset() {
+  G = { state: { ...START }, flags: {}, i: 0, t: 0, mode: 'title', speed: 1, target: 1, temp: 820, tempTarget: 820,
+        slabs: [], spawn: 0, coils: 0, log: [], deadline: 0, resumeAt: 0, workerX: 690, workerTarget: 690, accident: false };
+  slabLayer.innerHTML = ''; coilStack.innerHTML = ''; worker.setAttribute('opacity', 0); eqNodes.zone.setAttribute('opacity', 0);
+  Object.values(eqNodes).forEach((n) => n.classList.remove('warn'));
+  $('event').className = 'event'; document.body.classList.remove('alarm');
+  updateHud(null); title();
 }
 
-function line(ev) {
-  const w = 120, gap = 14, y = 26, h = 44;
-  const boxes = LINE.map(([id, nm], k) => {
-    const x = 10 + k * (w + gap), hot = ev && ev.hot === id;
-    const arrow = k < LINE.length - 1 ? `<path d="M${x + w + 2} ${y + h / 2}h${gap - 4}" stroke="rgba(255,255,255,.25)" stroke-width="2" marker-end="url(#ah)"/>` : '';
-    const worker = ev && ev.worker && hot ? `<circle class="worker" cx="${x + w / 2}" cy="${y + h + 16}" r="6"/><text x="${x + w / 2}" y="${y + h + 38}" text-anchor="middle">작업자</text>` : '';
-    return `<rect class="${hot ? 'hot' : 'box'}" x="${x}" y="${y}" width="${w}" height="${h}" rx="10"/><text x="${x + w / 2}" y="${y + h / 2 + 5}" text-anchor="middle">${nm}</text>${arrow}${worker}`;
-  }).join('');
-  return `<div class="line" aria-label="열간압연 라인"><svg viewBox="0 0 ${10 + LINE.length * (w + gap)} 124">
-    <defs><marker id="ah" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0 0L6 3L0 6z" fill="rgba(255,255,255,.35)"/></marker></defs>
-    <text x="10" y="14">슬라브</text><text x="${LINE.length * (w + gap) - 4}" y="14" text-anchor="end">열연 코일</text>${boxes}</svg></div>`;
-}
-
-function steps() {
-  const k = PHASES.findIndex(([p]) => p === G.phase);
-  document.getElementById('steps').innerHTML = G.phase === 'final' ? '<span class="on">최종 운영 평가</span>'
-    : PHASES.map(([, nm], j) => `<span class="${j === k ? 'on' : j < k ? 'done' : ''}">${nm}</span>`).join('');
-  const st = document.getElementById('status');
-  const danger = G.phase !== 'final' && G.phase !== 'dashboard' || (G.phase === 'dashboard' && G.i > 0);
-  st.textContent = G.phase === 'final' ? '미션 종료' : G.phase === 'result' ? '조치 완료' : G.phase === 'dashboard' && G.i === 0 ? '공정 정상 가동' : '이상 상황 발생';
-  st.style.setProperty('--st', G.phase === 'final' || G.phase === 'result' ? 'var(--accent)' : danger ? 'var(--heat)' : 'var(--ok)');
-}
-
-function render() {
-  steps();
-  const ev = EVENTS[G.i];
-  if (G.phase === 'dashboard') {
-    const carry = ev.carry && ev.carry(G.flags);
-    if (carry && G.carryNote === null) { G.state = apply(G.state, { safety: carry.safety }); G.carryNote = carry.note; }
-    $app.innerHTML = `<section class="panel">
-      <div class="eyebrow">DAY 01 · 열간압연 공정 · 사건 ${G.i + 1}/${EVENTS.length} · ${ev.level}</div>
-      <h2>공장 현황</h2><p class="lead">생산 목표 달성률은 생산량 지수로 봅니다. 안전 막대의 빨간 선이 하한선(${SAFETY_FLOOR})입니다.</p>
-      ${kpis(G.state)}${line(ev)}
-      <div class="event" role="alert"><div><b>⚠ ${esc(ev.title)}</b><p>${esc(ev.desc)}</p>${G.carryNote ? `<p class="note">${esc(G.carryNote)}</p>` : ''}</div></div>
-      <div class="actions"><button class="btn" data-go="agents">에이전트 회의 열기</button></div></section>`;
-  } else if (G.phase === 'agents') {
-    $app.innerHTML = `<section class="panel">
-      <div class="eyebrow">${esc(ev.title)}</div><h2>에이전트 회의실</h2>
-      <p class="lead">같은 상황을 에이전트마다 자기 목표로 읽고 행동을 제안합니다.</p>
-      <div class="agents">${ev.agents.map((x, k) => {
-        const A = AGENTS[x.a], rec = ev.choices.find((c) => c.id === x.rec);
-        return `<article class="agent" style="--c:${A.c};animation-delay:${k * 120}ms">
-          <div class="who"><span class="ic">${A.ic}</span><div><div class="nm">${A.name}</div><div class="goal">목표: ${A.goal}</div></div></div>
-          <p class="say">“${esc(x.say)}”</p><p class="why">근거: ${esc(x.why)}</p><div class="rec">추천 → ${esc(rec.t.split(':')[0])}</div></article>`;
-      }).join('')}</div>
-      <div class="chief"><b>공장장 에이전트 정리</b><p>${esc(ev.chief)}</p></div>
-      <div class="actions"><button class="btn" data-go="decide">결정하러 가기</button><button class="btn ghost" data-go="dashboard">현황 다시 보기</button></div></section>`;
-  } else if (G.phase === 'decide') {
-    $app.innerHTML = `<section class="panel">
-      <div class="eyebrow">${esc(ev.title)}</div><h2>어떻게 대응할까요?</h2>
-      <p class="lead">에이전트 제안은 참고 자료입니다. 최종 결정은 운영 책임자인 당신이 합니다.</p>
-      <div class="choices">${ev.choices.map((c) => `<button class="choice" data-pick="${c.id}">
-        <span class="t">${esc(c.t)}</span><span class="s">${esc(c.s)}</span>
-        <span class="tags">${METRICS.filter((m) => c.effect[m.id]).map((m) => `<span class="tag ${c.effect[m.id] > 0 ? 'up' : 'down'}">${m.name} ${c.effect[m.id] > 0 ? '▲' : '▼'}</span>`).join('')}</span></button>`).join('')}</div>
-      <p class="note">▲▼는 예상 방향만 보여 줍니다. 실제 변화량은 결과 보고서에서 확인합니다.</p></section>`;
-  } else if (G.phase === 'result') {
-    const last = G.log[G.log.length - 1], failed = G.state.safety < SAFETY_FLOOR, more = G.i < EVENTS.length - 1 && !failed;
-    $app.innerHTML = `<section class="panel">
-      <div class="eyebrow">${esc(ev.title)} · 결과 보고서</div><h2>${esc(last.choice)}</h2>
-      <p class="lead">${failed ? '안전 지수가 하한선 아래로 떨어져 라인이 강제로 멈췄습니다.' : '게임 엔진이 정해진 규칙으로 지표를 다시 계산했습니다.'}</p>
-      ${kpis(G.state, G.prev)}
-      <ul class="log"><li>이 결정을 추천한 에이전트<span>${last.backers.length ? last.backers.map((a) => AGENTS[a].name).join(', ') : '없음: 에이전트 제안과 다른 결정'}</span></li>
-      <li>현재 종합 점수<span>${score(G.state)}점 (생산 30% · 품질 25% · 안전 35% · 비용 10%)</span></li></ul>
-      <div class="actions"><button class="btn" data-go="${more ? 'next' : 'final'}">${more ? '다음 사건으로' : '최종 평가 보기'}</button></div></section>`;
-  } else if (G.phase === 'final') {
-    const r = grade(G.state), total = score(G.state);
-    $app.innerHTML = `<section class="panel">
-      <div class="eyebrow">최종 공장 운영 평가</div><h2>압연 미션 결과</h2>
-      <div class="grade"><div class="g" style="--gc:${r.c}">${r.g}</div><div class="sc">종합 운영 점수<b>${total} / 100</b>${esc(r.why)}</div></div>
-      ${kpis(G.state, START)}
-      <ul class="log">${G.log.map((l) => `<li>${esc(l.event)}: ${esc(l.choice)}<span>${METRICS.map((m) => l.effect[m.id] ? `${m.name} ${sign(l.effect[m.id])}` : '').filter(Boolean).join(' · ')}</span></li>`).join('')}</ul>
-      <p class="note">등급: S 90+ · A 80+ · B 65+ (모두 안전 지수 ${SAFETY_FLOOR} 이상일 때). 안전이 하한선 아래면 점수와 상관없이 실패입니다.</p>
-      <div class="actions"><button class="btn" data-go="restart">처음부터 다시</button></div></section>`;
+function updateHud(prev) {
+  for (const m of METRICS) {
+    const box = $('m-' + m.id), v = G.state[m.id];
+    box.querySelector('.v').textContent = v;
+    const i = box.querySelector('i'); i.style.width = v + '%';
+    i.style.setProperty('--c', m.id === 'safety' && v < SAFETY_FLOOR ? 'var(--bad)' : 'var(--accent)');
+    if (prev && prev[m.id] !== v) {
+      const d = v - prev[m.id];
+      box.classList.remove('hit'); void box.offsetWidth; box.classList.add('hit');
+      box.insertAdjacentHTML('beforeend', `<span class="float ${d > 0 ? 'up' : 'down'}">${sign(d)}</span>`);
+      setTimeout(() => box.querySelector('.float')?.remove(), 1400);
+    }
   }
-  $app.querySelector('.btn, .choice')?.focus({ preventScroll: true });
+}
+function setStatus(text, color) { $('status').textContent = text; $('status').style.setProperty('--st', color); }
+
+// ── 실시간 루프 ──────────────────────────────────────────────
+function loop(now) {
+  const dt = Math.min(0.05, (now - (last || now)) / 1000); last = now;
+  const slow = G.mode === 'event' ? 0.25 : 1;              // 결정하는 동안은 라인이 천천히 흐른다
+  G.speed += (G.target - G.speed) * Math.min(1, dt * 3);
+  G.temp += (G.tempTarget - G.temp) * Math.min(1, dt * (G.mode === 'event' ? 0.12 : 0.8));
+  const v = 160 * G.speed * slow;
+
+  if (G.mode === 'run' || G.mode === 'event' || G.mode === 'after') {
+    if (G.mode !== 'event') G.t += dt * (G.speed > 0.05 ? 1 : 0.6);
+    G.spawn -= dt * G.speed * slow;
+    if (G.spawn <= 0 && G.speed > 0.05) { G.spawn = 1.25; addSlab(); }
+    for (const s of G.slabs) {
+      s.x += v * dt;
+      const p = s.x / 900, len = 70 + p * 120, h = 14 - p * 9;          // 지나갈수록 얇고 길어진다
+      const heat = Math.max(0, 1 - Math.max(0, s.x - 640) / 240);        // 런아웃 테이블에서 식는다
+      s.n.setAttribute('x', s.x - len / 2); s.n.setAttribute('width', len); s.n.setAttribute('y', Y + 10 - h); s.n.setAttribute('height', h);
+      s.n.setAttribute('fill', `rgb(${Math.round(120 + 135 * heat)},${Math.round(70 + 60 * heat)},${Math.round(60 - 30 * heat)})`);
+      s.n.setAttribute('filter', heat > .4 ? 'url(#glow)' : '');
+    }
+    while (G.slabs.length && G.slabs[0].x > 910) { G.slabs.shift().n.remove(); addCoil(); }
+  }
+  // 작업자
+  G.workerX += (G.workerTarget - G.workerX) * Math.min(1, dt * 1.5);
+  worker.setAttribute('transform', `translate(${G.workerX},${Y + 70})`);
+
+  // 온도계·속도 표시
+  const tp = Math.max(0, Math.min(1, (G.temp - 760) / 260));
+  $('temp').textContent = Math.round(G.temp) + '℃';
+  $('tempbar').style.width = tp * 100 + '%';
+  $('tempbar').style.setProperty('--c', G.temp > 930 ? 'var(--bad)' : G.temp > 880 ? 'var(--heat)' : 'var(--accent)');
+  $('speed').textContent = `라인 속도 ${Math.round(G.speed * 100)}%`;
+
+  // 진행
+  if (G.mode === 'run' && G.i < EVENTS.length && G.t >= EVENTS[G.i].at) startEvent();
+  if (G.mode === 'event') {
+    const left = Math.max(0, (G.deadline - now) / 1000);
+    const tm = document.querySelector('.timer');
+    if (tm) { tm.style.setProperty('--p', left / DECIDE_SECONDS); tm.querySelector('span').textContent = Math.ceil(left);
+      tm.style.setProperty('--tc', left < 6 ? 'var(--bad)' : 'var(--accent)'); }
+    if (left <= 0) pick(EVENTS[G.i].timeout, true);
+  }
+  if (G.mode === 'after' && G.resumeAt && now >= G.resumeAt) { G.target = Math.max(G.target, 1); G.resumeAt = 0; }
+  if (G.mode === 'after' && now >= G.nextAt) nextStep();
+  raf = requestAnimationFrame(loop);
+}
+const defs = el('defs', {}, svg);
+const f = el('filter', { id: 'glow', x: '-50%', y: '-200%', width: '200%', height: '500%' }, defs);
+el('feGaussianBlur', { stdDeviation: 4, result: 'b' }, f);
+const mg = el('feMerge', {}, f); el('feMergeNode', { in: 'b' }, mg); el('feMergeNode', { in: 'SourceGraphic' }, mg);
+function addSlab() { G.slabs.push({ x: 60, n: el('rect', { rx: 3 }, slabLayer) }); }
+function addCoil() {
+  G.coils += 1; $('coils').textContent = G.coils;
+  const k = G.coils - 1, cx = 880 + (k % 4) * 18, cy = Y + 70 - Math.floor(k / 4) * 16;
+  if (k < 24) el('circle', { cx, cy, r: 8, fill: '#8b8f96', stroke: '#5c6066', 'stroke-width': 3 }, coilStack);
 }
 
-$app.addEventListener('click', (e) => {
-  const go = e.target.closest('[data-go]')?.dataset.go, pick = e.target.closest('[data-pick]')?.dataset.pick;
-  if (pick) {
-    const ev = EVENTS[G.i], c = ev.choices.find((x) => x.id === pick);
-    G.prev = G.state; G.state = apply(G.state, c.effect);
-    if (c.flag) G.flags[c.flag] = true;
-    G.log.push({ event: ev.title, choice: c.t, effect: c.effect, backers: ev.agents.filter((a) => a.rec === pick).map((a) => a.a) });
-    G.phase = 'result';
-  } else if (go === 'next') { G.i += 1; G.phase = 'dashboard'; G.carryNote = null; G.prev = null; }
-  else if (go === 'restart') return reset();
-  else if (go) G.phase = go;
-  else return;
-  render(); window.scrollTo({ top: 0, behavior: 'smooth' });
+// ── 사건 진행 ────────────────────────────────────────────────
+function startEvent() {
+  const ev = EVENTS[G.i];
+  const carry = ev.carry && ev.carry(G.flags);
+  if (carry) { const prev = G.state; G.state = apply(G.state, { safety: carry.safety }); updateHud(prev); }
+  G.mode = 'event'; G.deadline = performance.now() + DECIDE_SECONDS * 1000;
+  document.body.classList.add('alarm');
+  eqNodes[ev.warn].classList.add('warn');
+  setStatus('이상 상황 발생', 'var(--bad)');
+  if (ev.id === 'rolling_temperature') G.tempTarget = 990;
+  if (ev.worker) { eqNodes.zone.setAttribute('opacity', 1); worker.setAttribute('opacity', 1); G.workerX = 640; G.workerTarget = 735; }
+
+  const box = $('event');
+  box.innerHTML = `<div class="ev-head"><div class="timer"><span>${DECIDE_SECONDS}</span></div>
+      <div><div class="lvl">${ev.level} · 사건 ${G.i + 1}/${EVENTS.length}</div><h2>⚠ ${esc(ev.title)}</h2><p>${esc(ev.desc)}</p>${carry ? `<p class="down">${esc(carry.note)}</p>` : ''}</div></div>
+    <div class="agents">${ev.agents.map((x) => { const A = AGENTS[x.a];
+      return `<div class="agent" style="--c:${A.c}"><div class="face">${A.ic}</div><div class="bubble"><div class="nm">${A.name} 에이전트</div><p>${esc(x.say)}</p><p class="why">${esc(x.why)}</p></div></div>`; }).join('')}</div>
+    <div class="chief"><b>공장장 에이전트</b> · ${esc(ev.chief)}</div>
+    <div class="choices">${ev.choices.map((c, k) => {
+      const backers = ev.agents.filter((a) => a.rec === c.id).map((a) => AGENTS[a.a].name);
+      return `<button class="choice" data-pick="${c.id}"><span class="key">${k + 1}</span><span class="t">${esc(c.t)}</span><span class="s">${esc(c.s)}</span>
+        <span class="tags">${METRICS.filter((m) => c.effect[m.id]).map((m) => `<span class="tag ${c.effect[m.id] > 0 ? 'up' : 'down'}">${m.name} ${c.effect[m.id] > 0 ? '▲' : '▼'}</span>`).join('')}</span>
+        <span class="backers">${backers.length ? '추천: ' + backers.join('·') : '추천한 에이전트 없음'}</span></button>`; }).join('')}</div>
+    <p class="hint">시간 안에 정하지 못하면 생산 에이전트 안이 그대로 실행됩니다. 키보드 1·2·3으로도 고를 수 있습니다.</p>`;
+  box.className = 'event on';
+  box.querySelectorAll('.agent').forEach((n, k) => setTimeout(() => n.classList.add('in'), 250 + k * 450));
+  setTimeout(() => box.querySelector('.chief')?.classList.add('in'), 250 + ev.agents.length * 450);
+  box.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function pick(id, timedOut) {
+  if (G.mode !== 'event') return;
+  const ev = EVENTS[G.i], c = ev.choices.find((x) => x.id === id);
+  const prev = G.state; G.state = apply(G.state, c.effect); updateHud(prev);
+  if (c.flag) G.flags[c.flag] = true;
+  G.log.push({ event: ev.title, choice: c.t, effect: c.effect, timedOut });
+  document.querySelectorAll('.choice').forEach((b) => { b.disabled = true; if (b.dataset.pick === id) b.classList.add('picked'); });
+  document.body.classList.remove('alarm');
+  eqNodes[ev.warn].classList.remove('warn');
+
+  const fx = c.fx, now = performance.now();
+  G.target = fx.speed; if (fx.temp) G.tempTarget = fx.temp;
+  if (fx.workerOut) G.workerTarget = 560;
+  G.resumeAt = fx.resume ? now + fx.resume * 1000 : 0;
+  if (fx.accident) {
+    G.accident = true; setStatus('안전 사고 발생', 'var(--bad)');
+    flash.animate([{ opacity: .55 }, { opacity: 0 }], { duration: 900, iterations: 2 });
+  } else setStatus(timedOut ? '결정 지연: 생산 안 자동 실행' : '조치 진행 중', timedOut ? 'var(--heat)' : 'var(--accent)');
+  if (ev.id === 'rolling_temperature' && id === 'continue_production') eqNodes.finishing_mill.classList.add('warn');
+  G.mode = 'after'; G.nextAt = now + (fx.accident ? 2600 : 3200);
+}
+
+function nextStep() {
+  const ev = EVENTS[G.i];
+  if (ev.worker) { setTimeout(() => { worker.setAttribute('opacity', 0); eqNodes.zone.setAttribute('opacity', 0); }, 400); }
+  $('event').className = 'event';
+  G.i += 1;
+  if (G.accident || G.state.safety < SAFETY_FLOOR || G.i >= EVENTS.length) { G.mode = 'end'; G.target = G.accident ? 0 : G.target; return finish(); }
+  G.mode = 'run'; G.t = 0; EVENTS[G.i].at = Math.max(3, EVENTS[G.i].at - 6);
+  setStatus('공정 가동 중', 'var(--ok)');
+}
+
+// ── 오버레이 ─────────────────────────────────────────────────
+function title() {
+  $('overlay').hidden = false;
+  $('overlay').innerHTML = `<div class="card"><h1>STEEL MIND</h1><p class="sub">AI 제철소 운영 시뮬레이션 · 압연 미션</p>
+    <ul class="brief">
+      <li>당신은 열간압연 공장의 <b>운영 책임자</b>입니다.</li>
+      <li>라인이 돌다가 사고가 터지면, 생산·품질·설비·안전 에이전트가 <b>서로 다른 해결책</b>을 냅니다.</li>
+      <li><b>${DECIDE_SECONDS}초</b> 안에 하나를 고르세요. 못 고르면 생산 에이전트 안이 실행됩니다.</li>
+      <li>안전이 <b>${SAFETY_FLOOR}</b> 아래로 떨어지면 다른 점수와 상관없이 실패입니다.</li>
+    </ul><button class="btn" data-act="start">교대 근무 시작</button></div>`;
+  $('overlay').querySelector('.btn').focus();
+}
+function finish() {
+  const r = grade(G.state), total = score(G.state);
+  setTimeout(() => {
+    $('overlay').hidden = false;
+    $('overlay').innerHTML = `<div class="card"><p class="sub" style="margin:0 0 4px">교대 근무 종료 · 최종 운영 평가</p>
+      <div class="stamp ${r.g === '실패' ? 'fail' : ''}" style="--gc:${r.c}">${r.g}</div>
+      <div class="total">${total} / 100</div><p class="sub">${esc(r.why)}</p>
+      <ul class="rows">${G.log.map((l) => `<li>${esc(l.event)} → <b>${esc(l.choice)}</b>${l.timedOut ? ' (시간 초과)' : ''}<span>${METRICS.filter((m) => l.effect[m.id]).map((m) => `${m.name} ${sign(l.effect[m.id])}`).join(' · ')}</span></li>`).join('')}
+        <li>생산한 코일 <b>${G.coils}개</b><span>코일 수는 보여 주기용이고 점수에는 들어가지 않습니다.</span></li></ul>
+      <p class="hint">등급: S 90+ · A 80+ · B 65+ (안전 ${SAFETY_FLOOR} 이상일 때)</p>
+      <button class="btn" data-act="restart">다시 근무하기</button></div>`;
+    $('overlay').querySelector('.btn').focus();
+  }, 900);
+}
+
+// ── 입력 ────────────────────────────────────────────────────
+document.addEventListener('click', (e) => {
+  const p = e.target.closest('[data-pick]'); if (p) return pick(p.dataset.pick, false);
+  const a = e.target.closest('[data-act]')?.dataset.act;
+  if (a === 'start') { $('overlay').hidden = true; G.mode = 'run'; setStatus('공정 가동 중', 'var(--ok)'); }
+  if (a === 'restart') { EVENTS[1].at = 9; reset(); }
+});
+document.addEventListener('keydown', (e) => {
+  if (G.mode === 'event' && ['1', '2', '3'].includes(e.key)) { const c = EVENTS[G.i].choices[+e.key - 1]; if (c) pick(c.id, false); }
 });
 
 reset();
+raf = requestAnimationFrame(loop);
 </script>
 </body>
 </html>
