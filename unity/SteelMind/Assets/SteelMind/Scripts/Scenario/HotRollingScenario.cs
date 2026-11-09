@@ -165,7 +165,7 @@ namespace SteelMind.Scenario
             var alarm = $"⚠ {ev.title}\n{ev.desc}";
             yield return Say(null, null, alarm, EfficiencyCalc.CarryApplies(ev, flags) ? ev.carry.note : null, false);
             foreach (var a in ev.agents) yield return Say(a.agent, null, a.say, a.why, false);
-            yield return Say("chief", null, ev.chief + "\n어떻게 하시겠습니까?", null, false);
+            yield return Say(null, null, $"쟁점 · {ev.chief}\n어떻게 하시겠습니까?", null, false);
             UnlockChoices();
             deciding = true;
             while (deciding) yield return null;
@@ -770,14 +770,11 @@ namespace SteelMind.Scenario
             AddText(right, "AI 진단", 16, Teal, FontStyle.Bold);
             var diagRow = NewRect("Diag", right);
             HLayout(diagRow.gameObject, 12);
-            var pic = NewRect("Avatar", diagRow);
-            var pimg = pic.gameObject.AddComponent<Image>(); pimg.sprite = Avatar("chief", null); pimg.preserveAspect = true;
-            LE(pic.gameObject, 52, 52);
             var bubble = NewRect("Bubble", diagRow);
             Round(bubble.gameObject, Bubble);
             VLayout(bubble.gameObject, 16, 10, 2);
             LE(bubble.gameObject, -1, -1, 1);
-            AddText(bubble, $"{C(ColorHex(Yellow), "<b>공장장 AI</b>")} {C(ColorHex(Dim), "· 기본 진단 (LLM 연결 전)")}", 15, Body);
+            AddText(bubble, C(ColorHex(Dim), "기본 진단 (LLM 연결 전)"), 13, Body);
             var diag = AddText(bubble, "", 16, Body);
             diagRow.gameObject.SetActive(false);
 
