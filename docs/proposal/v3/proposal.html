@@ -1,0 +1,687 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>STEEL MIND 기획서 v3</title>
+<style>
+@font-face { font-family: "NotoKR"; font-weight: 400; src: local("Noto Sans KR"), url("file:///C:/Windows/Fonts/NotoSansKR-Regular.ttf"); }
+@font-face { font-family: "NotoKR"; font-weight: 700; src: local("Noto Sans KR Bold"), url("file:///C:/Windows/Fonts/NotoSansKR-Bold.ttf"); }
+:root {
+  --ink: #0f1720; --muted: #55606c; --faint: #8a94a0; --line: #e3e6ea; --bg: #ffffff; --soft: #f4f6f8;
+  --blue: #2a78d6; --blue-soft: #e6f0fb; --orange: #eb6834; --orange-soft: #fdeee7;
+  --green: #1f9d6b; --green-soft: #e4f5ee; --navy: #13294b;
+  --game: #1d1a18; --game2: rgba(255,255,255,.07); --mint: #6cc3b0; --gtext: #f2f2f2; --gmuted: #b9b9be;
+}
+@page { size: A4; margin: 0; }
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink);
+  font-family: "NotoKR", "Noto Sans KR", sans-serif; font-size: 10.2pt; line-height: 1.6;
+  -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.page { width: 210mm; height: 297mm; padding: 16mm 16mm 14mm; position: relative; overflow: hidden; page-break-after: always; }
+.page:last-child { page-break-after: auto; }
+.foot { position: absolute; left: 16mm; right: 16mm; bottom: 8mm; display: flex; justify-content: space-between;
+  font-size: 7.5pt; color: var(--faint); border-top: 1px solid var(--line); padding-top: 2mm; }
+.kicker { font-size: 8.5pt; font-weight: 700; letter-spacing: .12em; color: var(--blue); }
+h1 { font-size: 34pt; line-height: 1.15; margin: 0; font-weight: 700; letter-spacing: -.02em; }
+h2 { font-size: 19pt; margin: 1mm 0 2mm; font-weight: 700; letter-spacing: -.01em; }
+h3 { font-size: 11.5pt; margin: 0 0 1.8mm; font-weight: 700; }
+p { margin: 0 0 2.5mm; }
+.lead { font-size: 10.8pt; color: var(--muted); margin-bottom: 6mm; }
+.muted { color: var(--muted); }
+.small { font-size: 9.1pt; }
+.xs { font-size: 8.3pt; }
+code { font-family: "Consolas", "NotoKR", monospace; font-size: .92em; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 5mm; }
+.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4mm; }
+.grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3mm; }
+.card { background: var(--soft); border-radius: 3mm; padding: 4mm 4.5mm; }
+.card.white { background: #fff; border: 1px solid var(--line); }
+.card.info { background: var(--blue-soft); }
+.card.warn { background: var(--orange-soft); }
+.card p:last-child { margin-bottom: 0; }
+.card .t { font-size: 9.6pt; font-weight: 700; display: block; margin-bottom: 1mm; }
+.card .t.b { color: var(--blue); } .card .t.o { color: var(--orange); } .card .t.g { color: var(--green); }
+.tag { display: inline-block; font-size: 7.5pt; font-weight: 700; padding: .4mm 2mm; border-radius: 10mm; }
+.tag.ok { background: var(--green-soft); color: var(--green); }
+.tag.no { background: var(--orange-soft); color: var(--orange); }
+.tag.keep { background: var(--blue-soft); color: var(--blue); }
+table { border-collapse: collapse; width: 100%; font-size: 9.2pt; }
+th, td { text-align: left; padding: 1.6mm 2mm; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-weight: 700; color: var(--muted); font-size: 8.6pt; }
+td.c, th.c { text-align: center; }
+td.n { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.nw { white-space: nowrap; }
+tr.hl td { background: var(--blue-soft); }
+.section-num { font-size: 40pt; font-weight: 700; color: var(--line); position: absolute; right: 16mm; top: 10mm; }
+.up { color: var(--green); font-weight: 700; } .dn { color: var(--orange); font-weight: 700; }
+
+/* cover */
+.cover { background: var(--navy); color: #fff; }
+.cover .kicker { color: #8fbaf0; }
+.cover .lead { color: #c3cfdf; }
+.cover .foot { color: #8193ad; border-color: #2a4268; }
+.cover .shot { border-radius: 3mm; overflow: hidden; border: 1px solid rgba(255,255,255,.15); position: relative; }
+.cover .shot img { display: block; width: 100%; }
+.kpi { border-radius: 3mm; padding: 4mm; background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.12); }
+.kpi .v { font-size: 13pt; font-weight: 700; line-height: 1.3; }
+.kpi .l { font-size: 8.3pt; color: #c3cfdf; margin-top: .5mm; }
+
+/* screenshot with markers */
+.map { position: relative; border-radius: 3mm; overflow: hidden; }
+.map img { display: block; width: 100%; }
+.pin { position: absolute; transform: translate(-50%, -50%); display: flex; align-items: center; gap: 1mm;
+  background: rgba(15,23,32,.82); color: #fff; font-size: 7.4pt; font-weight: 700; padding: .5mm 2mm .5mm .6mm; border-radius: 10mm; white-space: nowrap; }
+.pin b { display: inline-flex; width: 4.2mm; height: 4.2mm; border-radius: 50%; background: var(--mint); color: #062520; font-size: 7pt; align-items: center; justify-content: center; }
+.pin.ev { background: var(--orange); }
+.pin.ev b { background: #fff; color: var(--orange); }
+.num { display: inline-flex; width: 5mm; height: 5mm; min-width: 5mm; max-width: 5mm; min-height: 5mm; max-height: 5mm; aspect-ratio: 1; justify-self: start; align-self: start; border-radius: 50%; background: var(--mint); color: #062520; font-weight: 700; font-size: 8pt; align-items: center; justify-content: center; flex: none; }
+.num.ev { background: var(--orange); color: #fff; padding: 0; border: 0; border-radius: 50%; }
+.num { line-height: 1; text-align: center; }
+
+/* sprite tints for agents */
+.sp { image-rendering: pixelated; display: block; object-fit: contain; }
+.t-prod { filter: none; }
+.t-qual { filter: hue-rotate(55deg) saturate(1.3); }
+.t-equip { filter: hue-rotate(170deg) saturate(1.6); }
+.t-safe { filter: hue-rotate(-80deg) saturate(1.3); }
+
+/* game mock frames */
+.frame { background: var(--game); color: var(--gtext); border-radius: 2.5mm; height: 40mm; position: relative; overflow: hidden; }
+.frame.bgshot { background-image: url("assets/hsm2_background.png"); background-repeat: no-repeat; }
+.story { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4mm; }
+.story .cap { margin-top: 2mm; font-size: 9pt; }
+.story .cap b { display: flex; align-items: center; gap: 1.5mm; font-size: 9.6pt; margin-bottom: .5mm; }
+.badge { position: absolute; font-size: 7.5pt; font-weight: 700; padding: .6mm 2mm; border-radius: 10mm; }
+.bub { display: flex; gap: 1.6mm; align-items: flex-start; margin-bottom: 1.6mm; }
+.bub img { width: 7mm; height: 7mm; flex: none; }
+.bub div { background: var(--game2); border-radius: 1mm 2.5mm 2.5mm 2.5mm; padding: .8mm 2mm; font-size: 7.4pt; line-height: 1.4; }
+.bub div i { font-style: normal; font-weight: 700; display: block; font-size: 6.8pt; }
+.btns { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5mm; }
+.btns span { background: var(--game2); border-radius: 1.5mm; padding: 1.5mm; font-size: 7.4pt; font-weight: 700; line-height: 1.3; }
+.btns span.on { box-shadow: 0 0 0 1.5px var(--mint); }
+.timer { width: 11mm; height: 11mm; border-radius: 50%; background: conic-gradient(var(--mint) 0 70%, rgba(255,255,255,.1) 0); display: grid; place-items: center; position: relative; }
+.timer::before { content: ""; position: absolute; inset: 1.2mm; border-radius: 50%; background: var(--game); }
+.timer span { position: relative; font-family: Consolas, monospace; font-weight: 700; font-size: 9pt; }
+.hudrow { display: grid; grid-template-columns: 14mm 1fr 9mm; gap: 1.5mm; align-items: center; font-size: 7.4pt; margin-bottom: 1.8mm; }
+.hudrow .bar { height: 1.6mm; border-radius: 2mm; background: rgba(255,255,255,.1); position: relative; }
+.hudrow .bar i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 2mm; background: var(--mint); }
+.stamp { width: 16mm; height: 16mm; border-radius: 4mm; background: #6fcf97; color: #111; display: grid; place-items: center; font-weight: 700; font-size: 24pt; }
+
+/* events */
+.ev { border: 1px solid var(--line); border-radius: 3mm; padding: 4mm 4.5mm; }
+.ev-h { display: flex; gap: 3mm; align-items: center; margin-bottom: 2.5mm; }
+.ev-h .shot { width: 34mm; height: 17mm; border-radius: 2mm; background-image: url("assets/hsm2_background.png"); background-size: 360% auto; flex: none; position: relative; }
+.ev-h .shot::after { content: ""; position: absolute; inset: 0; border-radius: 2mm; box-shadow: inset 0 0 0 2px var(--orange); }
+.ev-h h3 { margin: 0; }
+.ev-h p { margin: 0; font-size: 9pt; color: var(--muted); }
+.says { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5mm 4mm; margin-bottom: 2.5mm; }
+.say { display: flex; gap: 2mm; align-items: flex-start; font-size: 8.8pt; line-height: 1.45; }
+.say img { width: 8mm; height: 8mm; flex: none; }
+.say b { display: block; font-size: 8.4pt; }
+.ev table { font-size: 8.8pt; }
+.ev td, .ev th { padding: 1.2mm 1.6mm; }
+
+/* flow */
+.flow { display: flex; align-items: stretch; }
+.flow .step { flex: 1; background: #fff; border: 1px solid var(--line); border-radius: 2.5mm; padding: 3mm; font-size: 8.8pt; line-height: 1.5; }
+.flow .step b { display: block; font-size: 9.4pt; margin-bottom: .8mm; white-space: nowrap; }
+.flow .step.me { background: var(--blue-soft); border-color: transparent; }
+.flow .step.rule { background: var(--orange-soft); border-color: transparent; }
+.flow .arrow { width: 5mm; display: flex; align-items: center; justify-content: center; color: var(--faint); font-size: 11pt; flex: none; }
+.code { font-family: Consolas, "NotoKR", monospace; font-size: 8.6pt; line-height: 1.55; white-space: pre; background: var(--soft); padding: 3.5mm 4mm; border-radius: 3mm; }
+
+/* people */
+.person { border-radius: 3mm; padding: 4mm; background: var(--soft); display: grid; grid-template-columns: 13mm 1fr; gap: 3mm; }
+.person img { width: 13mm; height: 13mm; }
+.person .name { font-size: 12pt; font-weight: 700; line-height: 1.2; }
+.person .what { font-size: 9pt; font-weight: 700; color: var(--blue); margin: .5mm 0 1.5mm; }
+.person ul { margin: 0; padding-left: 4mm; font-size: 8.8pt; color: var(--muted); }
+.person ul li { margin-bottom: .6mm; }
+.tl td { padding: 1.5mm 2mm; }
+.quote { background: var(--navy); color: #fff; border-radius: 3mm; padding: 5.5mm 7mm; }
+.quote .k { font-size: 7.5pt; font-weight: 700; letter-spacing: .08em; color: #8fbaf0; margin-bottom: 1.5mm; }
+.quote p { font-size: 11pt; line-height: 1.7; margin: 0; }
+
+/* role cards */
+.role-card { border-radius: 3mm; background: var(--soft); padding: 3.5mm 4.5mm; margin-bottom: 3.5mm; }
+.rc-h { display: flex; gap: 3mm; align-items: center; margin-bottom: 2mm; }
+.rc-h img { width: 11mm; height: 11mm; }
+.rc-h .name { font-size: 12pt; font-weight: 700; line-height: 1.2; }
+.rc-h .what { font-size: 9pt; font-weight: 700; color: var(--blue); }
+.rc-list { margin: 0; padding-left: 4.5mm; font-size: 9.3pt; line-height: 1.6; }
+.rc-b { display: grid; grid-template-columns: 1.35fr 1fr; gap: 5mm; }
+.rc-b ul { margin: 0; padding-left: 4mm; font-size: 8.7pt; line-height: 1.5; }
+.rc-b ul li { margin-bottom: .4mm; }
+.rc-b p { margin: 0; font-size: 8.7pt; }
+.theme { border-radius: 3mm; padding: 4.5mm 6mm; background: var(--navy); color: #fff; }
+.theme .k { font-size: 8pt; font-weight: 700; letter-spacing: .1em; color: #8fbaf0; margin-bottom: 1.2mm; }
+.theme .s { font-size: 15pt; font-weight: 700; line-height: 1.45; letter-spacing: -.01em; margin: 0; }
+.theme .s .g { color: #5fd3a0; } .theme .s .b { color: #7fb4ff; } .theme .s .o { color: #ff9a6e; }
+.cover .theme { background: rgba(255,255,255,.08); box-shadow: inset 0 0 0 1.5px rgba(143,186,240,.55); }
+.foot .mt { color: var(--muted); font-weight: 700; }
+.cover .foot .mt { color: #8fbaf0; }
+.lbl { font-size: 7.3pt; font-weight: 700; letter-spacing: .06em; color: var(--muted); margin-bottom: .8mm; }
+</style>
+</head>
+<body>
+
+<!-- ================= 표지 ================= -->
+<section class="page cover">
+  <div style="margin-top: 12mm" class="kicker">POSCO K-뉴딜 아카데미 내부 해커톤 · 프로젝트 기획서</div>
+  <h1 style="margin-top: 5mm">STEEL MIND</h1>
+  <p style="font-size: 16pt; font-weight: 700; margin: 2mm 0 0">AI Agent들의 회의로 운영하는 제철소 공정 시뮬레이션</p>
+  <div class="theme" style="margin-top: 6mm">
+    <div class="k">해커톤 대주제</div>
+    <p class="s">AI로 <span class="g">더 안전하고</span>, <span class="b">멈추지 않고</span>, <span class="o">더 정확하게</span> 생산하는 제철소를 만들어라.</p>
+  </div>
+
+  <div class="shot" style="margin-top: 6mm">
+    <img src="assets/hsm2_background.png" alt="제철소 공정 게임 배경">
+    <img class="sp t-prod" src="assets/knewdeal.png" alt="" style="position: absolute; width: 10mm; left: 47%; bottom: 4mm">
+  </div>
+  <p class="xs" style="color: #8193ad; margin-top: 1.5mm">게임 배경 시안(열간압연 맵). 제선 → 제강 → 연주 → 열간압연 공정별 맵을 만들고, 미션에 쓸 공정은 개발 단계에서 정합니다.</p>
+
+  <p class="lead" style="margin-top: 7mm; font-size: 12pt; line-height: 1.7">플레이어는 제철소 공정의 운영 책임자입니다. 라인이 돌다 사고 징후가 생기면 AI가 상황에 맞는 선택지를 만들고, 플레이어는 제한 시간 안에 하나를 고릅니다. 결정이 나면 생산·품질·설비·안전 Agent가 저마다의 입장으로 회의를 벌이고, 그 결과가 공장 지표로 이어집니다.</p>
+
+  <div class="grid4" style="margin-top: 6mm">
+    <div class="kpi"><div class="v">팀 철든신입</div><div class="l">박소영(ssoyoum)<br>양수빈(viiin2)<br>신원민(won2912)<br>김다영(cookieimda)</div></div>
+    <div class="kpi"><div class="v">Unity 게임</div><div class="l">공정별 맵 · 설비 화면<br>픽셀아트 캐릭터</div></div>
+    <div class="kpi"><div class="v">AI Agent 4명</div><div class="l">생산 · 품질 · 설비 · 안전<br>결정 뒤 반응 회의</div></div>
+    <div class="kpi"><div class="v">미션 1판</div><div class="l">사건 · 제한 시간 선택<br>결과 등급 S~C·실패</div></div>
+  </div>
+  <div class="foot"><span>STEEL MIND · 기획서 v3</span><span class="mt">AI로 더 안전하고, 멈추지 않고, 더 정확하게</span><span>2026-11-09</span></div>
+</section>
+
+<!-- ================= 대주제와 프로젝트 주제 ================= -->
+<section class="page">
+  <div class="section-num">01</div>
+  <div class="kicker">해커톤 대주제와 프로젝트 주제</div>
+  <h2>무엇을 만들고, 왜 이 주제인가</h2>
+  <div class="theme" style="margin-bottom: 4mm">
+    <div class="k">해커톤 대주제</div>
+    <p class="s">AI로 <span class="g">더 안전하고</span>, <span class="b">멈추지 않고</span>, <span class="o">더 정확하게</span> 생산하는 제철소를 만들어라.</p>
+  </div>
+  <div class="card info" style="margin-bottom: 5mm">
+    <span class="t b" style="font-size: 10pt">우리의 답: 프로젝트 주제</span>
+    <p style="font-size: 13.5pt; font-weight: 700; margin: .5mm 0 1.2mm; letter-spacing: -.01em">"만약 그때 이렇게 했다면?" 제철소의 What-if를 제한 시간 안에 결정하는 게임</p>
+    <p class="small" style="margin: 0; color: var(--muted)">AI가 만든 선택지 중 하나를 제한 시간 안에 고르고, 생산·품질·설비·안전 AI Agent의 엇갈린 반응을 겪어 보는 제철소 운영 시뮬레이션 게임</p>
+  </div>
+
+  <h3>대주제의 세 목표를 한 번의 결정에 모두 담습니다</h3>
+  <div class="grid3">
+    <div class="card" style="background: var(--green-soft)"><span class="tag ok">목표 1</span><span class="t g" style="margin-top: 1.5mm; font-size: 11pt">더 안전하게</span><p class="small">사고 징후가 보일 때 생산 압박을 이기고 위험을 먼저 막는 판단. 안전이 무너지면 다른 성과도 소용없습니다.</p></div>
+    <div class="card" style="background: var(--blue-soft)"><span class="tag keep">목표 2</span><span class="t b" style="margin-top: 1.5mm; font-size: 11pt">멈추지 않고</span><p class="small">무조건 세우는 것이 답은 아닙니다. 감속·점검으로 라인을 살리면서 위험을 줄이는 길을 찾습니다.</p></div>
+    <div class="card" style="background: var(--orange-soft)"><span class="tag no">목표 3</span><span class="t o" style="margin-top: 1.5mm; font-size: 11pt">더 정확하게</span><p class="small">설비 조건이 흔들리면 제품 품질도 흔들립니다. 불량 없이 만드는 것도 결정의 한 축입니다.</p></div>
+  </div>
+  <p class="small muted" style="margin: 2.5mm 0 0">세 목표는 자주 부딪힙니다. 멈추면 안전하지만 생산이 끊기고, 계속 돌리면 품질과 안전이 흔들립니다. STEEL MIND는 이 셋을 동시에 지키는 판단을 연습하는 게임입니다.</p>
+
+  <h3 style="margin-top: 5mm">이 주제를 고른 이유</h3>
+  <div style="display: grid; row-gap: 2.5mm">
+    <div style="display: grid; grid-template-columns: 7mm 1fr; gap: 2mm"><span class="num ev" style="margin-top: 2.1mm">1</span><div><b>안전·가동·품질은 따로 풀 수 없는 문제입니다.</b><p class="small muted" style="margin: .5mm 0 0">이상 징후와 납기 압박이 겹치면 "조금만 더 돌리자"는 판단이 사고와 불량으로 이어집니다.</p></div></div>
+    <div style="display: grid; grid-template-columns: 7mm 1fr; gap: 2mm"><span class="num ev" style="margin-top: 2.1mm">2</span><div><b>이 판단은 현장에 나가기 전에는 연습할 곳이 없습니다.</b><p class="small muted" style="margin: .5mm 0 0">신입사원은 부서 간 이해관계가 부딪히는 결정을 해 볼 기회가 없습니다. 게임에서는 실패해도 됩니다.</p></div></div>
+    <div style="display: grid; grid-template-columns: 7mm 1fr; gap: 2mm"><span class="num ev" style="margin-top: 2.1mm">3</span><div><b>AI가 늘어날수록 사람의 최종 판단이 더 중요해집니다.</b><p class="small muted" style="margin: .5mm 0 0">AI끼리 의견이 갈릴 때, 그럴듯한 제안 중에서 세 목표를 지키는 길을 고르는 연습이 필요합니다.</p></div></div>
+    <div style="display: grid; grid-template-columns: 7mm 1fr; gap: 2mm"><span class="num ev" style="margin-top: 2.1mm">4</span><div><b>우리 팀이 이틀 안에 끝까지 만들 수 있습니다.</b><p class="small muted" style="margin: .5mm 0 0">배운 Agent 설계·프롬프트·API 연동을 그대로 쓰고, 동작하는 시안과 배경 그림이 이미 있습니다.</p></div></div>
+  </div>
+
+  <h3 style="margin-top: 6mm">프로젝트 개요</h3>
+  <table>
+    <tr><th style="width: 28mm">항목</th><th>내용</th></tr>
+    <tr><td>대상</td><td>제철소 공정과 부서 간 이해관계를 처음 접하는 신입사원·교육생</td></tr>
+    <tr><td>형태</td><td>Unity 게임(제선·제강·연주·열간압연 공정별 맵), 미션 1판 단위</td></tr>
+    <tr><td>목표</td><td>11/10 02:00까지 미션 1판(공정은 개발 단계에서 확정)을 사건부터 결과 등급·AI 진단까지 완성</td></tr>
+  </table>
+  <div class="foot"><span>STEEL MIND · 기획서 v3</span><span class="mt">AI로 더 안전하고, 멈추지 않고, 더 정확하게</span><span>2</span></div>
+</section>
+
+<!-- ================= 역할 상세 ================= -->
+<section class="page">
+  <div class="section-num">02</div>
+  <div class="kicker">역할 분담</div>
+  <h2>누가 무엇을 맡는가</h2>
+  <p class="lead">한 사람이 한 영역을 끝까지 책임지고, 영역마다 최종 결정권자를 둡니다. 각자 무엇을 누구에게 넘기는지까지 정해 두어 통합 때 막히지 않게 합니다.</p>
+  <div class="grid2">
+    <div class="role-card" style="margin: 0">
+      <div class="rc-h"><img class="sp t-prod" src="assets/knewdeal.png" alt=""><div><div class="name">박소영 <span style="font-size: 9.5pt; color: var(--muted); font-weight: 700">(ssoyoum)</span> <span class="tag keep">팀장</span></div><div class="what">기획 · 통합</div></div></div>
+      <ul class="rc-list"><li>기획서와 플레이 흐름</li><li>Agent 페르소나와 회의 반응 설계</li><li>JSON 형식 정의와 통합</li></ul>
+    </div>
+    <div class="role-card" style="margin: 0">
+      <div class="rc-h"><img class="sp t-equip" src="assets/knewdeal.png" alt=""><div><div class="name">양수빈 <span style="font-size: 9.5pt; color: var(--muted); font-weight: 700">(viiin2)</span> </div><div class="what">게임 화면 · UI</div></div></div>
+      <ul class="rc-list"><li>Unity로 메인 게임 화면 제작</li><li>제선·제강·연주·압연 공정·설비·사건 화면 설계</li><li>공정 가동·설비 이상 표현, 지표·사건·선택 UI</li></ul>
+    </div>
+    <div class="role-card" style="margin: 0">
+      <div class="rc-h"><img class="sp t-qual" src="assets/knewdeal.png" alt=""><div><div class="name">신원민 <span style="font-size: 9.5pt; color: var(--muted); font-weight: 700">(won2912)</span> </div><div class="what">시나리오 · 규칙 엔진</div></div></div>
+      <ul class="rc-list"><li>사건과 행동 목록 설계</li><li>지표 계산·등급·밸런스</li><li>공정별 사건 데이터</li></ul>
+    </div>
+    <div class="role-card" style="margin: 0">
+      <div class="rc-h"><img class="sp t-safe" src="assets/knewdeal.png" alt=""><div><div class="name">김다영 <span style="font-size: 9.5pt; color: var(--muted); font-weight: 700">(cookieimda)</span></div><div class="what">AI 연동 · 결과 화면</div></div></div>
+      <ul class="rc-list"><li>LLM API 선택지 생성</li><li>AI 진단 로그</li><li>결과 화면</li></ul>
+    </div>
+  </div>
+  <div class="foot"><span>STEEL MIND · 기획서 v3</span><span class="mt">AI로 더 안전하고, 멈추지 않고, 더 정확하게</span><span>3</span></div>
+</section>
+
+<!-- ================= 협업과 일정 ================= -->
+<section class="page">
+  <div class="section-num">03</div>
+  <div class="kicker">협업 방식과 추진 일정</div>
+  <h2>형식을 먼저 맞추고, 정해진 시각에 합칩니다</h2>
+  <p class="lead">네 영역이 동시에 개발되므로 "무엇을 어떤 형식으로 주고받는지"를 가장 먼저 정합니다. 이후에는 정해진 시각마다 합쳐 보고, 문제는 그 자리에서 풉니다.</p>
+
+  <div class="grid2" style="row-gap: 4mm">
+    <div class="card"><span class="t b">① 형식 먼저 합의 (12:00 전)</span><p class="small">시나리오, Agent 대사, 결과 데이터, 진단 로그의 JSON 형식을 <code>schemas/</code>에 정합니다. 바꿀 때는 받는 사람과 먼저 합의합니다.</p></div>
+    <div class="card"><span class="t b">② 가짜 데이터로 동시 개발</span><p class="small">형식이 정해지면 각자 가짜 데이터로 바로 시작합니다. 누가 늦어도 다른 사람의 작업이 멈추지 않습니다.</p></div>
+    <div class="card"><span class="t b">③ GitHub 브랜치와 상호 검토</span><p class="small">팀 저장소에서 폴더별 브랜치(<code>frontend/…</code>, <code>engine/…</code>, <code>llm/…</code>)로 작업하고, 다른 팀원 1명 이상이 승인한 Pull Request만 합칩니다.</p></div>
+    <div class="card"><span class="t b">④ 결정권자를 정해 둠</span><p class="small">화면은 viiin2, 점수·밸런스는 won2912, AI 연동은 cookieimda, 기획·형식과 통합 순서는 팀장 ssoyoum이 최종 결정합니다. 의견이 갈리면 결정권자가 정합니다.</p></div>
+    <div class="card"><span class="t b">⑤ 짧은 점검 회의</span><p class="small">18:00, 22:00, 01:00에 10분씩 모여 진척과 막힌 점을 공유합니다. 30분 넘게 막히면 바로 팀 채팅방에 알립니다.</p></div>
+    <div class="card"><span class="t b">⑥ 과정 기록</span><p class="small">Pull Request 설명에 무엇을, 왜 바꿨는지와 부딪힌 문제를 어떻게 풀었는지 남깁니다. 결과보고서의 근거가 됩니다.</p></div>
+  </div>
+
+  <h3 style="margin-top: 6mm">추진 일정</h3>
+  <table class="tl">
+    <tr><th style="width: 36mm">시간</th><th>할 일</th><th style="width: 40mm">결과</th></tr>
+    <tr><td class="nw">11/9 09:30~12:00</td><td>기획 확정, JSON 형식 합의, 기능별 담당 확정</td><td>기획서 (<b>13:30 제출</b>)</td></tr>
+    <tr><td class="nw">11/9 13:10~18:00</td><td>영역별 개발: 화면·UI / 시나리오·규칙 엔진 / AI 선택지·진단 / Agent 회의</td><td>영역별 단독 동작</td></tr>
+    <tr><td class="nw">11/9 18:00~22:00</td><td>통합: 공정 가동 → 사건 → AI 선택지 → 회의 → 결과까지 연결, 다른 공정 맵·사건 데이터 추가</td><td>한 판이 끝까지 도는 빌드</td></tr>
+    <tr><td class="nw">11/9 22:00~24:00</td><td>밸런스 조정과 수치 고정, AI 선택지·진단 API 연결과 기본 문장 대체 확인</td><td>최종 빌드</td></tr>
+    <tr class="hl"><td class="nw">11/10 00:00~02:00</td><td>소스코드 정리, 결과보고서·발표자료 작성, 시연 영상 녹화</td><td><b>02:00 결과물 제출</b></td></tr>
+    <tr><td class="nw">11/10 14:00~18:00</td><td>본선 진출 시 15~20분 발표와 시연</td><td>최종 발표</td></tr>
+  </table>
+  <div class="foot"><span>STEEL MIND · 기획서 v3</span><span class="mt">AI로 더 안전하고, 멈추지 않고, 더 정확하게</span><span>4</span></div>
+</section>
+
+<!-- ================= 01 개요·문제 ================= -->
+<section class="page">
+  <div class="section-num">04</div>
+  <div class="kicker">해결하려는 문제</div>
+  <h2>공장의 결정은 늘 누군가의 손해를 만듭니다</h2>
+  <p class="lead">제철소에서는 생산, 품질, 설비, 안전 부서가 각자 옳은 말을 합니다. 그런데 그 말들은 자주 부딪칩니다. 앞으로 각 부서 옆에 AI Agent가 붙으면, 사람은 AI들끼리 갈린 의견을 듣고 결정해야 합니다.</p>
+
+  <div class="grid3">
+    <div class="card"><span class="t o">현장의 문제</span><p class="small">설비 온도가 오르는데 출하할 주문이 남았습니다. 속도를 유지하면 납기는 지키지만 설비와 안전이 위험하고, 멈추면 생산이 줄어듭니다.</p></div>
+    <div class="card"><span class="t o">교육의 문제</span><p class="small">신입사원은 이런 부서 간 트레이드오프를 직접 판단해 볼 기회가 거의 없습니다. 교재로는 "무엇을 잃는지"가 잘 와닿지 않습니다.</p></div>
+    <div class="card"><span class="t o">AI 시대의 문제</span><p class="small">AI Agent가 늘수록 AI끼리 의견이 갈리는 상황도 늘어납니다. 그럴듯한 AI 제안을 비교해 사람이 결정하는 연습이 필요합니다.</p></div>
+  </div>
+
+  <div class="card info" style="margin-top: 5mm; display: grid; grid-template-columns: 22mm 1fr; gap: 4mm; align-items: center">
+    <img class="sp t-prod" src="assets/knewdeal.png" alt="" style="width: 22mm">
+    <div><span class="t b" style="font-size: 11pt">그래서 만듭니다: STEEL MIND</span>
+      <p class="small" style="margin: 0">플레이어가 제철소 운영 책임자가 되어, AI가 만든 선택지 중 제한 시간 안에 결정하고 부서별 AI Agent의 엇갈린 반응을 겪는 게임입니다. <b>AI는 선택지를 만들고, 사람이 판단하고, 결과는 규칙대로 계산됩니다.</b> 같은 선택은 언제나 같은 결과를 냅니다.</p></div>
+  </div>
+
+  <h3 style="margin-top: 6mm">이 게임이 바꾸려는 것</h3>
+  <table>
+    <tr><th style="width: 56mm">지금</th><th>STEEL MIND를 하고 나면</th></tr>
+    <tr><td>부서 간 충돌을 말로만 배움</td><td>한 번의 결정이 네 지표를 동시에 바꾸는 것을 숫자와 화면으로 확인</td></tr>
+    <tr><td>AI 제안을 그대로 믿기 쉬움</td><td>AI끼리 다른 말을 할 때 근거를 비교해 직접 결정</td></tr>
+    <tr><td>안전을 여러 목표 중 하나로 봄</td><td>안전이 무너지면 다른 성과가 의미 없다는 것을 결과로 경험</td></tr>
+  </table>
+
+  <h3 style="margin-top: 6mm">대주제의 세 목표가 게임 규칙이 됩니다</h3>
+  <div class="grid3">
+    <div class="card white"><span class="t g">더 안전하고</span><p class="small">안전 지수에 하한선(60)을 둡니다. 다른 점수가 아무리 높아도 안전이 무너지면 미션 실패입니다.</p></div>
+    <div class="card white"><span class="t b">멈추지 않고</span><p class="small">속도 유지·감속·정지 사이에서 고릅니다. 무리하게 돌리면 설비가 달아올라 다음 사건이 더 위험해집니다.</p></div>
+    <div class="card white"><span class="t o">더 정확하게</span><p class="small">설비 조건이 흔들리면 제품 품질도 흔들립니다. 품질 Agent가 이 영향을 짚습니다.</p></div>
+  </div>
+  <div class="foot"><span>STEEL MIND · 기획서 v3</span><span class="mt">AI로 더 안전하고, 멈추지 않고, 더 정확하게</span><span>5</span></div>
+</section>
+
+<!-- ================= 02 게임 한눈에 ================= -->
+<section class="page">
+  <div class="section-num">05</div>
+  <div class="kicker">게임 화면</div>
+  <h2>공정 라인을 한 화면에서 운영합니다</h2>
+  <p class="lead">화면 전체가 하나의 공정 라인입니다. 제선 → 제강 → 연주 → 열간압연 공정마다 맵이 있고, 사건은 공장의 실제 위치에서 터집니다. 아래는 열간압연 맵 시안이며, 미션에 쓸 공정은 개발 단계에서 정합니다.</p>
+
+  <div class="map">
+    <img src="assets/hsm2_background.png" alt="열간압연 맵과 구역 표시">
+    <div class="pin" style="left: 13%; top: 70%"><b>1</b>슬라브 야드</div>
+    <div class="pin" style="left: 21.7%; top: 20%"><b>2</b>가열로</div>
+    <div class="pin" style="left: 39.8%; top: 22%"><b>3</b>조압연</div>
+    <div class="pin ev" style="left: 57%; top: 22%"><b>!</b>사건 예시 · 사상압연</div>
+    <div class="pin ev" style="left: 75%; top: 36%"><b>!</b>사건 예시 · 런아웃 테이블</div>
+    <div class="pin" style="left: 88%; top: 66%"><b>6</b>코일 적치장</div>
+    <div class="pin" style="left: 51.4%; top: 88%"><b>7</b>운영실</div>
+  </div>
+  <p class="xs muted" style="margin-top: 1.5mm">팀원이 만든 배경 시안 위에 구역을 표시했습니다. 주황색이 MVP 미션의 사건 위치입니다.</p>
+
+  <div class="grid2" style="margin-top: 5mm">
+    <div>
+      <h3>공장 구역과 게임 속 역할 <span class="small muted" style="font-weight: 400">열간압연 맵 예시</span></h3>
+      <table>
+        <tr><th style="width: 32mm">구역</th><th>게임에서</th></tr>
+        <tr><td><span class="num">1</span> 슬라브 야드</td><td>원료 슬라브가 투입됩니다</td></tr>
+        <tr><td><span class="num">2</span> 가열로</td><td>슬라브를 데웁니다. 확장 사건: 전력 피크</td></tr>
+        <tr><td><span class="num">3</span> 조압연</td><td>슬라브를 1차로 얇게 폅니다</td></tr>
+        <tr><td><span class="num ev">!</span> 사상압연</td><td><b>사건 예시:</b> 설비 온도 상승</td></tr>
+        <tr><td><span class="num ev">!</span> 런아웃 테이블</td><td><b>사건 예시:</b> 작업자 위험 구역 진입</td></tr>
+        <tr><td><span class="num">6</span> 코일 적치장</td><td>생산한 코일이 쌓입니다(생산량 표시)</td></tr>
+        <tr><td><span class="num">7</span> 운영실</td><td>플레이어의 자리. Agent 회의가 열립니다</td></tr>
+      </table>
+    </div>
+    <div>
+      <h3>화면 구성</h3>
+      <div class="card" style="margin-bottom: 3mm"><span class="t b">상단 지표판</span><p class="small">생산량 · 품질 · 안전 · 비용 효율 4개 지표와 생산량. 안전 막대에는 하한선(60)이 표시됩니다.</p></div>
+      <div class="card" style="margin-bottom: 3mm"><span class="t b">공장 화면</span><p class="small">라인이 실시간으로 움직이고, 사건이 생긴 설비가 깜빡입니다. 설비 상태 게이지와 라인 속도가 함께 보입니다.</p></div>
+      <div class="card"><span class="t b">사건 패널</span><p class="small">제한 시간 타이머와 AI가 만든 선택지 3개(키보드 1·2·3). 결정 뒤 Agent 회의 말풍선이 이어집니다.</p></div>
+      <div style="display: flex; gap: 2mm; margin-top: 3mm; align-items: flex-end">
+        <img class="sp t-prod" src="assets/knewdeal.png" alt="" style="width: 10mm">
+        <img class="sp t-qual" src="assets/knewdeal.png" alt="" style="width: 10mm">
+        <img class="sp t-equip" src="assets/knewdeal.png" alt="" style="width: 10mm">
+        <img class="sp t-safe" src="assets/knewdeal.png" alt="" style="width: 10mm">
+        <span class="xs muted">캐릭터 시안을 Agent별 색으로 구분(생산 · 품질 · 설비 · 안전)</span>
+      </div>
+    </div>
+  </div>
+  <div class="foot"><span>STEEL MIND · 기획서 v3</span><span class="mt">AI로 더 안전하고, 멈추지 않고, 더 정확하게</span><span>6</span></div>
+</section>
+
+<!-- ================= 03 플레이 시나리오 ================= -->
+<section class="page">
+  <div class="section-num">06</div>
+  <div class="kicker">플레이 시나리오</div>
+  <h2>한 판은 이렇게 흘러갑니다</h2>
+  <p class="lead">사건이 터지면 AI가 선택지를 만들고, 플레이어가 결정하면 Agent들이 그 결정을 두고 회의합니다. 사건마다 이 흐름을 반복한 뒤 결과를 받습니다.</p>
+
+  <div class="story">
+    <div>
+      <div class="frame bgshot" style="background-size: auto 100%; background-position: 30% 50%"><span class="badge" style="left: 2mm; top: 2mm; background: rgba(0,0,0,.6); color: #6fcf97">● 공정 정상 가동 · 속도 100%</span></div>
+      <div class="cap"><b><span class="num">1</span>공정 가동</b>원료가 설비를 지나 제품으로 쌓이고, 생산량이 올라갑니다.</div>
+    </div>
+    <div>
+      <div class="frame bgshot" style="background-size: auto 230%; background-position: 57% 42%; box-shadow: inset 0 0 0 3px #ff6b6b"><span class="badge" style="left: 2mm; top: 2mm; background: #ff6b6b; color: #fff">LEVEL 1 · 설비 온도 상승</span><span class="badge" style="right: 2mm; bottom: 2mm; background: rgba(0,0,0,.65); color: #f0a04b">설비 온도 ▲</span></div>
+      <div class="cap"><b><span class="num ev">2</span>사건 발생</b>이상이 생긴 설비가 깜빡이고 경보가 울립니다. 라인이 느려집니다.</div>
+    </div>
+    <div>
+      <div class="frame" style="padding: 3mm">
+        <div style="display: flex; gap: 2.5mm; align-items: center; margin-bottom: 2.5mm">
+          <div class="timer"><span>14</span></div>
+          <div style="font-size: 7.6pt; color: var(--gmuted); line-height: 1.4"><b style="color: var(--mint)">AI 선택지</b> 상황에 맞춰 매번 다르게 만들어집니다</div>
+        </div>
+        <div class="btns"><span>1 그대로 가동</span><span class="on">2 감속 후 점검</span><span>3 정지·구역 통제</span></div>
+      </div>
+      <div class="cap"><b><span class="num">3</span>AI 선택지 · 제한 시간 결정</b>LLM API가 선택지 3개를 만듭니다. 시간이 다 되면 가장 위험한 기본 행동이 실행됩니다.</div>
+    </div>
+    <div>
+      <div class="frame" style="padding: 2.5mm">
+        <div class="bub"><img class="sp t-prod" src="assets/knewdeal.png" alt=""><div><i style="color: #7aa7ff">생산 · 불만</i>감속이요? 오늘 주문량은 어떻게 맞춥니까.</div></div>
+        <div class="bub"><img class="sp t-equip" src="assets/knewdeal.png" alt=""><div><i style="color: #f0a04b">설비 · 찬성</i>잘하셨어요. 더 상하기 전에 잡았습니다.</div></div>
+        <div class="bub"><img class="sp t-safe" src="assets/knewdeal.png" alt=""><div><i style="color: #6fcf97">안전 · 경고</i>주변 인원 통제도 같이 해 주세요.</div></div>
+      </div>
+      <div class="cap"><b><span class="num">4</span>Agent 회의</b>결정이 나면 페르소나가 다른 Agent들이 찬성하거나 불만을 터뜨립니다.</div>
+    </div>
+    <div>
+      <div class="frame" style="padding: 3.5mm">
+        <div class="hudrow"><span>생산량</span><span class="bar"><i style="width: 65%"></i></span><span class="dn">−5</span></div>
+        <div class="hudrow"><span>품질</span><span class="bar"><i style="width: 83%"></i></span><span class="up">+3</span></div>
+        <div class="hudrow"><span>안전</span><span class="bar"><i style="width: 96%"></i></span><span class="up">+6</span></div>
+        <div class="hudrow"><span>비용 효율</span><span class="bar"><i style="width: 69%"></i></span><span class="dn">−6</span></div>
+        <div style="font-size: 7.2pt; color: var(--gmuted)">라인 속도 55% · 설비 온도 안정</div>
+      </div>
+      <div class="cap"><b><span class="num">5</span>결과 반영</b>규칙 엔진이 지표를 바꾸고, 공장 화면도 달라집니다.</div>
+    </div>
+    <div>
+      <div class="frame" style="padding: 3.5mm; display: grid; grid-template-columns: 18mm 1fr; gap: 3mm; align-items: center">
+        <div class="stamp">A</div>
+        <div style="font-size: 7.6pt; line-height: 1.5">종합 <b style="font-family: Consolas">80.6</b><br><span style="color: var(--gmuted)">안전을 지키면서 종합 80점 이상을 냈습니다.</span><br><span style="color: var(--gmuted)">선택 기록 · AI 진단 로그</span></div>
+      </div>
+      <div class="cap"><b><span class="num">6</span>결과 등급</b>사건이 모두 끝나면 등급·선택 기록과 AI 진단 로그를 보여 줍니다.</div>
+    </div>
+  </div>
+
+  <div class="card warn" style="margin-top: 6mm; display: grid; grid-template-columns: 1fr 1fr; gap: 5mm">
+    <div><span class="t o">회의에서 손해가 드러납니다</span><p class="small">같은 결정에도 생산 Agent는 불만을, 안전 Agent는 찬성을 말합니다. 무엇을 지키려고 누구의 손해를 택했는지 바로 보입니다.</p></div>
+    <div><span class="t o">안전은 점수가 아니라 조건입니다</span><p class="small">사람이 있는 구역을 그대로 돌리는 선택은 안전을 하한선 아래로 떨어뜨려 미션 실패로 끝납니다.</p></div>
+  </div>
+  <div class="foot"><span>STEEL MIND · 기획서 v3</span><span class="mt">AI로 더 안전하고, 멈추지 않고, 더 정확하게</span><span>7</span></div>
+</section>
+
+<!-- ================= 06 미션 설계 ================= -->
+<section class="page">
+  <div class="section-num">07</div>
+  <div class="kicker">미션 설계 방식</div>
+  <h2>사건 하나는 이렇게 짜여 있습니다</h2>
+  <p class="lead">어느 공정이든 사건은 같은 틀로 만듭니다. 공정과 사건 내용은 개발 단계에서 정하고, 수치는 게임 밸런스용 가상 값입니다.</p>
+
+  <table>
+    <tr><th style="width: 32mm">구성</th><th>내용</th></tr>
+    <tr><td><b>상황</b></td><td>어떤 설비에서 어떤 징후가 보이는지, 남은 생산 목표</td></tr>
+    <tr><td><b>AI 선택지</b></td><td>LLM API가 규칙 엔진의 행동 목록에서 3개를 골라 상황에 맞는 문장으로 씁니다</td></tr>
+    <tr><td><b>제한 시간</b></td><td>사건마다 제한 시간을 둡니다. 넘기면 가장 위험한 기본 행동이 실행됩니다</td></tr>
+    <tr><td><b>Agent 회의</b></td><td>결정 뒤 생산·품질·설비·안전 Agent가 페르소나대로 찬성·불만·경고를 말합니다</td></tr>
+    <tr><td><b>지표 변화</b></td><td>행동마다 정해 둔 변화값을 규칙 엔진이 적용합니다</td></tr>
+  </table>
+
+  <h3 style="margin-top: 6mm">행동 목록 <span class="small muted" style="font-weight: 400">예시 · 방향만 표시</span></h3>
+  <table>
+    <tr><th>행동</th><th class="c">생산량</th><th class="c">품질</th><th class="c">안전</th><th class="c">비용 효율</th><th>어울리는 상황</th></tr>
+    <tr><td><b>그대로 가동</b></td><td class="c up">▲</td><td class="c dn">▼</td><td class="c dn">▼▼</td><td class="c up">▲</td><td class="xs">납기가 급할 때. 사고 위험이 커짐</td></tr>
+    <tr><td><b>감속 후 점검</b></td><td class="c dn">▼</td><td class="c up">▲</td><td class="c up">▲</td><td class="c dn">▼</td><td class="xs">이상 징후가 아직 작을 때</td></tr>
+    <tr><td><b>정지·구역 통제</b></td><td class="c dn">▼▼</td><td class="c up">▲</td><td class="c up">▲▲</td><td class="c dn">▼▼</td><td class="xs">사람이 위험할 때</td></tr>
+  </table>
+
+  <div class="ev" style="margin-top: 6mm">
+    <div class="ev-h">
+      <div class="shot" style="background-position: 57% 40%"></div>
+      <div><span class="tag no">예시 · 설비 온도 상승</span><h3 style="margin-top: 1mm">설비 온도가 기준보다 빠르게 오릅니다</h3><p>출하할 주문이 남은 상황에서 플레이어가 "감속 후 점검"을 골랐다면</p></div>
+    </div>
+    <div class="says">
+      <div class="say"><img class="sp t-prod" src="assets/knewdeal.png" alt=""><div><b style="color: #4f7fd6">생산 · 불만</b>감속이요? 오늘 주문량은 누가 책임집니까.</div></div>
+      <div class="say"><img class="sp t-equip" src="assets/knewdeal.png" alt=""><div><b style="color: #d9862e">설비 · 찬성</b>잘하셨어요. 설비가 더 상하기 전에 잡았습니다.</div></div>
+      <div class="say"><img class="sp t-safe" src="assets/knewdeal.png" alt=""><div><b style="color: #2f9e62">안전 · 경고</b>좋습니다. 다음엔 주변 인원 통제도 같이 해 주세요.</div></div>
+      <div class="say"><img class="sp t-qual" src="assets/knewdeal.png" alt=""><div><b style="color: #9a63d6">품질 · 찬성</b>조건이 안정되면 불량도 줄어요.</div></div>
+    </div>
+  </div>
+  <p class="xs muted" style="margin-top: 2mm">시작값과 변화값은 개발 중 밸런스를 맞춰 정합니다.</p>
+  <div class="foot"><span>STEEL MIND · 기획서 v3</span><span class="mt">AI로 더 안전하고, 멈추지 않고, 더 정확하게</span><span>8</span></div>
+</section>
+
+<!-- ================= 공정별 미션 ================= -->
+<section class="page">
+  <div class="section-num">08</div>
+  <div class="kicker">공정별 미션 구성</div>
+  <h2>쇳물부터 코일까지, 공정 4개를 미션으로</h2>
+  <p class="lead">제철소의 큰 흐름인 제선 → 제강 → 연주 → 압연을 미션 4개로 나눕니다. 공정마다 맵·설비·사건은 다르고, Agent 4명(생산·품질·설비·안전)과 점수 규칙은 그대로 씁니다. 사건과 선택지는 JSON 데이터라 공정을 늘려도 엔진은 바뀌지 않습니다.</p>
+
+  <div class="grid4">
+    <div class="card"><img src="assets/map_ironmaking.png" alt="제선 · 고로 맵" style="display: block; width: 100%; height: 21mm; object-fit: cover; object-position: center 60%; border-radius: 2mm; margin-bottom: 2mm"><span class="t b">제선 · 고로</span><p class="small">철광석과 코크스를 녹여 쇳물(용선)을 만듭니다.</p><p class="xs muted" style="margin: 0">고로 · 열풍로 · 출선구</p></div>
+    <div class="card"><img src="assets/map_steelmaking.png" alt="제강 · 전로 맵" style="display: block; width: 100%; height: 21mm; object-fit: cover; object-position: center 60%; border-radius: 2mm; margin-bottom: 2mm"><span class="t b">제강 · 전로</span><p class="small">쇳물의 탄소와 불순물을 빼 강(용강)으로 만듭니다.</p><p class="xs muted" style="margin: 0">전로 · 산소 랜스 · 레들</p></div>
+    <div class="card"><img src="assets/map_casting.png" alt="연주 · 연속주조 맵" style="display: block; width: 100%; height: 21mm; object-fit: cover; object-position: center 60%; border-radius: 2mm; margin-bottom: 2mm"><span class="t b">연주 · 연속주조</span><p class="small">용강을 틀에 부어 굳혀 슬라브로 만듭니다.</p><p class="xs muted" style="margin: 0">턴디시 · 주형 · 냉각대</p></div>
+    <div class="card"><img src="assets/map_hotrolling.png" alt="열간압연 맵" style="display: block; width: 100%; height: 21mm; object-fit: cover; object-position: center 60%; border-radius: 2mm; margin-bottom: 2mm"><span class="t b">열간압연</span><p class="small">슬라브를 늘려 얇은 코일로 감습니다.</p><p class="xs muted" style="margin: 0">가열로 · 사상압연기 · 런아웃 테이블</p></div>
+  </div>
+
+  <h3 style="margin-top: 6mm">미션별 사건 설계</h3>
+  <table>
+    <tr><th style="width: 22mm">공정</th><th>사건 1</th><th>사건 2</th><th style="width: 30mm">부딪히는 Agent</th><th style="width: 24mm">현재</th></tr>
+    <tr><td class="nw"><b>제선</b></td><td class="small">고로 노 안 온도 하강(식어 굳을 징후)</td><td class="small">출선구 주변 고열 작업 중 쇳물 분출</td><td class="small">생산 ↔ 설비·안전</td><td class="small nw">맵 시안</td></tr>
+    <tr><td class="nw"><b>제강</b></td><td class="small">전로 쇳물 넘침(슬로핑) 징후</td><td class="small">산소 랜스 냉각수 누수</td><td class="small">생산 ↔ 품질·안전</td><td class="small nw">맵 시안</td></tr>
+    <tr><td class="nw"><b>연주</b></td><td class="small">주형 아래 굳은 껍질이 찢어질 징후</td><td class="small">턴디시 용강 온도 저하</td><td class="small">생산 ↔ 품질·설비</td><td class="small nw">맵 시안</td></tr>
+    <tr><td class="nw"><b>열간압연</b></td><td class="small">사상압연기 롤 온도 상승</td><td class="small">작업자 위험 구역 진입</td><td class="small">생산 ↔ 설비·안전</td><td class="small nw">맵·플레이 시안</td></tr>
+  </table>
+  <p class="xs muted" style="margin-top: 1.5mm">공정별 사건은 기획 단계의 후보입니다. 선택지와 변화값은 8쪽의 사건 틀과 같은 형식으로 정하고, 수치는 게임용 가상 값입니다.</p>
+
+  <h3 style="margin-top: 6mm">만드는 순서</h3>
+  <div class="grid3">
+    <div class="card warn"><span class="t o">① 02:00까지 필수</span><p class="small">미션에 쓸 공정 하나를 골라 1판을 사건부터 결과·AI 진단까지 완성합니다.</p></div>
+    <div class="card info"><span class="t b">② 같은 엔진에 추가</span><p class="small">다른 공정은 맵과 사건 JSON만 더하면 됩니다. 시간 안에 되는 만큼 붙입니다.</p></div>
+    <div class="card"><span class="t b">③ 못 붙인 공정</span><p class="small">맵·설비 화면과 사건 설계를 발표에서 보여 주고, 확장 계획(공정 캠페인)으로 이어 설명합니다.</p></div>
+  </div>
+
+  <div class="quote" style="margin-top: 6mm">
+    <div class="k">공정 4개를 이으면</div>
+    <p>앞 공정의 선택이 다음 공정의 출발 상태가 됩니다. 제강에서 서두르면 연주는 불순물이 많은 용강으로 시작하고, 연주에서 품질을 놓치면 열간압연에서 두께가 흔들립니다. "만약 그때 이렇게 했다면?"을 공정 전체로 따라가 보는 구조입니다.</p>
+  </div>
+  <div class="foot"><span>STEEL MIND · 기획서 v3</span><span class="mt">AI로 더 안전하고, 멈추지 않고, 더 정확하게</span><span>9</span></div>
+</section>
+
+<!-- ================= 05 재미와 규칙 ================= -->
+<section class="page">
+  <div class="section-num">09</div>
+  <div class="kicker">핵심 재미와 점수 규칙</div>
+  <h2>정답 없는 선택, 제한 시간, 갈리는 결과</h2>
+  <p class="lead">STEEL MIND의 재미는 "누구 말을 들을까"를 고민하는 순간에서 나옵니다. 그래서 Agent 시나리오를 다음 네 가지 원칙으로 설계합니다.</p>
+
+  <div class="grid2" style="row-gap: 3mm">
+    <div class="card"><span class="t b">① 모든 Agent가 맞는 말을 한다</span><p class="small">틀린 말을 하는 Agent는 없습니다. 각자 자기 부서 목표에서는 옳은 근거를 댑니다. 그래서 선택이 고민됩니다.</p></div>
+    <div class="card"><span class="t b">② 공짜 선택지는 없다</span><p class="small">세 선택지 모두 최소 한 지표는 손해를 봅니다. 무엇을 지키고 무엇을 내줄지 정하는 것이 플레이입니다.</p></div>
+    <div class="card"><span class="t b">③ 시간이 압박한다</span><p class="small">제한 시간 안에 정해야 합니다. 고민만 하다 시간을 넘기면 가장 위험한 기본 행동이 실행됩니다.</p></div>
+    <div class="card"><span class="t b">④ 결정 뒤에 회의가 열린다</span><p class="small">고른 결정을 두고 Agent들이 찬성·불만·경고를 말합니다. 누구의 손해로 무엇을 지켰는지 바로 드러납니다.</p></div>
+  </div>
+
+  <div class="grid2" style="margin-top: 5mm">
+    <div>
+      <h3>지표와 가중치</h3>
+      <table>
+        <tr><th>지표</th><th class="c">시작값</th><th class="c">가중치</th><th>담당 Agent</th></tr>
+        <tr><td>생산량</td><td class="c">70</td><td class="c">30%</td><td>생산</td></tr>
+        <tr><td>품질</td><td class="c">80</td><td class="c">25%</td><td>품질</td></tr>
+        <tr class="hl"><td><b>안전</b> <span class="tag no">하한 60</span></td><td class="c">90</td><td class="c"><b>35%</b></td><td>안전</td></tr>
+        <tr><td>비용 효율</td><td class="c">75</td><td class="c">10%</td><td>설비(정비·정지 비용)</td></tr>
+      </table>
+      <p class="xs muted" style="margin-top: 2mm">모든 지표는 0~100 범위로 제한합니다. 종합 점수 = 지표 × 가중치의 합.</p>
+    </div>
+    <div>
+      <h3>결과 등급</h3>
+      <table>
+        <tr><th style="width: 18mm">등급</th><th>조건</th></tr>
+        <tr><td><b class="dn">실패</b></td><td>안전이 60 미만(종합 점수와 무관)</td></tr>
+        <tr><td><b>S</b></td><td>종합 90 이상</td></tr>
+        <tr><td><b>A</b></td><td>종합 80 이상</td></tr>
+        <tr><td><b>B</b></td><td>종합 65 이상</td></tr>
+        <tr><td><b>C</b></td><td>안전은 지켰지만 종합 65 미만</td></tr>
+      </table>
+    </div>
+  </div>
+
+
+  <h3 style="margin-top: 4mm">결말은 고른 행동의 조합으로 갈립니다</h3>
+  <table>
+    <tr><th style="width: 62mm">사건마다 고른 행동</th><th>결말 경향</th></tr>
+    <tr><td>위험한데도 "그대로 가동"</td><td>안전이 하한선 아래로 떨어져 <b class="dn">실패</b></td></tr>
+    <tr><td>"감속 후 점검" 위주</td><td>생산을 조금 내주고 안정을 지켜 <b>A·B</b></td></tr>
+    <tr><td>"정지·구역 통제" 위주</td><td>안전은 높지만 생산·비용 손실이 커 <b>B·C</b></td></tr>
+    <tr><td>상황에 맞춰 섞어 고름</td><td>세 목표의 균형을 맞춰 <b>S</b>까지 가능</td></tr>
+  </table>
+  <p class="xs muted" style="margin-top: 1.5mm">선택지 문장은 AI가 매번 달리 써도 바탕 행동과 변화값은 같아, 결말 기준은 그대로입니다.</p>
+  <h3 style="margin-top: 4mm">AI와 규칙의 역할 분리</h3>
+  <div class="grid2">
+    <div class="card info"><span class="t b">AI(LLM API)가 하는 일</span><p class="small">사건마다 행동 목록에서 선택지 3개를 골라 상황에 맞는 문장으로 쓰고, 판이 끝나면 진단 로그를 씁니다. 점수는 바꾸지 않습니다.</p></div>
+    <div class="card warn"><span class="t o">규칙 엔진이 하는 일</span><p class="small">플레이어가 고른 선택지에 정해진 변화값을 더하고 등급을 매깁니다. AI는 점수와 공장 상태를 바꾸지 않으므로 같은 선택은 언제나 같은 결과입니다.</p></div>
+  </div>
+  <div class="foot"><span>STEEL MIND · 기획서 v3</span><span class="mt">AI로 더 안전하고, 멈추지 않고, 더 정확하게</span><span>10</span></div>
+</section>
+
+<!-- ================= 주요 기능 ================= -->
+<section class="page">
+  <div class="section-num">10</div>
+  <div class="kicker">주요 기능</div>
+  <h2>MVP 핵심 기능 5가지</h2>
+  <p class="lead">02:00 제출본에 꼭 넣을 핵심만 정했습니다. 나머지는 시간이 남으면 붙이는 확장으로 둡니다.</p>
+  <table>
+    <tr><th style="width: 9mm">ID</th><th style="width: 34mm">기능</th><th>내용</th><th style="width: 33mm">담당</th></tr>
+    <tr><td><b>F1</b></td><td class="nw"><b>공장 화면</b></td><td class="small">공정 라인이 돌고, 사건이 난 설비가 깜빡입니다. 선택에 따라 라인 속도와 설비 상태가 바뀝니다.</td><td class="small nw">양수빈(viiin2)</td></tr><tr><td><b>F2</b></td><td class="nw"><b>사건과 AI 선택지</b></td><td class="small">사건이 터지면 LLM API가 상황에 맞는 선택지 3개를 만듭니다. 제한 시간 안에 고르지 않으면 가장 위험한 기본 행동이 실행됩니다.</td><td class="small nw">신원민(won2912)<br>김다영(cookieimda)</td></tr><tr><td><b>F3</b></td><td class="nw"><b>Agent 회의</b></td><td class="small">결정이 나면 페르소나가 다른 Agent들이 찬성하거나 불만을 터뜨리며 회의하는 장면이 나옵니다.</td><td class="small nw">박소영(ssoyoum)<br>양수빈(viiin2)</td></tr><tr><td><b>F4</b></td><td class="nw"><b>지표 계산</b></td><td class="small">규칙 엔진이 고른 행동의 변화값을 지표 4개에 적용합니다. AI는 점수를 바꾸지 않습니다.</td><td class="small nw">신원민(won2912)</td></tr><tr><td><b>F5</b></td><td class="nw"><b>결과 화면·AI 진단</b></td><td class="small">등급, 지표 변화, 선택 기록과 함께 LLM API가 쓴 진단 로그를 보여 줍니다.</td><td class="small nw">김다영(cookieimda)</td></tr>
+  </table>
+
+  <h3 style="margin-top: 6mm">이번에 넣지 않는 것(시간이 남으면 추가)</h3>
+  <div class="grid3">
+    <div class="card"><span class="t b">이어지는 상태</span><p class="small">앞 사건의 선택이 다음 사건의 출발 상태를 바꾸는 규칙, 공정 4개를 잇는 캠페인</p></div>
+    <div class="card"><span class="t b">Agent·난이도 추가</span><p class="small">에너지·물류·환경 Agent, Agent 2~7명 난이도</p></div>
+    <div class="card"><span class="t b">학습 기록</span><p class="small">플레이 기록으로 "자주 희생한 지표" 돌아보기</p></div>
+  </div>
+  <p class="xs muted" style="margin-top: 3mm">실제 설비 제어, 실시간 산업 데이터 연결, 멀티플레이는 다루지 않습니다.</p>
+  <div class="foot"><span>STEEL MIND · 기획서 v3</span><span class="mt">AI로 더 안전하고, 멈추지 않고, 더 정확하게</span><span>11</span></div>
+</section>
+
+<!-- ================= 06 시스템 구성 ================= -->
+<section class="page">
+  <div class="section-num">11</div>
+  <div class="kicker">시스템 구성</div>
+  <h2>사건 → AI 선택지 → 결정 → 규칙 계산 → 회의·진단</h2>
+  <p class="lead">시나리오 데이터가 사건과 행동 목록을 정하고, LLM API가 그 안에서 선택지를 만들고, 플레이어가 고르면 규칙 엔진이 계산합니다. 결정 뒤에는 Agent 회의가, 판이 끝나면 AI 진단이 이어집니다. 각 단계는 정해진 JSON 형식으로만 주고받습니다.</p>
+
+  <div class="flow">
+    <div class="step"><b>시나리오 데이터</b>사건, 위치, 행동 목록과 변화값</div><div class="arrow">→</div>
+    <div class="step"><b>AI 선택지</b>LLM API가 행동 3개를 골라 문장으로</div><div class="arrow">→</div>
+    <div class="step"><b>게임 화면</b>공장, 말풍선, 타이머, 선택지</div><div class="arrow">→</div>
+    <div class="step me"><b>플레이어</b>제한 시간 안에 선택</div><div class="arrow">→</div>
+    <div class="step rule"><b>규칙 엔진</b>변화값 적용, 등급 계산</div><div class="arrow">→</div>
+    <div class="step"><b>회의·결과</b>Agent 반응 회의, 등급, AI 진단 로그</div>
+  </div>
+
+  <div class="grid2" style="margin-top: 6mm">
+    <div>
+      <h3>AI 선택지 형식</h3>
+<div class="code">{
+  "event": "equipment_overheat",
+  "choices": [
+    { "action": "keep_running", "text": "그대로 돌리며 온도를 지켜본다" },
+    { "action": "slow_and_check", "text": "속도를 낮추고 냉각부터 확인한다" },
+    { "action": "stop_and_lock", "text": "라인을 멈추고 구역을 통제한다" }
+  ]
+}</div>
+      <p class="xs muted" style="margin-top: 2mm"><code>action</code>은 행동 목록에 있는 ID여야 하고, 효과값은 규칙 엔진이 정합니다. 형식이 틀리거나 호출이 실패하면 기본 선택지 문장을 씁니다. 진단 로그도 같은 방식으로 받습니다.</p>
+    </div>
+    <div>
+      <h3>지켜야 할 경계</h3>
+      <ul class="small" style="margin: 0; padding-left: 4.5mm">
+        <li style="margin-bottom: 1.5mm">LLM은 선택지 문장과 진단 로그만 만듭니다. 점수·상태를 바꾸는 것은 규칙 엔진뿐입니다.</li>
+        <li style="margin-bottom: 1.5mm">API가 늦거나 실패해도 기본 선택지·기본 진단으로 게임은 멈추지 않습니다.</li>
+        <li style="margin-bottom: 1.5mm">모든 수치는 게임용 가상 값이며 실제 제철소 기준이 아님을 화면에 표시합니다.</li>
+        <li>실제 설비·실시간 산업 데이터와 연결하지 않습니다.</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3 style="margin-top: 6mm">기술 구성</h3>
+  <table>
+    <tr><th style="width: 34mm">영역</th><th>구성</th><th style="width: 24mm">담당</th></tr>
+    <tr><td>게임 화면·UI</td><td>Unity 메인 게임 화면, 공정별 맵·설비·캐릭터 이미지, 지표·사건·선택 UI</td><td class="nw">양수빈(viiin2)</td></tr>
+    <tr><td>시나리오·규칙 엔진</td><td>사건·선택지·변화값 JSON, 점수 계산과 등급, 사건 간 이어지는 상태</td><td class="nw">신원민(won2912)</td></tr>
+    <tr><td>AI 선택지·진단</td><td>LLM API로 사건별 선택지 문장과 결과 진단 로그 생성, 형식 검사, 실패 시 기본 문장</td><td class="nw">김다영(cookieimda)</td></tr>
+    <tr><td>결과 화면</td><td>등급, 지표 변화, 선택 기록, Agent별 목표 달성</td><td class="nw">김다영(cookieimda)</td></tr>
+    <tr><td>Agent 회의·통합</td><td>Agent 페르소나와 회의 반응 규칙, 모듈 간 JSON 형식, 통합</td><td class="nw">박소영(ssoyoum)</td></tr>
+  </table>
+  <div class="foot"><span>STEEL MIND · 기획서 v3</span><span class="mt">AI로 더 안전하고, 멈추지 않고, 더 정확하게</span><span>12</span></div>
+</section>
+
+<!-- ================= 08 기대 효과 ================= -->
+<section class="page">
+  <div class="section-num">12</div>
+  <div class="kicker">기대 효과와 확장</div>
+  <h2>신입 교육용 의사결정 훈련 도구로</h2>
+  <p class="lead">STEEL MIND는 실제 공정을 판단하는 도구가 아닙니다. 부서 간 이해관계와 AI와 함께 결정하는 방식을 몸으로 익히는 교육용 게임을 목표로 합니다.</p>
+
+  <div class="grid3">
+    <div class="card"><span class="t b">부서 간 시야</span><p class="small">한 번의 결정이 생산·품질·설비·안전에 동시에 영향을 준다는 것을 숫자와 화면으로 확인합니다.</p></div>
+    <div class="card"><span class="t b">AI와 함께 결정하기</span><p class="small">AI가 그럴듯한 근거를 대도 최종 판단과 책임은 사람에게 있다는 점을 체험합니다.</p></div>
+    <div class="card"><span class="t b">안전 우선 습관</span><p class="small">안전이 무너지면 다른 성과가 의미 없다는 규칙을 게임 결과로 경험합니다.</p></div>
+  </div>
+
+  <h3 style="margin-top: 6mm">확장 계획</h3>
+  <table>
+    <tr><th style="width: 40mm">확장</th><th>내용</th></tr>
+    <tr><td>사건 추가</td><td>가열로 전력 피크(에너지 Agent), 코일 출하 지연(물류 Agent), 배출 기준(환경 Agent)</td></tr>
+    <tr><td>공정 캠페인</td><td>제선 → 제강 → 연주 → 압연 미션을 이어 앞 공정 결과가 다음 공정의 출발 상태가 되게 합니다. 사건과 선택지가 데이터로 분리되어 교육 담당자가 추가할 수 있습니다</td></tr>
+    <tr><td>난이도</td><td>Easy(Agent 2~3명) → Hard(Agent 6~7명, 시간·예산 제약)</td></tr>
+    <tr><td>교육 피드백</td><td>플레이 기록을 모아 "어떤 지표를 자주 희생했는지" 돌아보기</td></tr>
+  </table>
+
+  <h3 style="margin-top: 6mm">심사 항목별 준비</h3>
+  <table>
+    <tr><th style="width: 40mm">심사 항목</th><th>준비하는 것</th></tr>
+    <tr><td>참여 태도 및 몰입도</td><td>기획부터 02:00 제출까지 전원 참여, 18:00·22:00 시점마다 진척 공유</td></tr>
+    <tr><td>팀워크 및 협업</td><td>영역 간 JSON 형식을 먼저 합의하고, Pull Request를 서로 검토해 합침</td></tr>
+    <tr><td>아이디어 및 창의성</td><td>AI가 만든 선택지로 결정하고, 페르소나가 다른 Agent들이 그 결정을 두고 회의하는 게임 구조</td></tr>
+    <tr><td>문제 이해 및 설계</td><td>대주제의 세 목표(안전·무정지·정확)와 부서별 목표 충돌을 사건·선택지·지표로 옮기고, AI와 규칙 엔진의 역할을 분리</td></tr>
+    <tr><td>실행력 및 진척도</td><td>22:00까지 한 판이 끝까지 도는 빌드, 02:00까지 제출물 4종</td></tr>
+    <tr><td>결과물 완성도</td><td>같은 선택은 같은 결과, 선택마다 달라지는 공장 화면과 등급, 시연 영상</td></tr>
+    <tr><td>현업 적용 가능성</td><td>신입 교육용 확장 구조, 가상 수치라는 한계 명시</td></tr>
+  </table>
+
+  <div class="quote" style="margin-top: 6mm">
+    <div class="k">한 문장으로</div>
+    <p>"STEEL MIND는 AI Agent들이 각자의 목표로 의견을 내는 제철소에서, 사람이 제한 시간 안에 <b>더 안전하고, 멈추지 않고, 더 정확한</b> 길을 골라 보는 게임입니다."</p>
+  </div>
+  <div class="foot"><span>STEEL MIND · 기획서 v3</span><span class="mt">AI로 더 안전하고, 멈추지 않고, 더 정확하게</span><span>13</span></div>
+</section>
+</body>
+</html>
