@@ -1592,11 +1592,11 @@ namespace SteelMind.Scenario
                 var cv = c.gameObject.AddComponent<VerticalLayoutGroup>(); cv.childAlignment = TextAnchor.LowerCenter; cv.childControlWidth = cv.childControlHeight = true; cv.childForceExpandWidth = false; cv.childForceExpandHeight = false; cv.spacing = 4;
                 string dv = deltas != null && !dim && deltas[i] != 0 ? (deltas[i] > 0 ? $" <color=#6FCF97>+{deltas[i]}</color>" : $" <color=#FF8A80>{deltas[i]}</color>") : "";
                 var vt = AddText(c, $"<b>{vals[i]}</b>{dv}", isT ? 16 : 13, dim ? RMute : RText, FontStyle.Normal, TextAnchor.LowerCenter); vt.horizontalOverflow = HorizontalWrapMode.Overflow;
-                var bar = NewRect("Bar", c); var bi = Round(bar.gameObject, col, 0.4f);
+                var bar = NewRect("Bar", c); var bi = bar.gameObject.AddComponent<Image>();   // 네모 막대 (둥근 이미지는 얇으면 알약 모양이 됨)
                 float alpha = isT ? 1f : dim ? 0.25f : 0.55f;
                 bi.color = new Color(col.r, col.g, col.b, alpha);
                 if (isT && col == RMute) bi.color = RWarn;
-                var le = LE(bar.gameObject, isT ? 46 : 34, 0); bars.Add(le);
+                var le = LE(bar.gameObject, isT ? 52 : 40, 0); bars.Add(le);
                 var nt = AddText(c, model.Name(ids[i]), 12, isT ? RText : RMute, isT ? FontStyle.Bold : FontStyle.Normal, TextAnchor.UpperCenter);
                 LE(nt.gameObject, 90, 38);
             }
@@ -1605,12 +1605,20 @@ namespace SteelMind.Scenario
 
         IEnumerator GrowBars(List<LayoutElement> bars, int[] vals, float delay)
         {
-            yield return new WaitForSeconds(delay);
-            float t = 0, dur = 0.7f;
-            while (t < dur)
+            // 바닥에서 막대가 하나씩 차례로 솟아오른다 (막대마다 0.08초 늦게, 끝에서 부드럽게 멈춤)
+            yield return new WaitForSecondsRealtime(delay);
+            const float dur = 0.6f, stagger = 0.08f;
+            float t = 0, total = dur + stagger * (bars.Count - 1);
+            while (t < total)
             {
-                t += Time.unscaledDeltaTime; float k = Mathf.SmoothStep(0, 1, t / dur);
-                for (int i = 0; i < bars.Count; i++) if (bars[i]) bars[i].preferredHeight = Mathf.Max(2f, vals[i] / 100f * 200f * k);
+                t += Time.unscaledDeltaTime;
+                for (int i = 0; i < bars.Count; i++)
+                {
+                    if (!bars[i]) continue;
+                    float p = Mathf.Clamp01((t - i * stagger) / dur);
+                    float k = 1f - Mathf.Pow(1f - p, 3f);   // ease-out
+                    bars[i].preferredHeight = Mathf.Max(2f, vals[i] / 100f * 200f * k);
+                }
                 yield return null;
             }
         }
