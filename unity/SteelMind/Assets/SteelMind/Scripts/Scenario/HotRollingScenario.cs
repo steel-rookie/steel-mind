@@ -89,7 +89,7 @@ namespace SteelMind.Scenario
             process = FindFirstObjectByType<LineProcess>(FindObjectsInactive.Include);
             player = FindFirstObjectByType<PlayerMove>();
             if (player) body = player.GetComponent<Rigidbody2D>();
-            font = Font.CreateDynamicFontFromOSFont(new[] { "Malgun Gothic", "Apple SD Gothic Neo", "AppleGothic", "Noto Sans CJK KR", "Arial" }, 20);
+            font = Resources.Load<Font>("Fonts/Galmuri11") ?? Font.CreateDynamicFontFromOSFont(new[] { "Malgun Gothic", "Apple SD Gothic Neo", "AppleGothic", "Arial" }, 20);   // 도트 글꼴 갈무리(OFL)
             round = MakeRoundSprite(64, 18);
             triangle = MakeTriangleSprite(48);
             BuildCanvas();
@@ -125,7 +125,7 @@ namespace SteelMind.Scenario
             yield return Say("quality", null, "품질 담당이에요. 0.01mm라도 어긋나면 불량입니다. 조건부터 잡아 주세요.", null, false);
             yield return Say("equipment", null, "설비 담당입니다. 롤 소리만 들어도 상태를 알죠. 무리하면 결국 더 오래 멈춥니다.", null, false);
             yield return Say("safety", null, "안전 담당입니다. 사람이 먼저입니다. 그건 타협 못 합니다.", null, false);
-            yield return Say(null, null, "사건이 터지면 화살표를 따라 그 설비로 가세요.\nAI들의 의견을 듣고, 최종 결정은 당신이 내립니다.", "WASD로 이동 · Space로 대화 넘기기 · A·B·C로 선택", false);
+            yield return Say(null, null, "사건이 터지면 화살표를 따라 그 설비로 가세요.\nAI들의 의견을 듣고, 최종 결정은 당신이 내립니다.", null, false);
             yield return Say(null, null, "같은 선택은 언제나 같은 결과를 냅니다.\n교대가 끝나면 운영 결과 보고서를 받게 됩니다.", null, false);
             CloseChat();
             chatting = false;
