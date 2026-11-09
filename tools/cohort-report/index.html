@@ -378,7 +378,7 @@ function render(){
   <h3>3.1 신입과 경력의 역량 차이</h3>
   ${groupedBars(C.comp.map(c => ({label:c.n, a:c.new, b:c.exp, mark:c.t.ok ? (c.t.p < .05 ? fmtP(c.t.p) : 'ns') : '', markColor:c.t.p < .05 ? '#1f9d63' : '#8a93a5'})), {max:100, unit:'점'})}${legend()}
   <div class="cap">역량별 평균 점수(0~100). 오른쪽은 Mann-Whitney 검정 결과(ns = 유의하지 않음).${mixedComp ? ' Unity와 HTML 시연은 역량 정의가 달라, 각 역량은 그 정의를 쓴 기록만으로 계산했습니다.' : ''}</div>
-  <p>${top2.length ? `차이가 가장 큰 역량은 <b>${top2.map(c => `"${c.n}"(신입 ${c.new.toFixed(0)}점, 경력 ${c.exp.toFixed(0)}점, ${fmtP(c.t.p)}, r=${c.t.r.toFixed(2)}, 효과크기 ${effTxt(c.t.r)})`).join('과 ')}</b>이었습니다 ${T('C1')}.` : '비교할 수 있는 인원이 부족합니다.'} 반면 ${C.comp.filter(c => c.t.ok).sort((a,b) => Math.abs(a.t.r) - Math.abs(b.t.r))[0] ? `"${C.comp.filter(c => c.t.ok).sort((a,b) => Math.abs(a.t.r) - Math.abs(b.t.r))[0].n}"은 차이가 가장 작았습니다.` : ''}</p>
+  <p>${top2.length ? `차이가 가장 큰 역량은 <b>${top2.map(c => `"${c.n}"(신입 ${c.new.toFixed(0)}점, 경력 ${c.exp.toFixed(0)}점, ${fmtP(c.t.p)}, r=${c.t.r.toFixed(2)}, 효과크기 ${effTxt(c.t.r)})`).join('과 ')}</b>이었습니다 ${T('C1')}.` : '비교할 수 있는 인원이 부족합니다.'} ${C.comp.filter(c => c.t.ok).sort((a,b) => Math.abs(a.t.r) - Math.abs(b.t.r))[0] ? `반면 "${C.comp.filter(c => c.t.ok).sort((a,b) => Math.abs(a.t.r) - Math.abs(b.t.r))[0].n}"은 차이가 가장 작았습니다.` : '신입·경력 기록이 각각 2명 이상 모이면 역량별 차이를 계산합니다.'}</p>
   <p class="bridge">그렇다면 이 차이는 신입이 "몰라서" 생긴 것일까요, 아니면 알 수 있는 근거를 "확인하지 않아서" 생긴 것일까요?</p>
 
   <h3>3.2 몰라서인가, 확인을 건너뛰어서인가</h3>
