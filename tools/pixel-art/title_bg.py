@@ -1,4 +1,4 @@
-"""메인 화면 배경: 해 질 녘 바닷가 제철소 전경 (480x270 도트, 오리지널).
+"""메인 화면 배경: 밤바다 옆 제철소, 불빛 강조 (480x270 도트, 오리지널).
 
 왼쪽에서 비치는 노을빛, 멀수록 푸르게 흐려지는 공기, 고로·열풍로·빨강흰 굴뚝, 녹슨 공장 건물,
 불 켜진 창·가로등·출선구 불빛. 굴뚝 꼭대기 좌표는 title_layout.json 으로 내보내 연기 연출에 쓴다.
@@ -14,6 +14,8 @@ hx = pk.hx
 TH = pk.bayer(H, W)
 yy, xx = np.mgrid[0:H, 0:W]
 img = np.zeros((H, W, 3), float)
+EMIS = np.zeros((H, W), bool)     # 스스로 빛나는 픽셀 (밤 보정에서 어두워지지 않음)
+CLOUDM = np.zeros((H, W), bool)
 rng = np.random.default_rng(7)
 
 HAZE = np.array(hx('#9db0c6'), float)
@@ -71,7 +73,7 @@ def clouds(blobs, seed, cut=0.55, dim=0.0):
     light = np.clip((d - sh) * 3.0 + 0.5, 0, 1)
     under = np.clip((yy - (np.array([b[1] for b in blobs]).mean())) / 14.0, 0, 1)
     lv = 1.0 + light * 4.2 - under * 1.6 - dim
-    paint(m, CLOUD, lv)
+    paint(m, CLOUD, lv); CLOUDM[m] = True
 
 clouds([(40, 22, 70, 16, 1.2), (110, 36, 60, 18, 1.0), (10, 50, 40, 14, 0.9), (170, 18, 40, 10, 0.7)], 3)
 clouds([(400, 30, 50, 12, 1.0), (455, 46, 40, 12, 0.9), (330, 58, 36, 9, 0.7)], 5)
@@ -102,7 +104,7 @@ def box(x0, y0, x1, y1, ramp, base, roof=3, windows=None, lit_ratio=0.0, seed=0)
         for y in range(y0 + 4, y1 - 3, wy):
             for x in range(x0 + 3, x1 - 3 - ww, wx):
                 if r.random() < lit_ratio:
-                    solid(rect_mask(x, y, x + ww, y + wh), LIT[r.integers(0, 3)])
+                    wm = rect_mask(x, y, x + ww, y + wh); solid(wm, LIT[r.integers(0, 3)]); EMIS[wm] = True
                     lights.append((x + ww / 2, y + wh / 2))
                 else:
                     paint(rect_mask(x, y, x + ww, y + wh), ramp, base - 1.8)
@@ -243,32 +245,62 @@ stack(140, 186, 236, 3)
 # 가로등
 for x in (30, 136, 268, 334, 450):
     paint(rect_mask(x, 212, x + 1, 232), DARK, 3)
-    solid(rect_mask(x, 212, x + 5, 213), '#3b3540'); solid(rect_mask(x + 4, 213, x + 6, 215), '#fff0b8')
+    solid(rect_mask(x, 212, x + 5, 213), '#3b3540'); solid(rect_mask(x + 4, 213, x + 6, 215), '#fff0b8'); EMIS[213:215, x + 4:x + 6] = True
     lights.append((x + 5, 214))
 
-# ── 조명 ─────────────────────────────────────────────
-# 1) 노을: 왼쪽 위에서 비추는 따뜻한 빛 (전체 색조)
-sun = np.clip(1.0 - xx / 520.0, 0, 1) * np.clip((yy - 40) / 200.0, 0, 1)
-warm = np.array(hx('#ffb070'), float)
-img = img * (1 - 0.18 * sun[..., None]) + warm * (0.18 * sun[..., None])
+# ── 밤 + 조명 ────────────────────────────────────────
+day = img.copy()
+# 1) 밤 보정: 전체를 푸르고 어둡게 (스스로 빛나는 것은 그대로)
+img = img * np.array([0.24, 0.27, 0.44])
+img[EMIS] = day[EMIS]
+# 별과 달 (구름 없는 하늘에만)
+for _ in range(140):
+    x, y = rng.integers(0, W), rng.integers(0, 120)
+    if not CLOUDM[y, x] and img[y, x].sum() < 160:
+        img[y, x] = hx('#e8ecff') if rng.random() < 0.75 else hx('#ffe6a8')
+mx, my = 352, 22
+moon = (xx - mx) ** 2 + (yy - my) ** 2 <= 81
+img[moon & ~CLOUDM] = np.array(hx('#f3eedc'), float)
+img[((xx - mx - 4) ** 2 + (yy - my + 3) ** 2 <= 64) & moon] = img[0, 0] * 0 + np.array(hx('#141c3c'), float)   # 초승달
 
-# 2) 불빛 주변 번짐 (디더링된 둥근 빛)
-def glow(cx, cy, rx, ry, c, s):
+# 2) 불빛: 디더링으로 계단진 빛을 더한다
+def light(cx, cy, rx, ry, c, s, steps=5):
     global img
-    f = np.clip(1 - ((xx - cx) / rx) ** 2 - ((yy - cy) / ry) ** 2, 0, 1) ** 1.3 * s
-    m = TH < f
-    c = np.array(hx(c), float)
-    img[m] = img[m] * 0.55 + c * 0.45
+    f = np.clip(1 - np.sqrt(((xx - cx) / rx) ** 2 + ((yy - cy) / ry) ** 2), 0, 1) ** 1.5
+    q = np.floor(f * steps + TH) / steps
+    img = img + np.array(hx(c), float)[None, None, :] * (q * s)[..., None]
 
+# 달빛 테두리
+light(mx, my, 40, 40, '#5a6aa0', 0.25, 3)
+# 고로 출선구: 크게 번지는 쇳물 빛 (수증기 아랫면·건물 앞면까지 물듦)
+for cx, s in ((110, 0.9), (262, 1.0), (392, 0.8)):
+    light(cx, 194, 95, 60, '#ff6a1c', 0.55 * s)
+    light(cx, 196, 40, 16, '#ffb040', 0.7 * s)
+    hot = ((xx - cx) / 6.0) ** 2 + ((yy - 196) / 3.0) ** 2 <= 1
+    img[hot] = np.array(hx('#ffe08a'), float)
+    for k in range(10):   # 쇳물 흐름
+        img[196 + k // 3, cx - 8 + k * 2: cx - 6 + k * 2] = np.array(hx('#ffb040' if k % 3 else '#fff0b8'), float)
+# 창문·가로등 빛 번짐
 for (lx, ly) in lights:
-    glow(lx, ly, 7, 5, '#ffcf7a', 0.35)
-glow(262, 196, 60, 14, '#ff7a2a', 0.7)    # 출선구 불빛
-glow(110, 196, 46, 12, '#ff8a3a', 0.6)
-glow(392, 196, 40, 10, '#ff8a3a', 0.5)
-
-# 3) 아래쪽 비네트
+    light(lx, ly, 6, 4, '#ffc060', 0.35, 3)
+for x in (30, 136, 268, 334, 450):
+    light(x + 5, 214, 26, 30, '#ffb050', 0.45)
+    light(x + 5, 236, 30, 10, '#ffb050', 0.35)   # 바닥에 고인 빛
+# 굴뚝 꼭대기 빨간 항공등 (정적; 깜빡임은 게임에서)
+for sx, top in tops:
+    img[top - 2:top, sx - 1:sx + 1] = np.array(hx('#ff4a3a'), float)
+    light(sx, top - 1, 6, 6, '#ff3a2a', 0.4, 3)
+# 바다에 비친 불빛 (세로 물결 줄)
+for _ in range(70):
+    x = int(rng.integers(0, W)); y = int(rng.integers(160, 182))
+    if img[y, x].sum() < 200:
+        img[y, x:x + int(rng.integers(2, 5))] = np.array(hx(['#ffb050', '#ffd88a', '#c0605a'][int(rng.integers(0, 3))]), float) * 0.8
+# 수증기 아랫면이 쇳물 빛에 물듦
+for cx, cy in ((70, 150), (300, 160), (232, 168), (470, 112), (338, 118)):
+    light(cx + 8, cy + 6, 34, 26, '#ff7a30', 0.4)
+# 아래쪽 비네트
 dark = np.clip((yy - 236) / 40.0, 0, 1)[..., None]
-img = img * (1 - dark * 0.35)
+img = img * (1 - dark * 0.45)
 
 out = sys.argv[1]
 im = Image.fromarray(np.clip(img, 0, 255).astype(np.uint8))
