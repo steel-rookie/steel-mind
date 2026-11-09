@@ -14,7 +14,7 @@ namespace SteelMind
     /// </summary>
     public class IslandMapView : MonoBehaviour
     {
-        [Serializable] class Area { public string name, scene, hover, mask; public float[] pin; }
+        [Serializable] class Area { public string name, scene, hover, mask, here; }
         [Serializable] class Cloud { public string file; public float x, y, w, h, amp; }
         [Serializable] class Layout { public int[] size; public string background; public Area[] areas; public Cloud[] clouds; public float cloudPeriodSeconds = 8, smokeFps = 12.5f; public int smokeFrames = 20; }
 
@@ -29,15 +29,8 @@ namespace SteelMind
         RawImage smokeImg;
         int hovered = -1;
 
-        /// <summary>지도 그림 판 (핀 같은 표시를 여기에 붙인다)</summary>
+        /// <summary>지도 그림 판 (테두리 같은 꾸밈을 여기에 붙인다)</summary>
         public RectTransform Board => board;
-
-        /// <summary>i번 공정 위쪽 가운데 (판 기준 0~1 앵커)</summary>
-        public Vector2 PinAnchor(int i)
-        {
-            if (layout.areas == null || i < 0 || i >= layout.areas.Length || layout.areas[i].pin == null) return new Vector2(0.5f, 0.5f);
-            var p = layout.areas[i].pin; return new Vector2(p[0] / layout.size[0], 1 - p[1] / layout.size[1]);
-        }
 
         static Texture2D Tex(string name)
         {
@@ -58,7 +51,7 @@ namespace SteelMind
             var v = go.AddComponent<IslandMapView>();
             v.layout = JsonUtility.FromJson<Layout>(json.text);
             v.onPick = onPick;
-            v.Make((RectTransform)go.transform);
+            v.Make((RectTransform)go.transform, currentScene);
             return v;
         }
 
@@ -70,7 +63,7 @@ namespace SteelMind
             return img;
         }
 
-        void Make(RectTransform root)
+        void Make(RectTransform root, string currentScene)
         {
             root.anchorMin = Vector2.zero; root.anchorMax = Vector2.one; root.offsetMin = root.offsetMax = Vector2.zero;
             board = new GameObject("Board", typeof(RectTransform)).GetComponent<RectTransform>();
@@ -94,6 +87,8 @@ namespace SteelMind
             for (int i = 0; i < smoke.Length; i++) smoke[i] = Tex($"smoke_{i:00}");
             smokeImg = Layer("Smoke", smoke.Length > 0 ? smoke[0] : null);
             Layer("Labels", Tex("labels"));
+            foreach (var a in layout.areas)   // 지금 있는 공정은 늘 주황 테로 표시 (마우스 강조보다 아래)
+                if (a.scene == currentScene && !string.IsNullOrEmpty(a.here)) Layer("Here_" + a.scene, Tex(a.here));
             foreach (var a in layout.areas)
             {
                 var h = Layer("Hover_" + a.scene, Tex(a.hover)); h.enabled = false;
