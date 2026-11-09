@@ -1,0 +1,819 @@
+fileFormatVersion: 2
+guid: ffe80aa95da8648b4845262937111495
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: 1670741818828719477
+    second: line_hot_strip_0
+  - first:
+      213: -7312426105797398461
+    second: line_hot_strip_1
+  - first:
+      213: 855825076991831036
+    second: line_hot_strip_2
+  - first:
+      213: -3652967753329446966
+    second: line_hot_strip_3
+  - first:
+      213: -5059737314319455845
+    second: line_hot_strip_4
+  - first:
+      213: -4881135484296972047
+    second: line_hot_strip_5
+  - first:
+      213: -772841784464271760
+    second: line_hot_strip_6
+  - first:
+      213: -4191872185017836356
+    second: line_hot_strip_7
+  - first:
+      213: -878771746178582790
+    second: line_hot_strip_8
+  - first:
+      213: -3034078256908042907
+    second: line_hot_strip_9
+  - first:
+      213: 6967821817984239664
+    second: line_hot_strip_10
+  - first:
+      213: 4091852965161660552
+    second: line_hot_strip_11
+  - first:
+      213: -6914015374959264387
+    second: line_hot_strip_12
+  - first:
+      213: -3881489380113725585
+    second: line_hot_strip_13
+  - first:
+      213: -8620638999205526517
+    second: line_hot_strip_14
+  - first:
+      213: -8950399335864359010
+    second: line_hot_strip_15
+  - first:
+      213: 1153058492657574568
+    second: line_hot_strip_16
+  - first:
+      213: 3938377031272337671
+    second: line_hot_strip_17
+  - first:
+      213: -7912777186966825175
+    second: line_hot_strip_18
+  - first:
+      213: -5229900529318774446
+    second: line_hot_strip_19
+  - first:
+      213: 3146669156152385733
+    second: line_hot_strip_20
+  - first:
+      213: -7684899992231163314
+    second: line_hot_strip_21
+  - first:
+      213: -737569378585418057
+    second: line_hot_strip_22
+  - first:
+      213: 7189990348630085490
+    second: line_hot_strip_23
+  - first:
+      213: -4893795501824282889
+    second: line_hot_strip_24
+  - first:
+      213: 6977682350773074373
+    second: line_hot_strip_25
+  - first:
+      213: 4427305658270210128
+    second: line_hot_strip_26
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 0
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 1
+  spriteExtrude: 1
+  spriteMeshType: 0
+  alignment: 1
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 16
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 4096
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 0
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: line_hot_strip_0
+      rect:
+        serializedVersion: 2
+        x: 2
+        y: 2
+        width: 57
+        height: 18
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5750dae05daaf2710800000000000000
+      internalID: 1670741818828719477
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: line_hot_strip_1
+      rect:
+        serializedVersion: 2
+        x: 61
+        y: 2
+        width: 8
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 34037ad133b058a90800000000000000
+      internalID: -7312426105797398461
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: line_hot_strip_2
+      rect:
+        serializedVersion: 2
+        x: 69
+        y: 2
+        width: 8
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: cfb28f78f5080eb00800000000000000
+      internalID: 855825076991831036
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: line_hot_strip_3
+      rect:
+        serializedVersion: 2
+        x: 77
+        y: 2
+        width: 8
+        height: 11
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: acf67debe2d0e4dc0800000000000000
+      internalID: -3652967753329446966
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: line_hot_strip_4
+      rect:
+        serializedVersion: 2
+        x: 87
+        y: 2
+        width: 33
+        height: 19
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b99233368b338c9b0800000000000000
+      internalID: -5059737314319455845
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: line_hot_strip_5
+      rect:
+        serializedVersion: 2
+        x: 131
+        y: 2
+        width: 25
+        height: 19
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 1f8bced6329b24cb0800000000000000
+      internalID: -4881135484296972047
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: line_hot_strip_6
+      rect:
+        serializedVersion: 2
+        x: 169
+        y: 2
+        width: 126
+        height: 18
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 0769d61ed705645f0800000000000000
+      internalID: -772841784464271760
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: line_hot_strip_7
+      rect:
+        serializedVersion: 2
+        x: 300
+        y: 2
+        width: 29
+        height: 18
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: cbcdb2c057a73d5c0800000000000000
+      internalID: -4191872185017836356
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: line_hot_strip_8
+      rect:
+        serializedVersion: 2
+        x: 339
+        y: 2
+        width: 35
+        height: 17
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: af63066b0c9fdc3f0800000000000000
+      internalID: -878771746178582790
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: line_hot_strip_9
+      rect:
+        serializedVersion: 2
+        x: 384
+        y: 2
+        width: 28
+        height: 17
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 56d724c86e9c4e5d0800000000000000
+      internalID: -3034078256908042907
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: line_hot_strip_10
+      rect:
+        serializedVersion: 2
+        x: 429
+        y: 2
+        width: 28
+        height: 17
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 038ca2fb60da2b060800000000000000
+      internalID: 6967821817984239664
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: line_hot_strip_11
+      rect:
+        serializedVersion: 2
+        x: 480
+        y: 2
+        width: 28
+        height: 17
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 880f69d979e29c830800000000000000
+      internalID: 4091852965161660552
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: line_hot_strip_12
+      rect:
+        serializedVersion: 2
+        x: 518
+        y: 2
+        width: 68
+        height: 17
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d7db6f306ab7c00a0800000000000000
+      internalID: -6914015374959264387
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: line_hot_strip_13
+      rect:
+        serializedVersion: 2
+        x: 587
+        y: 6
+        width: 32
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f67ceda49fd222ac0800000000000000
+      internalID: -3881489380113725585
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: line_hot_strip_14
+      rect:
+        serializedVersion: 2
+        x: 620
+        y: 6
+        width: 32
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: b04c97b11865d5880800000000000000
+      internalID: -8620638999205526517
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: line_hot_strip_15
+      rect:
+        serializedVersion: 2
+        x: 653
+        y: 6
+        width: 20
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e97a9eba93bc9c380800000000000000
+      internalID: -8950399335864359010
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: line_hot_strip_16
+      rect:
+        serializedVersion: 2
+        x: 672
+        y: 6
+        width: 12
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 8a22a14079c700010800000000000000
+      internalID: 1153058492657574568
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: line_hot_strip_17
+      rect:
+        serializedVersion: 2
+        x: 685
+        y: 6
+        width: 32
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7019b842b0de7a630800000000000000
+      internalID: 3938377031272337671
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: line_hot_strip_18
+      rect:
+        serializedVersion: 2
+        x: 718
+        y: 6
+        width: 12
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9271708721b203290800000000000000
+      internalID: -7912777186966825175
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: line_hot_strip_19
+      rect:
+        serializedVersion: 2
+        x: 729
+        y: 6
+        width: 21
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 259b3538d29ab67b0800000000000000
+      internalID: -5229900529318774446
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: line_hot_strip_20
+      rect:
+        serializedVersion: 2
+        x: 750
+        y: 6
+        width: 21
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5c0242efce63bab20800000000000000
+      internalID: 3146669156152385733
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: line_hot_strip_21
+      rect:
+        serializedVersion: 2
+        x: 770
+        y: 6
+        width: 12
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e4ac8a46c20c95590800000000000000
+      internalID: -7684899992231163314
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: line_hot_strip_22
+      rect:
+        serializedVersion: 2
+        x: 783
+        y: 6
+        width: 32
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7b6e538de80a3c5f0800000000000000
+      internalID: -737569378585418057
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: line_hot_strip_23
+      rect:
+        serializedVersion: 2
+        x: 816
+        y: 6
+        width: 12
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 27f459cb02af7c360800000000000000
+      internalID: 7189990348630085490
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: line_hot_strip_24
+      rect:
+        serializedVersion: 2
+        x: 827
+        y: 6
+        width: 20
+        height: 12
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 7feeb566beeb51cb0800000000000000
+      internalID: -4893795501824282889
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: line_hot_strip_25
+      rect:
+        serializedVersion: 2
+        x: 848
+        y: 2
+        width: 53
+        height: 17
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5c97751f025b5d060800000000000000
+      internalID: 6977682350773074373
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: line_hot_strip_26
+      rect:
+        serializedVersion: 2
+        x: 906
+        y: 2
+        width: 32
+        height: 17
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 058d5411a03f07d30800000000000000
+      internalID: 4427305658270210128
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 5e97eb03825dee720800000000000000
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      line_hot_strip_0: 1670741818828719477
+      line_hot_strip_1: -7312426105797398461
+      line_hot_strip_10: 6967821817984239664
+      line_hot_strip_11: 4091852965161660552
+      line_hot_strip_12: -6914015374959264387
+      line_hot_strip_13: -3881489380113725585
+      line_hot_strip_14: -8620638999205526517
+      line_hot_strip_15: -8950399335864359010
+      line_hot_strip_16: 1153058492657574568
+      line_hot_strip_17: 3938377031272337671
+      line_hot_strip_18: -7912777186966825175
+      line_hot_strip_19: -5229900529318774446
+      line_hot_strip_2: 855825076991831036
+      line_hot_strip_20: 3146669156152385733
+      line_hot_strip_21: -7684899992231163314
+      line_hot_strip_22: -737569378585418057
+      line_hot_strip_23: 7189990348630085490
+      line_hot_strip_24: -4893795501824282889
+      line_hot_strip_25: 6977682350773074373
+      line_hot_strip_26: 4427305658270210128
+      line_hot_strip_3: -3652967753329446966
+      line_hot_strip_4: -5059737314319455845
+      line_hot_strip_5: -4881135484296972047
+      line_hot_strip_6: -772841784464271760
+      line_hot_strip_7: -4191872185017836356
+      line_hot_strip_8: -878771746178582790
+      line_hot_strip_9: -3034078256908042907
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

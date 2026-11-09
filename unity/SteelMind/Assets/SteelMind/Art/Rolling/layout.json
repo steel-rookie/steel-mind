@@ -1,0 +1,486 @@
+{
+ "map": {
+  "width": 1536,
+  "height": 560,
+  "tile": 16,
+  "pixelsPerUnit": 16,
+  "wallHeight": 160,
+  "note": "좌표는 지도 왼쪽 위가 (0,0)인 px. rect=[x,y,w,h], collider는 바닥 발자국, sortY가 클수록 앞에 그린다."
+ },
+ "layers": [
+  {
+   "id": "ground",
+   "file": "ground.png",
+   "order": -1000
+  },
+  {
+   "id": "glow_floor",
+   "file": "glow_floor.png",
+   "order": -900
+  },
+  {
+   "id": "glow_strip",
+   "file": "glow_strip.png",
+   "order": 9000,
+   "toggle": "line_running"
+  },
+  {
+   "id": "glow_air",
+   "file": "glow_air.png",
+   "order": 9500
+  }
+ ],
+ "objects": [
+  {
+   "id": "reheating_furnace",
+   "label": "가열로",
+   "file": "line_reheating_furnace.png",
+   "rect": [
+    72,
+    96,
+    386,
+    250
+   ],
+   "sortY": 347,
+   "warnFile": "line_reheating_furnace_warn.png",
+   "equipment": true,
+   "collider": [
+    76,
+    197,
+    379,
+    150
+   ]
+  },
+  {
+   "id": "descaler",
+   "label": "스케일 제거기",
+   "file": "line_descaler.png",
+   "rect": [
+    466,
+    216,
+    76,
+    92
+   ],
+   "sortY": 304,
+   "warnFile": "line_descaler_warn.png",
+   "equipment": true,
+   "collider": [
+    470,
+    244,
+    68,
+    60
+   ]
+  },
+  {
+   "id": "roughing_mill",
+   "label": "조압연기",
+   "file": "line_roughing_mill.png",
+   "rect": [
+    565,
+    169,
+    190,
+    137
+   ],
+   "sortY": 307,
+   "warnFile": "line_roughing_mill_warn.png",
+   "equipment": true,
+   "collider": [
+    569,
+    202,
+    182,
+    105
+   ]
+  },
+  {
+   "id": "finishing_mill",
+   "label": "사상압연기",
+   "file": "line_finishing_mill.png",
+   "rect": [
+    766,
+    173,
+    216,
+    133
+   ],
+   "sortY": 306,
+   "warnFile": "line_finishing_mill_warn.png",
+   "equipment": true,
+   "collider": [
+    770,
+    202,
+    208,
+    104
+   ]
+  },
+  {
+   "id": "runout_table",
+   "label": "런아웃 테이블",
+   "file": "line_runout_table.png",
+   "rect": [
+    973,
+    203,
+    373,
+    110
+   ],
+   "sortY": 323,
+   "warnFile": "line_runout_table_warn.png",
+   "equipment": true,
+   "collider": [
+    976,
+    246,
+    366,
+    77
+   ]
+  },
+  {
+   "id": "coiler",
+   "label": "권취기",
+   "file": "line_coiler.png",
+   "rect": [
+    1324,
+    186,
+    96,
+    209
+   ],
+   "sortY": 391,
+   "warnFile": "line_coiler_warn.png",
+   "equipment": true,
+   "collider": [
+    1328,
+    223,
+    89,
+    168
+   ]
+  },
+  {
+   "id": "roller_tables",
+   "label": "롤러 테이블",
+   "file": "line_roller_tables.png",
+   "rect": [
+    450,
+    242,
+    321,
+    61
+   ],
+   "sortY": 299,
+   "collider": [
+    452,
+    267,
+    315,
+    32
+   ]
+  },
+  {
+   "id": "walkway",
+   "label": "작업자 난간",
+   "file": "line_walkway.png",
+   "rect": [
+    469,
+    292,
+    550,
+    40
+   ],
+   "sortY": 328,
+   "collider": [
+    473,
+    317,
+    542,
+    11
+   ]
+  },
+  {
+   "id": "hot_strip",
+   "label": "열연 강판",
+   "file": "line_hot_strip.png",
+   "rect": [
+    450,
+    251,
+    940,
+    23
+   ],
+   "sortY": 291,
+   "toggle": "line_running"
+  },
+  {
+   "id": "pulpit",
+   "label": "운전실",
+   "file": "prop_pulpit.png",
+   "rect": [
+    693,
+    367,
+    194,
+    114
+   ],
+   "sortY": 479,
+   "collider": [
+    697,
+    421,
+    186,
+    58
+   ]
+  },
+  {
+   "id": "coil_row_a",
+   "label": "coil_row_a",
+   "file": "prop_coil_row_a.png",
+   "rect": [
+    1246,
+    410,
+    102,
+    64
+   ],
+   "sortY": 470,
+   "collider": [
+    1250,
+    444,
+    94,
+    26
+   ]
+  },
+  {
+   "id": "coil_row_b",
+   "label": "coil_row_b",
+   "file": "prop_coil_row_b.png",
+   "rect": [
+    1246,
+    470,
+    102,
+    64
+   ],
+   "sortY": 530,
+   "collider": [
+    1250,
+    504,
+    94,
+    26
+   ]
+  },
+  {
+   "id": "coil_row_c",
+   "label": "coil_row_c",
+   "file": "prop_coil_row_c.png",
+   "rect": [
+    1381,
+    470,
+    69,
+    64
+   ],
+   "sortY": 530,
+   "collider": [
+    1385,
+    504,
+    61,
+    26
+   ]
+  },
+  {
+   "id": "slab_a",
+   "label": "slab_a",
+   "file": "prop_slab_a.png",
+   "rect": [
+    56,
+    402,
+    84,
+    62
+   ],
+   "sortY": 461,
+   "collider": [
+    60,
+    432,
+    76,
+    29
+   ]
+  },
+  {
+   "id": "slab_b",
+   "label": "slab_b",
+   "file": "prop_slab_b.png",
+   "rect": [
+    56,
+    470,
+    84,
+    70
+   ],
+   "sortY": 537,
+   "collider": [
+    60,
+    508,
+    76,
+    29
+   ]
+  },
+  {
+   "id": "slab_c",
+   "label": "slab_c",
+   "file": "prop_slab_c.png",
+   "rect": [
+    154,
+    454,
+    84,
+    54
+   ],
+   "sortY": 505,
+   "collider": [
+    158,
+    476,
+    76,
+    29
+   ]
+  },
+  {
+   "id": "barrels",
+   "label": "barrels",
+   "file": "prop_barrels.png",
+   "rect": [
+    557,
+    425,
+    56,
+    48
+   ],
+   "sortY": 469,
+   "collider": [
+    561,
+    449,
+    48,
+    20
+   ]
+  },
+  {
+   "id": "cabinet_a",
+   "label": "cabinet_a",
+   "file": "prop_cabinet_a.png",
+   "rect": [
+    12,
+    128,
+    48,
+    56
+   ],
+   "sortY": 181,
+   "collider": [
+    16,
+    166,
+    40,
+    15
+   ]
+  },
+  {
+   "id": "cabinet_b",
+   "label": "cabinet_b",
+   "file": "prop_cabinet_b.png",
+   "rect": [
+    1426,
+    132,
+    34,
+    52
+   ],
+   "sortY": 181,
+   "collider": [
+    1430,
+    166,
+    26,
+    15
+   ]
+  },
+  {
+   "id": "cones",
+   "label": "cones",
+   "file": "prop_cones.png",
+   "rect": [
+    991,
+    374,
+    108,
+    30
+   ],
+   "sortY": 400
+  }
+ ],
+ "spawn": [
+  640,
+  536
+ ],
+ "colliders": [
+  {
+   "id": "back_wall",
+   "rect": [
+    0,
+    0,
+    1536,
+    166
+   ]
+  },
+  {
+   "id": "front_wall_left",
+   "rect": [
+    0,
+    552,
+    600,
+    8
+   ]
+  },
+  {
+   "id": "front_wall_right",
+   "rect": [
+    680,
+    552,
+    856,
+    8
+   ]
+  },
+  {
+   "id": "left_edge",
+   "rect": [
+    -8,
+    0,
+    8,
+    560
+   ]
+  },
+  {
+   "id": "right_edge",
+   "rect": [
+    1536,
+    0,
+    8,
+    560
+   ]
+  }
+ ],
+ "fx": {
+  "note": "공정 연출 위치(px). LineProcess.cs가 읽는다",
+  "stripTop": 254,
+  "stripHeight": 17,
+  "furnaceExit": 438,
+  "furnaceGlow": [
+   72,
+   96
+  ],
+  "descaler": [
+   470,
+   538
+  ],
+  "roughing": [
+   569,
+   751
+  ],
+  "finishing": [
+   770,
+   978
+  ],
+  "runout": [
+   976,
+   1342
+  ],
+  "coil": [
+   1388,
+   260
+  ],
+  "coilRadius": 13,
+  "sprayShort": [
+   469,
+   224
+  ],
+  "sprayLong": [
+   979,
+   220
+  ]
+ }
+}
