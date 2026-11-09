@@ -4,7 +4,7 @@ using UnityEngine.UI;
 
 namespace SteelMind
 {
-    /// <summary>미니맵·전체 공정 보기·공정 버튼을 한 번에 숨기거나 보인다. 버튼 또는 H 키.</summary>
+    /// <summary>미니맵·전체 공정 보기·공정 버튼을 한 번에 숨기거나 보인다. H 키.</summary>
     public class UiToggle : MonoBehaviour
     {
         public List<GameObject> targets = new List<GameObject>();

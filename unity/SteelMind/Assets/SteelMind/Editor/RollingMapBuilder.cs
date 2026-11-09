@@ -345,15 +345,9 @@ namespace SteelMind.EditorTools
                 UnityEventTools.AddIntPersistentListener(b.onClick, switcher.Load, i);
             }
 
-            // UI 숨기기 (왼쪽 아래): 미니맵·전체 공정 보기·공정 버튼
-            var hideBtn = MakeButton("HideUiButton", canvasGo.transform, new Vector2(0, 0), new Vector2(180, 40), new Vector2(16, 16),
-                "UI 숨기기 (H)", new Color32(58, 52, 64, 220), out var hideText);
-            hideText.color = new Color32(230, 226, 220, 255); hideText.fontSize = 18;
+            // H 키로 미니맵·전체 공정 보기·공정 버튼을 숨기기/보이기 (버튼 없음)
             var toggle = canvasGo.AddComponent<UiToggle>();
-            toggle.label = hideText;
-            foreach (Transform child in canvasGo.transform)
-                if (child.gameObject != hideBtn.gameObject) toggle.targets.Add(child.gameObject);
-            UnityEventTools.AddPersistentListener(hideBtn.onClick, toggle.Toggle);
+            foreach (Transform child in canvasGo.transform) toggle.targets.Add(child.gameObject);
 
             var es = new GameObject("EventSystem");
             es.AddComponent<UnityEngine.EventSystems.EventSystem>();
