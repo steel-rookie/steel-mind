@@ -56,7 +56,7 @@ namespace SteelMind.Scenario
         readonly List<int> picks = new List<int>();
         readonly HashSet<string> flags = new HashSet<string>();
         int current = -1;
-        bool deciding, chatting, skip, showingResult, guiding;
+        bool deciding, chatting, skip, showingResult, guiding, finished;
         Coroutine resume, fade;
         AudioSource normalBgm, alarmBgm;
         float normalVolume = 0.5f;
@@ -188,7 +188,7 @@ namespace SteelMind.Scenario
             StopAllCoroutines();
             resume = null;
             picks.Clear(); flags.Clear();
-            current = -1; deciding = chatting = showingResult = guiding = false;
+            current = -1; deciding = chatting = showingResult = guiding = finished = false;
             CloseChat(); HideGuide();
             if (overlay) Destroy(overlay.gameObject);
             if (line) { line.ClearWarnings(); line.SetRunning(true); }
@@ -366,7 +366,8 @@ namespace SteelMind.Scenario
             {
                 if (k.spaceKey.wasPressedThisFrame || k.enterKey.wasPressedThisFrame || k.numpadEnterKey.wasPressedThisFrame) skip = true;
             }
-            else if (showingResult && k.rKey.wasPressedThisFrame) Restart();
+            else if ((showingResult || finished) && k.rKey.wasPressedThisFrame) Restart();
+            else if (showingResult && k.escapeKey.wasPressedThisFrame) CloseReport();
         }
 
         // ── 길 안내 ────────────────────────────────────────────
@@ -798,6 +799,33 @@ namespace SteelMind.Scenario
 
         // ── 결과 보고서 ────────────────────────────────────────
         const string HistoryKey = "steelmind.history";
+        const string RunsKey = "steelmind.runs";
+
+        [System.Serializable] class RunRecord { public int no; public string when, path, type, title; public int efficiency, bestCount, events; public bool accident; public string[] choices; public string[] events_; }
+        [System.Serializable] class RunList { public List<RunRecord> runs = new List<RunRecord>(); }
+
+        static RunList LoadRuns()
+        {
+            var json = PlayerPrefs.GetString(RunsKey, "");
+            if (string.IsNullOrEmpty(json)) return new RunList();
+            try { return JsonUtility.FromJson<RunList>(json) ?? new RunList(); } catch { return new RunList(); }
+        }
+
+        static void SaveRuns(RunList list) { PlayerPrefs.SetString(RunsKey, JsonUtility.ToJson(list)); PlayerPrefs.Save(); }
+
+        RunRecord SaveRun(Report rep)
+        {
+            var list = LoadRuns();
+            var rec = new RunRecord
+            {
+                no = list.runs.Count == 0 ? 1 : list.runs[list.runs.Count - 1].no + 1,
+                when = System.DateTime.Now.ToString("MM/dd HH:mm"), path = rep.pathCode, type = rep.type, title = def.title,
+                efficiency = rep.run.finalEfficiency, bestCount = rep.bestCount, events = def.events.Length, accident = rep.accident,
+                choices = rep.run.events.ConvertAll(e => e.chosen.label).ToArray(), events_ = rep.run.events.ConvertAll(e => e.ev.title).ToArray(),
+            };
+            list.runs.Add(rec); SaveRuns(list);
+            return rec;
+        }
         static readonly Color CardBg = Hex("#221F1D"), CardLine = Hex("#3A3634"), Tile = Hex("#2C2826");
 
         RectTransform ReportCard(Transform parent, int pad = 22, float spacing = 10)
@@ -822,19 +850,20 @@ namespace SteelMind.Scenario
         {
             var rep = ReportBuilder.Build(def, picks);
             var r = rep.run;
-            showingResult = true;
+            var record = SaveRun(rep);
+            showingResult = true; finished = true;
             overlay = NewRect("Report", canvas.transform);
             overlay.anchorMin = Vector2.zero; overlay.anchorMax = Vector2.one; overlay.offsetMin = overlay.offsetMax = Vector2.zero;
             overlay.gameObject.AddComponent<Image>().color = Hex("#141312", 0.97f);
             var view = NewRect("Viewport", overlay); view.anchorMin = Vector2.zero; view.anchorMax = Vector2.one; view.offsetMin = view.offsetMax = Vector2.zero;
             view.gameObject.AddComponent<RectMask2D>();
             var page = NewRect("Page", view); page.anchorMin = page.anchorMax = new Vector2(0.5f, 1); page.pivot = new Vector2(0.5f, 1); page.sizeDelta = new Vector2(1040, 0);
-            VLayout(page.gameObject, 0, 28, 16);
+            var pv = VLayout(page.gameObject, 0, 28, 16); pv.padding = new RectOffset(0, 0, 28, 110);
             page.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
             var sr = view.gameObject.AddComponent<ScrollRect>(); sr.content = page; sr.viewport = view; sr.horizontal = false; sr.scrollSensitivity = 40; sr.movementType = ScrollRect.MovementType.Clamped;
 
             // 머리
-            AddText(page, "<b>STEEL MIND · 결과 보고서</b>", 14, Orange);
+            AddText(page, $"<b>STEEL MIND · 결과 보고서 · {record.no}회차</b>", 14, Orange);
             AddText(page, "<b>운영 결과 보고서</b>", 34, Color.white);
             AddText(page, "틀과 숫자는 규칙으로 바로 계산하고, 문장 칸은 기본 문장으로 먼저 보여 줍니다. 모든 값은 데모용 가상 데이터입니다.", 15, Dim);
 
@@ -915,19 +944,32 @@ namespace SteelMind.Scenario
             AiTag(sug, "다음 판 제안");
             AddText(sug, $"<b>{rep.suggestion}</b>", 21, Color.white);
             var hist = ReportCard(row5); LE(hist.gameObject, 10, -1, 1);
-            var hh = NewRect("Head", hist); HLayout(hh.gameObject, 8, TextAnchor.MiddleLeft);
-            var hTitle = AddText(hh, "회차별 성향 분포", 15, Dim, FontStyle.Bold, TextAnchor.MiddleLeft); LE(hTitle.gameObject, -1, -1, 1);
-            var saveBtn = SmallButton(hh, "이 판을 회차 기록에 저장");
-            var clearBtn = SmallButton(hh, "기록 지우기");
+            AddText(hist, "회차별 성향 분포", 15, Dim, FontStyle.Bold);
             var bars = NewRect("Bars", hist); VLayout(bars.gameObject, 0, 4, 8);
             var note = AddText(hist, "", 13, Dim);
-            System.Action draw = () => DrawHistory(bars, note, rep.type);
-            bool saved = false;
-            saveBtn.onClick.AddListener(() => { if (saved) return; saved = true; var list = LoadHistory(); list.Add(rep.type); SaveHistory(list); draw(); });
-            clearBtn.onClick.AddListener(() => { SaveHistory(new List<string>()); saved = false; draw(); });
+
+            // 회차 기록 (모든 판의 선택과 결과)
+            var runsCard = ReportCard(page, 22, 0);
+            var rh = NewRect("Head", runsCard); HLayout(rh.gameObject, 8, TextAnchor.MiddleLeft);
+            var rt = AddText(rh, "<b>회차 기록</b>  <color=#A3A8B2>끝낸 판은 자동으로 저장됩니다 (최근 순)</color>", 17, Body, FontStyle.Normal, TextAnchor.MiddleLeft); LE(rt.gameObject, -1, -1, 1);
+            var clearBtn = SmallButton(rh, "기록 지우기");
+            var runsBox = NewRect("Runs", runsCard); VLayout(runsBox.gameObject, 0, 8, 0);
+            System.Action draw = () => { DrawHistory(bars, note, rep.type); DrawRuns(runsBox, record.no); };
+            clearBtn.onClick.AddListener(() => { SaveRuns(new RunList()); draw(); });
             draw();
 
-            var restart = Button_(page, "다시 하기 (R)", Yellow, Hex("#1A1408"), 52);
+            // 아래 고정 버튼 막대: 닫기 · 다시 플레이
+            var barRt = NewRect("Actions", overlay); barRt.anchorMin = new Vector2(0, 0); barRt.anchorMax = new Vector2(1, 0); barRt.pivot = new Vector2(0.5f, 0);
+            barRt.sizeDelta = new Vector2(0, 84);
+            barRt.gameObject.AddComponent<Image>().color = Hex("#141312", 0.96f);
+            var line2 = NewRect("Line", barRt); line2.anchorMin = new Vector2(0, 1); line2.anchorMax = new Vector2(1, 1); line2.pivot = new Vector2(0.5f, 1); line2.sizeDelta = new Vector2(0, 1);
+            line2.gameObject.AddComponent<Image>().color = CardLine;
+            var btns = NewRect("Buttons", barRt); btns.anchorMin = btns.anchorMax = new Vector2(0.5f, 0.5f); btns.sizeDelta = new Vector2(1040, 52);
+            var bh2 = HLayout(btns.gameObject, 12, TextAnchor.MiddleRight); bh2.childForceExpandHeight = true;
+            var info = AddText(btns, $"{record.no}회차 · {r.finalEfficiency}% · {rep.type}  <color=#A3A8B2>저장됨</color>", 16, Body, FontStyle.Normal, TextAnchor.MiddleLeft); LE(info.gameObject, -1, -1, 1);
+            var close = Button_(btns, "닫기 (Esc)", Tile, Body, 52); LE(close.gameObject, 170, 52);
+            close.onClick.AddListener(CloseReport);
+            var restart = Button_(btns, "다시 플레이 (R)", Yellow, Hex("#1A1408"), 52); LE(restart.gameObject, 210, 52);
             restart.onClick.AddListener(Restart);
             LayoutRebuilder.ForceRebuildLayoutImmediate(page);
 
@@ -977,17 +1019,53 @@ namespace SteelMind.Scenario
         void DrawHistory(RectTransform bars, Text note, string current)
         {
             for (int i = bars.childCount - 1; i >= 0; i--) Destroy(bars.GetChild(i).gameObject);
-            var list = LoadHistory();
+            var runs = LoadRuns().runs;
             foreach (var type in ReportBuilder.Types)
             {
-                int cnt = 0; foreach (var x in list) if (x == type) cnt++;
-                float pct = list.Count == 0 ? 0 : (float)cnt / list.Count;
+                int cnt = 0; foreach (var x in runs) if (x.type == type) cnt++;
+                float pct = runs.Count == 0 ? 0 : (float)cnt / runs.Count;
                 var row = NewRect("Row", bars); HLayout(row.gameObject, 10, TextAnchor.MiddleLeft);
                 var tl = AddText(row, type == current ? $"<b>{type}</b>" : type, 15, type == current ? Teal : Body, FontStyle.Normal, TextAnchor.MiddleLeft); LE(tl.gameObject, 100);
                 var g = Gauge(row, pct, Teal, 8); LE(g.gameObject, 10, 8, 1);
-                var pv = AddText(row, $"{Mathf.RoundToInt(pct * 100)}%", 14, Dim, FontStyle.Normal, TextAnchor.MiddleRight); LE(pv.gameObject, 44);
+                var pv = AddText(row, $"{cnt}회", 14, Dim, FontStyle.Normal, TextAnchor.MiddleRight); LE(pv.gameObject, 44);
             }
-            note.text = list.Count == 0 ? "아직 저장한 회차가 없습니다. 여러 판을 저장하면 성향 비율이 쌓입니다." : $"저장한 회차 {list.Count}번";
+            note.text = runs.Count == 0 ? "저장된 회차가 없습니다." : $"지금까지 {runs.Count}판";
+        }
+
+        void DrawRuns(RectTransform box, int currentNo)
+        {
+            for (int i = box.childCount - 1; i >= 0; i--) Destroy(box.GetChild(i).gameObject);
+            var runs = LoadRuns().runs;
+            if (runs.Count == 0) { AddText(box, "저장된 회차가 없습니다.", 14, Dim); return; }
+            for (int i = runs.Count - 1; i >= 0; i--)
+            {
+                var x = runs[i];
+                var item = NewRect("Run", box);
+                Round(item.gameObject, x.no == currentNo ? Hex("#1F2C2A") : Tile, 1.4f);
+                if (x.no == currentNo) { var o = item.gameObject.AddComponent<Outline>(); o.effectColor = Teal; o.effectDistance = new Vector2(1, -1); }
+                VLayout(item.gameObject, 16, 10, 4);
+                var head = NewRect("Head", item); HLayout(head.gameObject, 12, TextAnchor.MiddleLeft);
+                AddText(head, $"<b>{x.no}회차</b>", 17, Body, FontStyle.Normal, TextAnchor.MiddleLeft).horizontalOverflow = HorizontalWrapMode.Overflow;
+                AddText(head, $"<b>{x.efficiency}%</b>", 17, LossColor(100 - x.efficiency), FontStyle.Normal, TextAnchor.MiddleLeft).horizontalOverflow = HorizontalWrapMode.Overflow;
+                AddText(head, x.type, 15, Teal, FontStyle.Normal, TextAnchor.MiddleLeft).horizontalOverflow = HorizontalWrapMode.Overflow;
+                AddText(head, $"최선 {x.bestCount}/{x.events}" + (x.accident ? "  <color=#FF6B6B>안전사고</color>" : ""), 14, Dim, FontStyle.Normal, TextAnchor.MiddleLeft).horizontalOverflow = HorizontalWrapMode.Overflow;
+                var when = AddText(head, $"{x.when}{(x.no == currentNo ? "  · 이번 판" : "")}", 13, Dim, FontStyle.Normal, TextAnchor.MiddleRight); LE(when.gameObject, -1, -1, 1);
+                var parts = new List<string>();
+                if (x.choices != null)
+                    for (int k = 0; k < x.choices.Length; k++)
+                        parts.Add($"{(x.events_ != null && k < x.events_.Length ? x.events_[k] : $"사건 {k + 1}")} <color=#EEF0F3>{x.choices[k]}</color>");
+                AddText(item, string.Join("   ·   ", parts), 13, Dim);
+                var gap = NewRect("Gap", box); LE(gap.gameObject, -1, 8);
+            }
+        }
+
+        void CloseReport()
+        {
+            if (overlay) Destroy(overlay.gameObject);
+            overlay = null; showingResult = false;
+            if (line) { line.ClearWarnings(); line.SetRunning(true); }
+            if (process) process.speed = 1f;
+            SetFrozen(false);
         }
 
         void Spacer(Transform parent, float h)
