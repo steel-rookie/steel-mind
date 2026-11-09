@@ -90,11 +90,22 @@ namespace SteelMind
             var col = Rect("Logo", root, new Vector2(0.5f, 0.72f), new Vector2(0.5f, 0.72f)); col.sizeDelta = new Vector2(1100, 260);
             var v = col.gameObject.AddComponent<VerticalLayoutGroup>(); v.childAlignment = TextAnchor.MiddleCenter; v.spacing = 6;
             v.childControlWidth = v.childControlHeight = true; v.childForceExpandHeight = false;
-            Label(col, "POSCO K-뉴딜 아카데미 해커톤 · 팀 철든신입", 18, new Color(0.94f, 0.63f, 0.29f));
-            var logo = Label(col, "STEEL MIND", 120, Color.white); logo.font = boldFont;
-            var sh = logo.gameObject.AddComponent<Shadow>(); sh.effectColor = new Color(0.94f, 0.45f, 0.18f, 0.8f); sh.effectDistance = new Vector2(0, -7);
-            var ol = logo.gameObject.AddComponent<Outline>(); ol.effectColor = new Color(0.1f, 0.06f, 0.12f, 0.9f); ol.effectDistance = new Vector2(3, -3);
-            Label(col, "AI Agent들의 회의로 운영하는 제철소", 28, new Color(0.93f, 0.92f, 0.95f));
+            var steelBlue = new Color32(169, 196, 220, 255);
+            Label(col, "POSCO K-뉴딜 아카데미 해커톤 · 팀 철든신입", 18, steelBlue);
+            // 로고: 도트로 그린 크롬 글자 (tools/pixel-art/title_logo.py)
+            var logoBytes = Resources.Load<TextAsset>("Title/title_logo");
+            if (logoBytes)
+            {
+                var tex = new Texture2D(2, 2); tex.LoadImage(logoBytes.bytes); tex.filterMode = FilterMode.Point; tex.wrapMode = TextureWrapMode.Clamp;
+                var lr = Rect("LogoImage", col, Vector2.zero, Vector2.zero);
+                lr.gameObject.AddComponent<RawImage>().texture = tex;
+                var le = lr.gameObject.AddComponent<LayoutElement>(); le.preferredWidth = tex.width * 6; le.preferredHeight = tex.height * 6;
+            }
+            else
+            {
+                var logo = Label(col, "STEEL MIND", 120, Color.white); logo.font = boldFont;
+            }
+            Label(col, "AI Agent들의 회의로 운영하는 제철소", 26, new Color(0.88f, 0.91f, 0.95f));
 
             var h = Rect("Hint", root, new Vector2(0.5f, 0.2f), new Vector2(0.5f, 0.2f)); h.sizeDelta = new Vector2(700, 50);
             hint = Label(h, "PRESS SPACE", 28, Color.white); hint.font = boldFont;
