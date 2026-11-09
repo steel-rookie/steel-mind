@@ -402,7 +402,7 @@ namespace SteelMind.Scenario
 
             var c = ev.choices[picks[i]];
             yield return Say("player", null, $"{c.label}.", c.detail, true);
-            foreach (var r in ReportBuilder.ReactionsFor(ev, c)) yield return Say(r.agent, r.stance, r.line, null, false);
+            // 선택 뒤 동료들의 찬성·불만 반응은 보여 주지 않는다 (평가가 드러나지 않게). 결과는 보고서에서만.
             CloseChat();
             chatting = false;
             SetFrozen(false);
