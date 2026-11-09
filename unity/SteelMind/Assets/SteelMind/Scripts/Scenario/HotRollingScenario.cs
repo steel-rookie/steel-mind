@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
@@ -56,6 +57,10 @@ namespace SteelMind.Scenario
         readonly List<int> picks = new List<int>();
         readonly HashSet<string> flags = new HashSet<string>();
         int current = -1;
+        // AI(AiDirector): 사건별 출제 결과, 지금 판단한 약점, 이번 사건의 회의 대사
+        readonly Dictionary<string, AiDirector.NextPick> aiPick = new Dictionary<string, AiDirector.NextPick>();
+        string aiPattern;
+        List<Reaction> aiMeeting; int aiMeetingCount;
         bool deciding, chatting, skip, showingResult, guiding, finished;
         Coroutine resume, fade;
         AudioSource normalBgm, alarmBgm;
@@ -185,6 +190,7 @@ namespace SteelMind.Scenario
             StopAllCoroutines();
             resume = null;
             picks.Clear(); flags.Clear();
+            aiPick.Clear(); aiPattern = null; aiMeeting = null; aiMeetingCount = 0;
             current = -1; deciding = chatting = showingResult = guiding = finished = false;
             CloseChat(); HideGuide();
             if (overlay) Destroy(overlay.gameObject);
@@ -202,7 +208,18 @@ namespace SteelMind.Scenario
             SetStatus($"{def.title} 테스트 · 사건 1/{n} 대기 중 · WASD로 이동");
             for (int i = 0; i < n; i++)
             {
+                // [F7·F8] 지금까지의 선택으로 약점을 보고 다음 사건을 고른다. 고른 사건을 i번째 자리로 옮기면
+                // 아래 흐름(picks[i], 결과 계산, 보고서)은 그대로 맞는다. AI가 늦으면 규칙 1순위로 간다.
+                AiDirector.NextPick pick = null;
+                StartCoroutine(AiDirector.PickNext(def, picks, i, p => pick = p));
                 yield return new WaitForSeconds(def.events[i].delay);
+                for (float w = 0; pick == null && w < 10f; w += Time.deltaTime) yield return null;
+                if (pick == null) pick = AiDirector.RulePick(def, picks, i);
+                if (pick.index != i) { var tmp = def.events[i]; def.events[i] = def.events[pick.index]; def.events[pick.index] = tmp; }
+                aiPick[def.events[i].id] = pick;
+                aiPattern = pick.pattern;
+                Debug.Log($"[AiDirector] 사건 {i + 1}: {def.events[i].title} ({(pick.ai ? "AI" : "규칙")}) · 약점 판단: {pick.pattern} · 이유: {pick.reason}");
+                if (i > 0) SetStatus($"AI가 본 약점: {aiPattern} · 사건 {i + 1}/{n}");
                 yield return GoToSite(i);
                 yield return EventChat(i);
                 var chosen = def.events[i].choices[picks[i]];
@@ -257,8 +274,11 @@ namespace SteelMind.Scenario
             int n = def.events.Length;
             SetFrozen(true);
             OpenChat(ev, i, n);
-            var alarm = $"⚠ {ev.title}\n{ev.desc}";
-            yield return Say(null, null, alarm, EfficiencyCalc.CarryApplies(ev, flags) ? ev.carry.note : null, false);
+            // [F8] AI가 이 사람의 약점에 맞춰 바꾼 상황 문장과, 이 사건을 낸 이유
+            aiPick.TryGetValue(ev.id, out var np);
+            var alarm = $"⚠ {ev.title}\n{(np != null ? np.situation : ev.desc)}";
+            var why = np != null && i > 0 ? $"{(np.ai ? "AI" : "규칙")} 출제 이유 · {np.reason}" : null;
+            yield return Say(null, null, alarm, EfficiencyCalc.CarryApplies(ev, flags) ? ev.carry.note : why, false);
             foreach (var a in ev.agents) yield return Say(a.agent, null, a.say, a.why, false);
             yield return Say(null, null, $"쟁점 · {ev.chief}\n어떻게 하시겠습니까?", null, false);
             UnlockChoices();
@@ -267,7 +287,11 @@ namespace SteelMind.Scenario
 
             var c = ev.choices[picks[i]];
             yield return Say("player", null, $"{c.label}.", c.detail, true);
-            foreach (var r in ReportBuilder.ReactionsFor(ev, c)) yield return Say(r.agent, r.stance, r.line, null, false);
+            // [F6] AI 공장장 회의: 선택할 때 요청해 둔 답을 기다린다(최대 8초). 늦으면 대본 반응.
+            for (float w = 0; aiMeeting == null && w < 8f; w += Time.deltaTime) yield return null;
+            var reactions = aiMeeting ?? ReportBuilder.ReactionsFor(ev, c);
+            SetStatus(aiMeetingCount > 0 ? $"AI 공장장 회의 · {aiMeetingCount}/{reactions.Count}명 AI 발언" : "공장장 회의(대본)");
+            foreach (var r in reactions) yield return Say(r.agent, r.stance, r.line, null, false);
             CloseChat();
             chatting = false;
             SetFrozen(false);
@@ -316,6 +340,10 @@ namespace SteelMind.Scenario
             var c = ev.choices[k];
             picks.Add(k);
             if (!string.IsNullOrEmpty(c.flag)) flags.Add(c.flag);
+            aiMeeting = null; aiMeetingCount = 0;
+            aiPick.TryGetValue(ev.id, out var np);
+            int slot = current;
+            StartCoroutine(AiDirector.Meeting(def, picks, slot, np != null ? np.situation : ev.desc, (list, n) => { if (slot == current) { aiMeeting = list; aiMeetingCount = n; } }));
             deciding = false; skip = false;
             MarkChosen(k);
             if (line && !c.keepWarning && !string.IsNullOrEmpty(ev.warn)) line.SetWarning(ev.warn, false);
@@ -943,23 +971,44 @@ namespace SteelMind.Scenario
         class TextSlots
         {
             public Text headline, headlineTag, momentsTag, agentsTag, next, nextTag;
+            public Text dxTag, strength, weakness, whatIf, training, mentor;   // [F9] 진단·추천
+            public AiDirector.Diagnosis dx;
             public List<Text> moments = new List<Text>();
             public Dictionary<string, Text> agents = new Dictionary<string, Text>();
+        }
+
+        static string TrainingText(List<string> ids, string reason) =>
+            string.Join("\n", ids.Select(id => AiDirector.Trainings.First(t => t.id == id)).Select(t => $"• <b>{t.title}</b>\n  <color=#A3A8B2>{t.note}</color>"))
+            + (string.IsNullOrEmpty(reason) ? "" : $"\n<color=#8D8D93>{reason}</color>");
+
+        static string MentorText(string id, string reason)
+        {
+            var m = AiDirector.Mentors.First(x => x.id == id);
+            return $"<b>{m.name} · {m.career}</b>\n<color=#A3A8B2>강점: {string.Join("·", m.strengths.Select(k => AiDirector.MetricName[k]))} · {m.note}</color>"
+                + (string.IsNullOrEmpty(reason) ? "" : $"\n<color=#8D8D93>{reason}</color>");
         }
 
         IEnumerator FillWithLlm(Report rep, TextSlots s, RectTransform page)
         {
             if (!ReportLlm.HasKey) yield break;
             LlmText ai = null; string err = null;
-            yield return ReportLlm.Fetch(def, rep, x => ai = x, x => err = x);
+            yield return ReportLlm.Fetch(def, rep, s.dx, x => ai = x, x => err = x);
             if (page == null) yield break; // 기다리는 사이 보고서를 닫았음
             void Tag(Text t, bool used) { if (t != null) t.text = used ? "AI 작성" : "기본 문장"; }
             if (ai == null)
             {
                 Debug.LogWarning("[ReportLlm] AI 문장을 받지 못해 기본 문장으로 둡니다: " + err);
-                foreach (var t in new[] { s.headlineTag, s.momentsTag, s.agentsTag, s.nextTag }) Tag(t, false);
+                foreach (var t in new[] { s.headlineTag, s.momentsTag, s.agentsTag, s.nextTag, s.dxTag }) Tag(t, false);
                 yield break;
             }
+            // [F9] 진단·추천
+            int dxAi = 0;
+            if (ai.strength != null) { s.strength.text = $"{C("#6FCF97", "<b>강점</b>")}  {ai.strength}"; dxAi++; }
+            if (ai.weakness != null) { s.weakness.text = $"{C("#FF6B6B", "<b>약점</b>")}  {ai.weakness}"; dxAi++; }
+            if (ai.whatIf != null) { s.whatIf.text = $"{C(ColorHex(Orange), "<b>다른 걸 골랐다면</b>")}  {ai.whatIf}"; dxAi++; }
+            if (ai.training != null) { s.training.text = TrainingText(ai.training, ai.trainingReason); dxAi++; }
+            if (ai.mentor != null) { s.mentor.text = MentorText(ai.mentor, ai.mentorReason); dxAi++; }
+            if (s.dxTag != null) s.dxTag.text = dxAi == 5 ? "AI 작성" : dxAi > 0 ? "일부 AI 작성" : "기본 문장";
             if (ai.headline != null) s.headline.text = $"<b>{ai.headline}</b>";
             Tag(s.headlineTag, ai.headline != null);
             if (ai.moments != null)
@@ -995,15 +1044,23 @@ namespace SteelMind.Scenario
 
             // 머리
             AddText(page, $"<b>STEEL MIND · 결과 보고서 · {record.no}회차</b>", 14, Orange);
-            AddText(page, "<b>운영 결과 보고서</b>", 34, Color.white);
-            AddText(page, "틀과 숫자는 규칙으로 바로 계산하고, 문장 칸은 기본 문장으로 먼저 보여 줍니다. 모든 값은 데모용 가상 데이터입니다.", 15, Dim);
+            AddText(page, "<b>돌발상황 대처 진단 보고서</b>", 34, Color.white);
+            AddText(page, "점수는 규칙으로 계산하고, 약점 판단·진단·추천은 AI가 씁니다. 모든 값은 데모용 가상 데이터이며 추천 사수는 예시입니다.", 15, Dim);
 
-            // 1줄: 운영 성향 | 운영 효율
+            // 1줄: 대처 역량(지표별 지킨 정도) | 운영 효율
+            var dx = AiDirector.RuleDiagnosis(def, picks, rep);
+            var slots = new TextSlots { dx = dx };
             var row1 = NewRect("Row1", page); var h1 = HLayout(row1.gameObject, 16); h1.childForceExpandWidth = true; h1.childForceExpandHeight = true;
             var typeCard = ReportCard(row1); LE(typeCard.gameObject, 10, -1, 1);
-            AddText(typeCard, "운영 성향", 15, Dim, FontStyle.Bold);
-            AddText(typeCard, $"<b>{rep.type}</b>", 44, Color.white);
-            AddText(typeCard, rep.typeDesc, 17, Body);
+            AddText(typeCard, "대처 역량 진단", 15, Dim, FontStyle.Bold);
+            AddText(typeCard, $"<b>{(dx.weakKey == null ? "뚜렷한 약점 없음" : "약점 · " + AiDirector.MetricName[dx.weakKey])}</b>", 40, dx.weakKey == null ? Hex("#6FCF97") : Hex("#FF6B6B"));
+            foreach (var k in AiDirector.Metrics)
+            {
+                var sc = dx.sac[k]; int keep = sc.rate == null ? -1 : Mathf.RoundToInt(100 * (1 - sc.rate.Value));
+                var (lab, col) = keep < 0 ? ("안 겪음", Dim) : keep == 100 ? ("강점", Hex("#6FCF97")) : keep >= 60 ? ("보통", Hex("#E8C25A")) : ("약점", Hex("#FF6B6B"));
+                AddText(typeCard, $"{AiDirector.MetricName[k]}  {C(ColorHex(col), $"<b>{lab}</b>")}{(keep >= 0 ? $"  <color=#8D8D93>지킨 정도 {keep}%</color>" : "")}", 15, Body);
+            }
+            if (!string.IsNullOrEmpty(aiPattern)) AddText(typeCard, $"마지막 사건 전 AI가 본 약점: {aiPattern}", 14, Dim);
             AddText(typeCard, $"결과 ID  <b>{rep.resultId}</b>", 14, Dim);
             var effCard = ReportCard(row1); LE(effCard.gameObject, 10, -1, 1);
             AddText(effCard, "운영 효율", 15, Dim, FontStyle.Bold);
@@ -1034,11 +1091,24 @@ namespace SteelMind.Scenario
                 var ltr = lt.rectTransform; ltr.anchorMin = Vector2.zero; ltr.anchorMax = Vector2.one; ltr.offsetMin = ltr.offsetMax = Vector2.zero;
             }
             var col2 = NewRect("Col", row2); VLayout(col2.gameObject, 0, 0, 8); LE(col2.gameObject, -1, -1, 1);
-            var slots = new TextSlots();
             slots.headlineTag = AiTag(col2, "한 줄 총평");
             slots.headline = AddText(col2, $"<b>{rep.headline}</b>", 23, Color.white);
             slots.momentsTag = AiTag(col2, "결정적 순간");
             foreach (var m in rep.moments) slots.moments.Add(AddText(col2, $"{C(ColorHex(Orange), "●")}  {m}", 15, Body));
+
+            // 2.5줄: [F9] 진단 · 다른 걸 골랐다면 · 추천 교육 · 추천 사수 (기본 문장 → AI 문장)
+            var cd = ReportCard(page);
+            slots.dxTag = AiTag(cd, "AI 진단과 추천");
+            slots.strength = AddText(cd, $"{C("#6FCF97", "<b>강점</b>")}  {dx.strength}", 16, Body);
+            slots.weakness = AddText(cd, $"{C("#FF6B6B", "<b>약점</b>")}  {dx.weakness}", 16, Body);
+            slots.whatIf = AddText(cd, $"{C(ColorHex(Orange), "<b>다른 걸 골랐다면</b>")}  {dx.whatIf}", 16, Body);
+            var rowd = NewRect("Recs", cd); var hd2 = HLayout(rowd.gameObject, 12); hd2.childForceExpandWidth = true; hd2.childForceExpandHeight = true;
+            var tc = NewRect("Training", rowd); Round(tc.gameObject, Tile, 1.4f); VLayout(tc.gameObject, 14, 12, 6); LE(tc.gameObject, 10, -1, 1);
+            AddText(tc, "<b>추천 교육</b>", 15, Dim);
+            slots.training = AddText(tc, TrainingText(dx.training, dx.trainingReason), 15, Body);
+            var mc = NewRect("Mentor", rowd); Round(mc.gameObject, Tile, 1.4f); VLayout(mc.gameObject, 14, 12, 6); LE(mc.gameObject, 10, -1, 1);
+            AddText(mc, "<b>추천 사수</b>  <color=#8D8D93>예시 데이터</color>", 15, Dim);
+            slots.mentor = AddText(mc, MentorText(dx.mentor, dx.mentorReason), 15, Body);
 
             // 3줄: Agent 회의
             var c3 = ReportCard(page);

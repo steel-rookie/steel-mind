@@ -13,6 +13,8 @@ namespace SteelMind.Scenario
     public class LlmText
     {
         public string headline, nextTry;
+        public string strength, weakness, whatIf, trainingReason, mentorReason, mentor;   // [F9] 진단
+        public List<string> training;
         public List<string> moments;
         public Dictionary<string, string> agents = new Dictionary<string, string>();
         public string provider;
@@ -80,8 +82,18 @@ namespace SteelMind.Scenario
 
         static string Level(int n) => n == 0 ? "손실 없음" : n <= 5 ? "작은 손실" : n <= 10 ? "큰 손실" : "매우 큰 손실";
 
-        static string Prompt(ScenarioDef def, Report rep)
+        [Serializable] class Opt { public string id, metric, title; }
+        [Serializable] class MentorOpt { public string id, career, strengths, note; }
+        [Serializable] class DxFacts { public string sacrifice; public Opt[] training_options; public MentorOpt[] mentor_options; }
+
+        static string Prompt(ScenarioDef def, Report rep, AiDirector.Diagnosis dx)
         {
+            var dxf = new DxFacts
+            {
+                sacrifice = AiDirector.SacrificeWords(dx.sac),
+                training_options = AiDirector.Trainings.Select(t => new Opt { id = t.id, metric = AiDirector.MetricName[t.metric], title = t.title }).ToArray(),
+                mentor_options = AiDirector.Mentors.Select(m => new MentorOpt { id = m.id, career = m.career, strengths = string.Join("·", m.strengths.Select(k => AiDirector.MetricName[k])), note = m.note }).ToArray(),
+            };
             var facts = new Facts
             {
                 scenario_title = def.title, type = rep.type, type_desc = rep.typeDesc, accident = rep.accident,
@@ -106,11 +118,22 @@ namespace SteelMind.Scenario
 [판 기록]
 {JsonUtility.ToJson(facts, true)}
 
+[지표별 희생 정도와 추천 후보]
+{JsonUtility.ToJson(dxf, true)}
+
 [공장장 말투]
 {personas}
 
+이 판은 돌발상황 대처 역량 진단이다. 성격 유형이나 성향 이름을 붙이지 말고, 상황에서 무엇을 지키고 무엇을 내줬는지로 말하라.
 아래 JSON 하나만 출력하라. 다른 글은 쓰지 마라.
-{{""headline"": ""이번 판을 한 문장으로(40자 이내)"",
+{{""headline"": ""진단을 한 문장으로(40자 이내)"",
+ ""strength"": ""가장 잘 지킨 것과 근거 사건(80자 이내)"",
+ ""weakness"": ""가장 자주 내준 것과 근거 사건(80자 이내)"",
+ ""what_if"": ""약점이 드러난 사건에서 최선의 행동을 골랐다면 무엇이 달라졌을지(100자 이내)"",
+ ""training"": [""training_options의 id(약점에 맞는 것, 최대 두 개)""],
+ ""training_reason"": ""왜 이 교육인지(60자 이내)"",
+ ""mentor"": ""mentor_options의 id 하나(약점을 강점으로 가진 사람)"",
+ ""mentor_reason"": ""왜 이 사수인지(60자 이내)"",
  ""turning_points"": [""worst_events 첫 사건에서 무엇을 골랐고 무엇을 잃었는지(90자 이내)"", ""worst_events 둘째 사건(있을 때만, 90자 이내)""],
  ""agent_comments"": {{""production"": ""생산 공장장이 이번 판을 두고 하는 한마디(60자 이내)"", ""quality"": ""…"", ""equipment"": ""…"", ""safety"": ""…""}},
  ""next_try"": ""다음 판에 바꿔 볼 선택 하나(60자 이내)""}}
@@ -126,17 +149,56 @@ agent_comments는 agents의 followed(그 공장장 추천을 따른 정도)와 �
         [Serializable] class Candidate { public Content content; }
         [Serializable] class Response { public Candidate[] candidates; }
         [Serializable] class Comments { public string production, quality, equipment, safety; }
-        [Serializable] class Answer { public string headline, next_try; public string[] turning_points; public Comments agent_comments; }
+        [Serializable] class Answer
+        {
+            public string headline, next_try, strength, weakness, what_if, training_reason, mentor, mentor_reason;
+            public string[] turning_points, training; public Comments agent_comments;
+        }
 
-        static bool Ok(string t, int max) => !string.IsNullOrWhiteSpace(t) && t.Trim().Length >= 4 && t.Trim().Length <= max && !t.Any(char.IsDigit);
+        public static bool Ok(string t, int max) => !string.IsNullOrWhiteSpace(t) && t.Trim().Length >= 4 && t.Trim().Length <= max && !t.Any(char.IsDigit);
+
+        [Serializable] class FastConfig { public string responseMimeType = "application/json"; public float temperature = 0.5f; public Thinking thinkingConfig = new Thinking(); }
+        [Serializable] class Thinking { public int thinkingBudget = 0; }
+        [Serializable] class FastRequest { public Content[] contents; public FastConfig generationConfig = new FastConfig(); }
+
+        /// <summary>
+        /// 플레이 중 바로 답해야 하는 호출(회의·출제)용. 생각 단계를 끄고(flash 모델) JSON 본문만 돌려준다.
+        /// 성공하면 onJson(JSON 문자열), 실패하면 onFail(이유).
+        /// </summary>
+        public static IEnumerator CallJson(string prompt, Action<string> onJson, Action<string> onFail, int timeout = 20)
+        {
+            var key = Env("GEMINI_API_KEY");
+            if (string.IsNullOrEmpty(key)) { onFail("GEMINI_API_KEY 없음(.env 확인)"); yield break; }
+            var content = new[] { new Content { parts = new[] { new Part { text = prompt } } } };
+            var body = Model.Contains("2.5-flash") ? JsonUtility.ToJson(new FastRequest { contents = content }) : JsonUtility.ToJson(new Request { contents = content });
+            using (var req = new UnityWebRequest($"https://generativelanguage.googleapis.com/v1beta/models/{Model}:generateContent", "POST"))
+            {
+                req.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(body));
+                req.downloadHandler = new DownloadHandlerBuffer();
+                req.SetRequestHeader("Content-Type", "application/json");
+                req.SetRequestHeader("x-goog-api-key", key);
+                req.timeout = timeout;
+                yield return req.SendWebRequest();
+                if (req.result != UnityWebRequest.Result.Success) { onFail($"{req.responseCode} {req.error}"); yield break; }
+                string json;
+                try
+                {
+                    var raw = JsonUtility.FromJson<Response>(req.downloadHandler.text).candidates[0].content.parts[0].text;
+                    int s = raw.IndexOf('{'), e = raw.LastIndexOf('}');
+                    json = raw.Substring(s, e - s + 1);
+                }
+                catch (Exception ex) { onFail("응답을 읽지 못함: " + ex.Message); yield break; }
+                onJson(json);
+            }
+        }
 
         /// <summary>Gemini를 불러 문장 칸을 만든다. 실패하면 onFail(이유), 성공하면 onDone(칸별 검사 결과).</summary>
-        public static IEnumerator Fetch(ScenarioDef def, Report rep, Action<LlmText> onDone, Action<string> onFail)
+        public static IEnumerator Fetch(ScenarioDef def, Report rep, AiDirector.Diagnosis dx, Action<LlmText> onDone, Action<string> onFail)
         {
             var key = Env("GEMINI_API_KEY");
             if (string.IsNullOrEmpty(key)) { onFail("GEMINI_API_KEY 없음(.env 확인)"); yield break; }
             float t0 = Time.realtimeSinceStartup;
-            var body = JsonUtility.ToJson(new Request { contents = new[] { new Content { parts = new[] { new Part { text = Prompt(def, rep) } } } } });
+            var body = JsonUtility.ToJson(new Request { contents = new[] { new Content { parts = new[] { new Part { text = Prompt(def, rep, dx) } } } } });
             using (var req = new UnityWebRequest($"https://generativelanguage.googleapis.com/v1beta/models/{Model}:generateContent", "POST"))
             {
                 req.uploadHandler = new UploadHandlerRaw(Encoding.UTF8.GetBytes(body));
@@ -159,6 +221,12 @@ agent_comments는 agents의 followed(그 공장장 추천을 따른 정도)와 �
                     if (Ok(a.next_try, MaxNext)) outText.nextTry = a.next_try.Trim();
                     var tp = (a.turning_points ?? new string[0]).Where(x => Ok(x, MaxMoment)).Select(x => x.Trim()).Take(2).ToList();
                     if (tp.Count > 0) outText.moments = tp;
+                    if (Ok(a.strength, 100)) outText.strength = a.strength.Trim();
+                    if (Ok(a.weakness, 100)) outText.weakness = a.weakness.Trim();
+                    if (Ok(a.what_if, 130)) outText.whatIf = a.what_if.Trim();
+                    var tr = (a.training ?? new string[0]).Where(id => AiDirector.Trainings.Any(t => t.id == id)).Take(2).ToList();
+                    if (tr.Count > 0) { outText.training = tr; if (Ok(a.training_reason, 80)) outText.trainingReason = a.training_reason.Trim(); }
+                    if (AiDirector.Mentors.Any(m => m.id == a.mentor)) { outText.mentor = a.mentor; if (Ok(a.mentor_reason, 80)) outText.mentorReason = a.mentor_reason.Trim(); }
                     var c = a.agent_comments ?? new Comments();
                     foreach (var (k, v) in new[] { ("production", c.production), ("quality", c.quality), ("equipment", c.equipment), ("safety", c.safety) })
                         if (Ok(v, MaxAgent)) outText.agents[k] = v.Trim();
