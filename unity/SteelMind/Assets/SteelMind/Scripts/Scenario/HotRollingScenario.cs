@@ -27,8 +27,8 @@ namespace SteelMind.Scenario
             Teal = Hex("#6CC3B0"), Orange = Hex("#F0A04B"), Red = Hex("#FF6B6B"), Yellow = Hex("#F0C040"), Card = Hex("#24262B");
         static readonly Dictionary<string, (string name, string color, string persona)> Agents = new Dictionary<string, (string, string, string)>
         {
-            { "production", ("한도윤", "#7AA7FF", "생산") }, { "quality", ("서지안", "#C99BFF", "품질") },
-            { "equipment", ("강태호", "#F0A04B", "설비") }, { "safety", ("윤하늘", "#6FCF97", "안전") },
+            { "production", ("재깍이", "#7AA7FF", "생산") }, { "quality", ("틈틈이", "#C99BFF", "품질") },
+            { "equipment", ("덜컹이", "#F0A04B", "설비") }, { "safety", ("조심이", "#6FCF97", "안전") },
             { "chief", ("공장장", "#F0C040", "공장장") }, { "player", ("나", "#6CC3B0", "운영 책임자") },
         };
         static readonly Dictionary<string, (string mood, string color)> Stance = new Dictionary<string, (string, string)>
@@ -170,10 +170,10 @@ namespace SteelMind.Scenario
             OpenVN("열연 2라인 · 야간 교대 시작", false);
             yield return Say(null, null, "열연 2라인, 야간 교대.\n오늘 당신은 처음으로 이 라인의 운영 책임자를 맡았습니다.", null, false);
             yield return Say(null, null, "오늘 함께 일할 AI 동료 네 명이 있습니다.\n모두 맞는 말을 하지만, 서로 다른 것을 지키려 합니다.", null, false);
-            yield return Say("production", null, "한도윤입니다. 오늘 밤 같이 라인을 지킵니다.", null, false);
-            yield return Say("quality", null, "서지안이에요. 궁금한 건 언제든 물어보세요.", null, false);
-            yield return Say("equipment", null, "강태호입니다. 이 라인에서 오래 일했습니다.", null, false);
-            yield return Say("safety", null, "윤하늘입니다. 잘 부탁드립니다.", null, false);
+            yield return Say("production", null, "재깍이예요. 오늘 밤 같이 라인을 지킵니다.", null, false);
+            yield return Say("quality", null, "틈틈이예요. 궁금한 건 언제든 물어보세요.", null, false);
+            yield return Say("equipment", null, "덜컹이예요. 이 라인에서 오래 일했습니다.", null, false);
+            yield return Say("safety", null, "조심이예요. 잘 부탁드립니다.", null, false);
             yield return Say(null, null, "사건이 터지면 화살표를 따라 그 설비로 가세요.\nAI들의 의견을 듣고, 최종 결정은 당신이 내립니다.", null, false);
             yield return Say(null, null, "같은 선택은 언제나 같은 결과를 냅니다.\n교대가 끝나면 운영 결과 보고서를 받게 됩니다.", null, false);
             CloseChat();
