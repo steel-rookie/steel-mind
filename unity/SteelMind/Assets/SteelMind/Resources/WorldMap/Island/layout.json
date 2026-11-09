@@ -1,0 +1,110 @@
+{
+  "size": [
+    444,
+    282
+  ],
+  "background": "#18191d",
+  "areas": [
+    {
+      "name": "제선",
+      "scene": "Ironmaking",
+      "hover": "hover_Ironmaking",
+      "mask": "mask_Ironmaking",
+      "pin": [
+        101.5,
+        43
+      ]
+    },
+    {
+      "name": "제강",
+      "scene": "Steelmaking",
+      "hover": "hover_Steelmaking",
+      "mask": "mask_Steelmaking",
+      "pin": [
+        199.5,
+        76
+      ]
+    },
+    {
+      "name": "연주",
+      "scene": "Casting",
+      "hover": "hover_Casting",
+      "mask": "mask_Casting",
+      "pin": [
+        74.0,
+        153
+      ]
+    },
+    {
+      "name": "열연",
+      "scene": "Rolling",
+      "hover": "hover_Rolling",
+      "mask": "mask_Rolling",
+      "pin": [
+        245.0,
+        163
+      ]
+    }
+  ],
+  "clouds": [
+    {
+      "file": "cloud_0",
+      "x": 13,
+      "y": 234,
+      "w": 57,
+      "h": 31,
+      "amp": 4
+    },
+    {
+      "file": "cloud_1",
+      "x": 255,
+      "y": 25,
+      "w": 53,
+      "h": 29,
+      "amp": 5
+    },
+    {
+      "file": "cloud_2",
+      "x": 373,
+      "y": 80,
+      "w": 57,
+      "h": 31,
+      "amp": 4
+    },
+    {
+      "file": "cloud_3",
+      "x": 308,
+      "y": 249,
+      "w": 48,
+      "h": 27,
+      "amp": 3
+    },
+    {
+      "file": "cloud_4",
+      "x": 400,
+      "y": 198,
+      "w": 43,
+      "h": 25,
+      "amp": 3
+    },
+    {
+      "file": "cloud_5",
+      "x": 112,
+      "y": 1,
+      "w": 39,
+      "h": 23,
+      "amp": 3
+    },
+    {
+      "file": "cloud_6",
+      "x": 0,
+      "y": 148,
+      "w": 31,
+      "h": 25,
+      "amp": 3
+    }
+  ],
+  "cloudPeriodSeconds": 8,
+  "smokeFrames": 20,
+  "smokeFps": 12.5
+}

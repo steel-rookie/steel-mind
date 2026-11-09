@@ -100,56 +100,29 @@ namespace SteelMind
             var dim = R("Dim", root, Vector2.zero, Vector2.one); dim.gameObject.AddComponent<Image>().color = new Color(0, 0, 0, 0.65f);
             dim.gameObject.AddComponent<Button>().onClick.AddListener(Close);
 
-            // 지도 그림 (640x400 도트를 1.6배)
-            const float MW = 640, MH = 400, K = 1.6f;
-            panel = R("Map", root, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f)); panel.sizeDelta = new Vector2(MW * K, MH * K);
-            var frame = panel.gameObject.AddComponent<Outline>();
-            var raw = panel.gameObject.AddComponent<RawImage>();
-            frame.effectColor = new Color32(90, 70, 48, 255); frame.effectDistance = new Vector2(5, -5);
-            var bytes = Resources.Load<TextAsset>("WorldMap/world");
-            if (bytes) { var tex = new Texture2D(2, 2); tex.LoadImage(bytes.bytes); tex.filterMode = FilterMode.Point; raw.texture = tex; }
-
-            // 두루마리 제목
-            var scroll = Ribbon(panel, "STEEL MIND 제철소", 30, new Vector2(1, 1), new Vector2(-24, -20), new Vector2(1, 1), true);
-
-            // 공정 띠 이름표 + 누를 수 있는 건물 자리
+            // 지도 그림: 게임 톤 섬 지도 (444x282 도트). 화면 안에서 비율을 지키며 최대한 크게.
+            // 바다·구름·연기·이름표·마우스 강조(호박색 외곽선 + 정보창)·클릭 이동은 IslandMapView가 맡는다.
+            panel = R("Map", root, new Vector2(0.04f, 0.09f), new Vector2(0.96f, 0.97f));
             string here = SceneManager.GetActiveScene().name;
-            var lay = Resources.Load<TextAsset>("WorldMap/world_layout");
-            var zones = new Dictionary<string, Zone>();
-            if (lay)
+            var view = IslandMapView.Build(panel, Go, here);
+            if (view)
             {
-                foreach (var (scene, _, _) in Maps)
-                {
-                    int i = lay.text.IndexOf("\"" + scene + "\"");
-                    if (i < 0) continue;
-                    int a2 = lay.text.IndexOf('{', i), b2 = lay.text.IndexOf('}', a2);
-                    zones[scene] = JsonUtility.FromJson<Zone>(lay.text.Substring(a2, b2 - a2 + 1));
-                }
+                var frame = view.Board.gameObject.AddComponent<Outline>();
+                frame.effectColor = new Color32(190, 120, 36, 255); frame.effectDistance = new Vector2(4, -4);
             }
-            for (int i = 0; i < Maps.Length; i++)
+
+            // 현재 위치 핀 (지금 있는 공정 위)
+            int curIdx = System.Array.FindIndex(Maps, x => x.scene == here);
+            if (view && curIdx >= 0)
             {
-                var (scene, name, desc) = Maps[i];
-                if (!zones.TryGetValue(scene, out var z)) continue;
-                int idx = i;
-                var hit = R("Hit", panel, new Vector2(0, 1), new Vector2(0, 1)); hit.pivot = new Vector2(0, 1);
-                hit.anchoredPosition = new Vector2(z.rect[0] * K, -z.rect[1] * K); hit.sizeDelta = new Vector2(z.rect[2] * K, z.rect[3] * K);
-                var hi = hit.gameObject.AddComponent<Image>(); hi.color = new Color(1, 1, 1, 0);
-                var hb = hit.gameObject.AddComponent<Button>(); hb.targetGraphic = hi;
-                var hc = hb.colors; hc.highlightedColor = new Color(1, 1, 1, 0.12f); hb.colors = hc;
-                hb.onClick.AddListener(() => Go(idx));
-                bool cur = scene == here;
-                var rib = Ribbon(panel, $"{z.label}", 22, new Vector2(0, 1), new Vector2(z.anchor[0] * K, -(z.rect[1] + z.rect[3]) * K - 4), new Vector2(0.5f, 1), false, cur);
-                var rb = rib.gameObject.AddComponent<Button>(); rb.onClick.AddListener(() => Go(idx));
-                if (cur)
-                {
-                    pin = R("Pin", panel, new Vector2(0, 1), new Vector2(0, 1)); pin.pivot = new Vector2(0.5f, 0);
-                    pin.anchoredPosition = new Vector2(z.anchor[0] * K, -z.anchor[1] * K + 6); pin.sizeDelta = new Vector2(150, 40);
-                    var pi = pin.gameObject.AddComponent<Image>(); pi.color = new Color32(229, 83, 61, 255);
-                    var pt = T(pin, "▼ 현재 위치", 18, Color.white, bold); Stretch(pt.rectTransform, 0, 0);
-                }
+                pin = R("Pin", view.Board, view.PinAnchor(curIdx), view.PinAnchor(curIdx)); pin.pivot = new Vector2(0.5f, 0);
+                pin.anchoredPosition = new Vector2(0, 6); pin.sizeDelta = new Vector2(150, 40);
+                var pi = pin.gameObject.AddComponent<Image>(); pi.color = new Color32(229, 83, 61, 255); pi.raycastTarget = false;
+                var pt = T(pin, "▼ 현재 위치", 18, Color.white, bold); Stretch(pt.rectTransform, 0, 0);
+                var labels = view.Board.Find("Labels"); if (labels) pin.SetSiblingIndex(labels.GetSiblingIndex() + 1);   // 마우스 강조·정보창보다 아래
             }
             var foot = T(panel, "가고 싶은 공장을 누르세요 · 숫자 1~4 · 닫기 M", 16, new Color32(220, 228, 236, 255), font);
-            Place(foot.rectTransform, new Vector2(0.5f, 0), new Vector2(0, 18), new Vector2(900, 24));
+            Place(foot.rectTransform, new Vector2(0.5f, 0), new Vector2(0, -22), new Vector2(900, 24));   // 지도 바로 아래
             var fs = foot.gameObject.AddComponent<Shadow>(); fs.effectColor = new Color(0, 0, 0, 0.8f);
         }
 
