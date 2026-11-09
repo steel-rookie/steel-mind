@@ -13,6 +13,7 @@ namespace SteelMind.EditorTools
         {
             if (EditorApplication.isPlayingOrWillChangePlaymode || EditorApplication.isCompiling) return;
             if (!Directory.Exists(RollingMapBuilder.ArtRoot)) return;
+            if (!File.Exists(RollingMapBuilder.TitleScene)) { UnityEngine.Debug.Log("[RollingMap] 메인 화면 장면이 없어 장면을 다시 만듭니다."); RollingMapBuilder.Build(); return; }
             foreach (var d in RollingMapBuilder.ProcessDirs())
             {
                 var scene = RollingMapBuilder.SceneFor(d);

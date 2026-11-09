@@ -104,64 +104,15 @@ namespace SteelMind.Scenario
         SessionState session;
         RectTransform title;
 
+        // 메인 화면은 Title 장면이 맡는다. 여기서는 공장에 처음 들어왔을 때 인트로만 한 번 보여 준다.
         IEnumerator TitleThenIntro()
         {
             SetFrozen(true);
             if (line) { line.ClearWarnings(); line.SetRunning(true); }
-            BuildTitle();
-            float t = 0;
-            var hint = title.Find("Hint")?.GetComponent<Text>();
-            while (true)
-            {
-                t += Time.deltaTime;
-                if (hint) hint.color = new Color(1, 1, 1, 0.45f + 0.55f * Mathf.Abs(Mathf.Sin(t * 2.5f)));
-                var k = Keyboard.current;
-                if (titleClicked || (k != null && (k.spaceKey.wasPressedThisFrame || k.enterKey.wasPressedThisFrame))) break;
-                yield return null;
-            }
-            // 메인 화면이 서서히 사라짐
-            var group = title.gameObject.AddComponent<CanvasGroup>();
-            for (float f = 0; f < 0.4f; f += Time.deltaTime) { group.alpha = 1 - f / 0.4f; yield return null; }
-            Destroy(title.gameObject); title = null;
+            yield return new WaitForSeconds(0.6f);
             yield return Intro();
             session.titleShown = true;
             Restart();
-        }
-
-        bool titleClicked;
-
-        void BuildTitle()
-        {
-            title = NewRect("Title", canvas.transform);
-            title.anchorMin = Vector2.zero; title.anchorMax = Vector2.one; title.offsetMin = title.offsetMax = Vector2.zero;
-            title.gameObject.AddComponent<Image>().color = new Color(0.04f, 0.04f, 0.05f, 0.72f);
-            var click = title.gameObject.AddComponent<Button>(); click.transition = Selectable.Transition.None; click.onClick.AddListener(() => titleClicked = true);
-            var col = NewRect("Col", title); col.anchorMin = col.anchorMax = new Vector2(0.5f, 0.56f); col.pivot = new Vector2(0.5f, 0.5f); col.sizeDelta = new Vector2(1000, 0);
-            var v = VLayout(col.gameObject, 0, 0, 10); v.childAlignment = TextAnchor.UpperCenter;
-            col.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-            AddText(col, "<b>POSCO K-뉴딜 아카데미 해커톤 · 팀 철든신입</b>", 16, Orange, FontStyle.Normal, TextAnchor.UpperCenter);
-            var logo = AddText(col, "<b>STEEL MIND</b>", 104, Color.white, FontStyle.Normal, TextAnchor.UpperCenter);
-            var sh = logo.gameObject.AddComponent<Shadow>(); sh.effectColor = new Color(0.94f, 0.63f, 0.29f, 0.55f); sh.effectDistance = new Vector2(0, -6);
-            AddText(col, "AI Agent들의 회의로 운영하는 제철소", 26, Hex("#E6E9F0"), FontStyle.Normal, TextAnchor.UpperCenter);
-            var gap = NewRect("Gap", col); LE(gap.gameObject, -1, 18);
-            var cast = NewRect("Cast", col); var ch = HLayout(cast.gameObject, 36, TextAnchor.MiddleCenter); ch.childForceExpandWidth = false;
-            foreach (var a in ReportBuilder.AgentOrder)
-            {
-                var (name, color, persona) = Agents[a];
-                var m = NewRect("Member", cast); var mv = VLayout(m.gameObject, 0, 0, 4); mv.childAlignment = TextAnchor.UpperCenter; LE(m.gameObject, 120);
-                var pic = NewRect("Pic", m); var img = pic.gameObject.AddComponent<Image>(); img.sprite = LoadSprite($"Portraits/{a}"); img.preserveAspect = true; LE(pic.gameObject, 96, 128);
-                AddText(m, $"<b>{name}</b>", 18, Hex(color), FontStyle.Normal, TextAnchor.UpperCenter);
-                AddText(m, persona, 13, Dim, FontStyle.Normal, TextAnchor.UpperCenter);
-            }
-            var hint = NewRect("Hint", title); hint.anchorMin = hint.anchorMax = new Vector2(0.5f, 0.12f); hint.sizeDelta = new Vector2(600, 40);
-            var ht = AddText(hint, "<b>SPACE를 눌러 시작</b>", 26, Color.white, FontStyle.Normal, TextAnchor.MiddleCenter);
-            ht.rectTransform.anchorMin = Vector2.zero; ht.rectTransform.anchorMax = Vector2.one; ht.rectTransform.offsetMin = ht.rectTransform.offsetMax = Vector2.zero;
-            Destroy(ht.gameObject); hint.gameObject.AddComponent<Text>();
-            var hintText = hint.GetComponent<Text>(); hintText.font = font; hintText.fontSize = 26; hintText.alignment = TextAnchor.MiddleCenter; hintText.supportRichText = true; hintText.text = "<b>SPACE를 눌러 시작</b>";
-            var foot = NewRect("Foot", title); foot.anchorMin = foot.anchorMax = new Vector2(0.5f, 0.04f); foot.sizeDelta = new Vector2(900, 24);
-            var ft = AddText(foot, "가상의 교육·체험 시뮬레이션입니다. 모든 값은 데모용이며 실제 제철소 기준이 아닙니다.", 13, Dim, FontStyle.Normal, TextAnchor.MiddleCenter);
-            ft.rectTransform.anchorMin = Vector2.zero; ft.rectTransform.anchorMax = Vector2.one; ft.rectTransform.offsetMin = ft.rectTransform.offsetMax = Vector2.zero;
-            LayoutRebuilder.ForceRebuildLayoutImmediate(col);
         }
 
         IEnumerator Intro()
