@@ -341,6 +341,7 @@ namespace SteelMind.Scenario
             canvas = go.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
             canvas.sortingOrder = 100;
+            canvas.pixelPerfect = true;   // 글자를 화면 픽셀에 맞춰 또렷하게
             canvasRect = go.GetComponent<RectTransform>();
             var scaler = go.AddComponent<CanvasScaler>();
             scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
