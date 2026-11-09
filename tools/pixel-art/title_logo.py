@@ -116,14 +116,14 @@ def main(out):
     HH, WW = M.shape
     img = np.zeros((HH, WW, 4), float)
 
-    # 옅은 푸른 빛 (테두리 바깥 몇 칸)
+    # 글씨 바깥: 검은색에 가까운 남색 테 (바깥으로 갈수록 옅어짐)
     from scipy.ndimage import distance_transform_edt as edt
     d = edt(~M)
     bayer = np.array([[0, 8, 2, 10], [12, 4, 14, 6], [3, 11, 1, 9], [15, 7, 13, 5]]) / 16.0
     th = bayer[np.arange(HH)[:, None] % 4, np.arange(WW)[None, :] % 4]
-    for k, a in ((2, 70), (3, 40), (4, 18)):   # 바깥으로 갈수록 옅어지는 단계형 빛
+    for k, a in ((2, 230), (3, 150), (4, 70)):   # 바깥으로 갈수록 옅어지는 단계형 테
         ring = (d > k - 1) & (d <= k)
-        img[ring] = [*hx('#3d8cff'), a]
+        img[ring] = [*hx('#0b1326'), a]
 
     # 아래로 깔리는 그림자(깊이감) + 어두운 테두리
     drop = np.zeros_like(M); drop[2:, :] = M[:-2, :]
