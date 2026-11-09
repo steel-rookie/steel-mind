@@ -353,16 +353,7 @@ namespace SteelMind.Scenario
                 es.AddComponent<EventSystem>();
                 es.AddComponent<InputSystemUIInputModule>();
             }
-            var bar = NewRect("Status", go.transform);
-            bar.anchorMin = bar.anchorMax = bar.pivot = new Vector2(0.5f, 1);
-            bar.anchoredPosition = new Vector2(0, -12);
-            Round(bar.gameObject, Room);
-            var h = bar.gameObject.AddComponent<HorizontalLayoutGroup>();
-            h.padding = new RectOffset(20, 20, 8, 8); h.childControlWidth = h.childControlHeight = true;
-            var f = bar.gameObject.AddComponent<ContentSizeFitter>();
-            f.horizontalFit = f.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-            status = AddText(bar, "", 17, Body);
-            status.horizontalOverflow = HorizontalWrapMode.Overflow;
+            // 위쪽 상태 글줄은 두지 않는다. 사건 위치는 길 안내(설비 위 표시·가장자리 화살표)로 알려 준다.
         }
 
         void SetStatus(string s) { if (status) status.text = s; }
