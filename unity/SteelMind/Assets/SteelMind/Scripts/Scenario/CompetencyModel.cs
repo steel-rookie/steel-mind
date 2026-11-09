@@ -61,13 +61,14 @@ namespace SteelMind.Scenario
             return weakness + s.Uncertainty;
         }
 
-        public Pick PickNext(IEnumerable<ScenarioEvent> pool)
+        /// <param name="noise">필요 점수가 비슷한 사건끼리 순서를 흔드는 값. 같은 답이어도 판마다 사건이 달라진다.</param>
+        public Pick PickNext(IEnumerable<ScenarioEvent> pool, Func<float> noise = null)
         {
             Pick best = null;
             foreach (var ev in pool)
             {
                 if (ev.probes == null || ev.probes.Length == 0) continue;
-                float score = ev.probes.Sum(Need);
+                float score = ev.probes.Sum(Need) + (noise?.Invoke() ?? 0f);
                 if (best == null || score > best.score + 1e-4f)
                 {
                     string target = ev.probes.OrderByDescending(Need).First();

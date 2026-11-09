@@ -20,6 +20,9 @@ namespace SteelMind.Scenario
         public static bool Enabled = true;   // 설정값(플레이 상태 아님)
         const string SceneName = "Rolling";
         const string DataPath = "Scenarios/hot_rolling";
+        const string VariantPath = "Scenarios/hot_rolling_variants";
+        const float PickNoise = 0.25f;
+        ScenarioVariants variants;
         const float CharDelay = 0.045f, TypingDots = 0.8f, NextSpeaker = 1.0f, ArriveRange = 3f;
         static readonly string[] Abc = { "A", "B", "C" };
 
@@ -88,6 +91,8 @@ namespace SteelMind.Scenario
             def = JsonUtility.FromJson<ScenarioDef>(json.text);
             baseEvents = def.events ?? new ScenarioEvent[0];
             surprisePool = def.surprises ?? new ScenarioEvent[0];
+            var variantJson = Resources.Load<TextAsset>(VariantPath);
+            if (variantJson) variants = new ScenarioVariants(JsonUtility.FromJson<VariantSet>(variantJson.text));
             line = FindFirstObjectByType<RollingLine>();
             process = FindFirstObjectByType<LineProcess>(FindObjectsInactive.Include);
             player = FindFirstObjectByType<PlayerMove>();
@@ -100,7 +105,13 @@ namespace SteelMind.Scenario
             SetupVoice();
             session = FindFirstObjectByType<SessionState>();
             if (!session) { session = new GameObject("SteelMindSession").AddComponent<SessionState>(); DontDestroyOnLoad(session.gameObject); }
-            if (session.titleShown) Restart();
+            // 시나리오를 끝낸 뒤 압연으로 돌아오면 처음부터 다시 하지 않는다 (R 키로는 다시 할 수 있다)
+            if (session.hotRollingDone)
+            {
+                finished = true;
+                if (normalBgm) { normalBgm.volume = normalVolume; normalBgm.Play(); }
+            }
+            else if (session.titleShown) Restart();
             else StartCoroutine(TitleThenIntro());
         }
 
@@ -185,6 +196,7 @@ namespace SteelMind.Scenario
         // ── 진행 ───────────────────────────────────────────────
         void Restart()
         {
+            if (session) session.hotRollingDone = false;
             StopAllCoroutines();
             resume = null;
             picks.Clear(); flags.Clear();
@@ -225,13 +237,14 @@ namespace SteelMind.Scenario
                 else
                 {
                     var cands = model.TopCandidates(pool, 3);
-                    var pk = model.PickNext(pool);
+                    var pk = model.PickNext(pool, () => UnityEngine.Random.Range(0f, PickNoise));
                     if (pk == null) break;
                     if (GeminiClient.Available) yield return AskPick(pk, cands);
                     ev = pk.ev; pool.Remove(ev); pickAt[i] = pk;
                     yield return new WaitForSeconds(1.2f);
                     yield return AiToast("AI 판단 · 다음 사건 선택", $"노리는 역량  <b>{model.Name(pk.target)}</b>\n{pk.reason}\n→ 돌발상황을 준비합니다", 3.6f, true);
                 }
+                if (variants != null) ev = variants.Apply(ev, session.lastVariant, n => UnityEngine.Random.Range(0, n));
                 played.Add(ev); def.events = played.ToArray();
                 yield return new WaitForSeconds(Mathf.Max(1.5f, ev.delay - (i < baseN ? 0 : 3f)));
                 yield return GoToSite(i);
@@ -1480,6 +1493,7 @@ namespace SteelMind.Scenario
 
         void CloseReport()
         {
+            if (session) session.hotRollingDone = true;
             if (overlay) Destroy(overlay.gameObject);
             overlay = null; showingResult = false;
             if (line) { line.ClearWarnings(); line.SetRunning(true); }
