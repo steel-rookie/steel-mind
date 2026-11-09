@@ -90,11 +90,22 @@ namespace SteelMind
             var col = Rect("Logo", root, new Vector2(0.5f, 0.72f), new Vector2(0.5f, 0.72f)); col.sizeDelta = new Vector2(1100, 260);
             var v = col.gameObject.AddComponent<VerticalLayoutGroup>(); v.childAlignment = TextAnchor.MiddleCenter; v.spacing = 6;
             v.childControlWidth = v.childControlHeight = true; v.childForceExpandHeight = false;
-            Label(col, "POSCO K-뉴딜 아카데미 해커톤 · 팀 철든신입", 18, new Color(0.94f, 0.63f, 0.29f));
-            var logo = Label(col, "STEEL MIND", 120, Color.white); logo.font = boldFont;
-            var sh = logo.gameObject.AddComponent<Shadow>(); sh.effectColor = new Color(0.94f, 0.45f, 0.18f, 0.8f); sh.effectDistance = new Vector2(0, -7);
-            var ol = logo.gameObject.AddComponent<Outline>(); ol.effectColor = new Color(0.1f, 0.06f, 0.12f, 0.9f); ol.effectDistance = new Vector2(3, -3);
-            Label(col, "AI Agent들의 회의로 운영하는 제철소", 28, new Color(0.93f, 0.92f, 0.95f));
+            var steelBlue = new Color32(169, 196, 220, 255);
+            Label(col, "POSCO K-뉴딜 아카데미 해커톤 · 팀 철든신입", 18, steelBlue);
+            // 로고: 도트로 그린 크롬 글자 (tools/pixel-art/title_logo.py)
+            var logoBytes = Resources.Load<TextAsset>("Title/title_logo");
+            if (logoBytes)
+            {
+                var tex = new Texture2D(2, 2); tex.LoadImage(logoBytes.bytes); tex.filterMode = FilterMode.Point; tex.wrapMode = TextureWrapMode.Clamp;
+                var lr = Rect("LogoImage", col, Vector2.zero, Vector2.zero);
+                lr.gameObject.AddComponent<RawImage>().texture = tex;
+                var le = lr.gameObject.AddComponent<LayoutElement>(); le.preferredWidth = tex.width * 6; le.preferredHeight = tex.height * 6;
+            }
+            else
+            {
+                var logo = Label(col, "STEEL MIND", 120, Color.white); logo.font = boldFont;
+            }
+            Label(col, "AI Agent들의 회의로 운영하는 제철소", 26, new Color(0.88f, 0.91f, 0.95f));
 
             var h = Rect("Hint", root, new Vector2(0.5f, 0.2f), new Vector2(0.5f, 0.2f)); h.sizeDelta = new Vector2(700, 50);
             hint = Label(h, "PRESS SPACE", 28, Color.white); hint.font = boldFont;
@@ -151,9 +162,13 @@ namespace SteelMind
 
         IEnumerator Leave()
         {
-            yield return FadeTo(1f, 0.6f);
-            Travel.from = "Title";
-            SceneManager.LoadScene(firstScene);
+            // 글자를 먼저 걷어 내고, 공장으로 천천히 넘어간다
+            float t = 0;
+            var logo = bg ? bg.parent.Find("Logo") : null;
+            CanvasGroup g = null;
+            if (logo) { g = logo.GetComponent<CanvasGroup>(); if (!g) g = logo.gameObject.AddComponent<CanvasGroup>(); }
+            while (t < 0.5f) { t += Time.deltaTime; if (g) g.alpha = 1 - t / 0.5f; if (hint) hint.color = new Color(1, 1, 1, 1 - t / 0.5f); yield return null; }
+            SceneFade.Go(firstScene, 0.9f, 1.4f);
         }
 
         IEnumerator FadeTo(float a, float dur)
@@ -185,7 +200,7 @@ namespace SteelMind
                 t += Time.deltaTime; float k = t / life;
                 rt.anchoredPosition = new Vector2(Mathf.Round(drift * k * 2.5f), Mathf.Round(4 + 30 * k));
                 float s = Mathf.Round(size0 + 16 * k); rt.sizeDelta = new Vector2(s, s);
-                img.color = new Color(0.62f, 0.58f, 0.66f, 0.55f * (1 - k));
+                img.color = new Color(0.78f, 0.62f, 0.58f, 0.6f * (1 - k));   // 불빛에 물든 밤 연기
                 yield return null;
             }
             if (rt) Destroy(rt.gameObject);

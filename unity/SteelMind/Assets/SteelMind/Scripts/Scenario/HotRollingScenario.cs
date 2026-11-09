@@ -94,6 +94,7 @@ namespace SteelMind.Scenario
             triangle = MakeTriangleSprite(48);
             BuildCanvas();
             SetupMusic();
+            SetupVoice();
             session = FindFirstObjectByType<SessionState>();
             if (!session) { session = new GameObject("SteelMindSession").AddComponent<SessionState>(); DontDestroyOnLoad(session.gameObject); }
             if (session.titleShown) Restart();
@@ -109,10 +110,55 @@ namespace SteelMind.Scenario
         {
             SetFrozen(true);
             if (line) { line.ClearWarnings(); line.SetRunning(true); }
-            yield return new WaitForSeconds(0.6f);
+            yield return CameraIntro();
             yield return Intro();
             session.titleShown = true;
             Restart();
+        }
+
+        // 공장 전체를 멀리서 보여 주다가 플레이어 쪽으로 천천히 다가가는 카메라 연출
+        IEnumerator CameraIntro()
+        {
+            var cam = Camera.main;
+            var follow = cam ? cam.GetComponent<CameraFollow>() : null;
+            if (!cam || !follow || !follow.target) { yield return new WaitForSeconds(0.6f); yield break; }
+            Behaviour ppc = null;
+            foreach (var b in cam.GetComponents<Behaviour>()) if (b && b.GetType().Name == "PixelPerfectCamera" && b.enabled) ppc = b;
+            if (ppc) ppc.enabled = false;
+            follow.enabled = false;
+
+            const float ppu = YSort.PixelsPerUnit;
+            float mapW = follow.mapSizePx.x / ppu, mapH = follow.mapSizePx.y / ppu;
+            float near = 270f / 2f / ppu;
+            float far = Mathf.Max(mapH / 2f, mapW / 2f / cam.aspect);
+            Vector3 wide = new Vector3(mapW / 2f, -mapH / 2f, -10f);
+            // 도착 위치는 CameraFollow가 잡을 자리와 똑같이 맞춘다
+            float halfH = near, halfW = near * cam.aspect;
+            Vector3 tp = follow.target.position;
+            Vector3 close = new Vector3(mapW <= halfW * 2 ? mapW / 2 : Mathf.Clamp(tp.x, halfW, mapW - halfW),
+                                        mapH <= halfH * 2 ? -mapH / 2 : Mathf.Clamp(tp.y, -mapH + halfH, -halfH), -10f);
+
+            cam.orthographicSize = far; cam.transform.position = wide;
+            var card = AddText(canvas.transform, "열연 2라인 · 야간 교대", 44, Color.white, FontStyle.Normal, TextAnchor.MiddleCenter);
+            card.font = Resources.Load<Font>("Fonts/Galmuri11-Bold") ?? font;
+            var crt = card.rectTransform; crt.anchorMin = new Vector2(0, 0.62f); crt.anchorMax = new Vector2(1, 0.78f); crt.offsetMin = crt.offsetMax = Vector2.zero;
+            var csh = card.gameObject.AddComponent<Outline>(); csh.effectColor = new Color(0, 0, 0, 0.8f); csh.effectDistance = new Vector2(3, -3);
+            for (float t = 0; t < 1f; t += Time.deltaTime) { card.color = new Color(1, 1, 1, Mathf.SmoothStep(0, 1, t / 0.7f)); yield return null; }
+            yield return new WaitForSeconds(0.9f);
+            const float dur = 2.2f;
+            for (float t = 0; t < dur; t += Time.deltaTime)
+            {
+                float k = Mathf.SmoothStep(0, 1, t / dur);
+                cam.orthographicSize = Mathf.Lerp(far, near, k);
+                cam.transform.position = Vector3.Lerp(wide, close, k);
+                card.color = new Color(1, 1, 1, 1f - Mathf.Clamp01(t / 0.8f));
+                yield return null;
+            }
+            Destroy(card.gameObject);
+            cam.orthographicSize = near; cam.transform.position = close;
+            follow.enabled = true;
+            if (ppc) ppc.enabled = true;
+            yield return new WaitForSeconds(0.3f);
         }
 
         IEnumerator Intro()
@@ -167,12 +213,27 @@ namespace SteelMind.Scenario
             yield return ResultScreen();
         }
 
-        // 사건 발생: 경보를 켜고 설비까지 길을 안내한다. 가까이 가면 회의가 열린다.
+        // 사건 발생: 경보 + 붉은 깜빡임 → 화살표 따라 설비까지 걸어감 → 회의
         IEnumerator GoToSite(int i)
         {
             var ev = def.events[i];
             Music(true);
             if (line && !string.IsNullOrEmpty(ev.warn)) line.SetWarning(ev.warn, true);
+            SetFrozen(true);
+            var go = new GameObject("AlarmFlash", typeof(RectTransform));
+            go.transform.SetParent(canvas.transform, false);
+            var rt = (RectTransform)go.transform; rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one; rt.offsetMin = rt.offsetMax = Vector2.zero;
+            var img = go.AddComponent<Image>(); img.raycastTarget = false;
+            const int blinks = 3; const float period = 0.5f;
+            for (float t = 0; t < blinks * period; t += Time.deltaTime)
+            {
+                float k = Mathf.Sin(t / period * Mathf.PI); // 0→1→0 한 번 깜빡임마다
+                img.color = new Color(0.9f, 0.1f, 0.08f, 0.38f * k * k);
+                yield return null;
+            }
+            Destroy(go);
+            SetFrozen(false);
+            // 문제가 난 설비까지 화살표를 따라 걸어간다. 가까이 가면 회의가 열린다.
             var eq = line ? line.equipment.Find(e => e.id == ev.warn) : null;
             if (eq == null || !eq.renderer || !player) yield break;
             guideTarget = eq.renderer.bounds;
@@ -181,8 +242,8 @@ namespace SteelMind.Scenario
             ShowGuide();
             while (true)
             {
-                var b = guideTarget; b.Expand(new Vector3(ArriveRange * 2, ArriveRange * 2, 10));
-                if (b.Contains(new Vector3(player.transform.position.x, player.transform.position.y, b.center.z))) break;
+                var bb = guideTarget; bb.Expand(new Vector3(ArriveRange * 2, ArriveRange * 2, 10));
+                if (bb.Contains(new Vector3(player.transform.position.x, player.transform.position.y, bb.center.z))) break;
                 yield return null;
             }
             HideGuide();
@@ -587,12 +648,12 @@ namespace SteelMind.Scenario
             VLayout(body.gameObject, 0, 0, 6);
             vnLine = AddText(body, "", 30, Hex("#F3F4F6"));
             vnWhy = AddText(body, "", 21, Hex("#A6ABB6"));
-            vnNext = NewRect("Next", box); vnNext.anchorMin = vnNext.anchorMax = new Vector2(1, 0); vnNext.anchoredPosition = new Vector2(-80, 30); vnNext.sizeDelta = new Vector2(18, 14);
+            vnNext = NewRect("Next", box); vnNext.anchorMin = vnNext.anchorMax = new Vector2(1, 0); vnNext.anchoredPosition = new Vector2(-100, 30); vnNext.sizeDelta = new Vector2(18, 14);
             var ni = vnNext.gameObject.AddComponent<Image>(); ni.sprite = triangle; ni.color = Color.white; vnNext.localRotation = Quaternion.Euler(0, 0, 180);
 
             // 로그·스킵
             // 게임 중 대화 기록(로그) 버튼은 두지 않는다
-            CircleButton("▶▶\n스킵", new Vector2(1, 1), new Vector2(-46, -46), () => { fastAll = true; skip = true; });
+            SkipChevrons(box);
             vnHistory.Clear();
         }
 
@@ -602,6 +663,77 @@ namespace SteelMind.Scenario
             rt.anchoredPosition = new Vector2(0, 150); rt.sizeDelta = new Vector2(300, 400);
             var img = rt.gameObject.AddComponent<Image>(); img.preserveAspect = true; img.color = new Color(1, 1, 1, 0);
             return img;
+        }
+
+        // 대화창 오른쪽 아래 노란 » 스킵 표시
+        void SkipChevrons(RectTransform box)
+        {
+            var rt = NewRect("Skip", box); rt.anchorMin = rt.anchorMax = new Vector2(1, 0); rt.pivot = new Vector2(1, 0);
+            rt.anchoredPosition = new Vector2(-28, 18); rt.sizeDelta = new Vector2(52, 44);
+            var hit = rt.gameObject.AddComponent<Image>(); hit.color = new Color(0, 0, 0, 0);
+            var b = rt.gameObject.AddComponent<Button>(); b.transition = Selectable.Transition.None;
+            b.onClick.AddListener(() => { fastAll = true; skip = true; });
+            var yellow = Hex("#F2C94C");
+            for (int c = 0; c < 2; c++)
+                for (int k = 0; k < 2; k++)
+                {
+                    var bar = NewRect("Bar", rt); bar.anchorMin = bar.anchorMax = new Vector2(0.5f, 0.5f);
+                    bar.sizeDelta = new Vector2(5, 17);
+                    bar.anchoredPosition = new Vector2(-8 + c * 14, k == 0 ? 5.5f : -5.5f);
+                    bar.localRotation = Quaternion.Euler(0, 0, k == 0 ? 45 : -45);
+                    var im = bar.gameObject.AddComponent<Image>(); im.color = yellow; im.raycastTarget = false;
+                }
+        }
+
+        // ── 동물의 숲 같은 웅얼웅얼 목소리 ──────────────────
+        AudioSource voice;
+        AudioClip[] blips;
+        static readonly Dictionary<string, float> VoicePitch = new Dictionary<string, float>
+        { { "production", 0.85f }, { "quality", 1.35f }, { "equipment", 0.72f }, { "safety", 1.05f }, { "player", 1.18f } };
+        // 한글 중성(ㅏㅐㅑㅒㅓㅔㅕㅖㅗㅘㅙㅚㅛㅜㅝㅞㅟㅠㅡㅢㅣ) → 아/에/이/오/우 소리
+        static readonly int[] JungToVowel = { 0, 1, 0, 1, 3, 1, 3, 1, 3, 0, 1, 1, 3, 4, 3, 1, 2, 4, 4, 2, 2 };
+
+        void SetupVoice()
+        {
+            voice = gameObject.AddComponent<AudioSource>(); voice.playOnAwake = false; voice.volume = 0.45f;
+            float[,] F = { { 800, 1250 }, { 520, 1850 }, { 300, 2300 }, { 520, 900 }, { 340, 760 } };
+            blips = new AudioClip[5];
+            for (int v = 0; v < 5; v++) blips[v] = MakeBlip(F[v, 0], F[v, 1], v);
+        }
+
+        static AudioClip MakeBlip(float f1, float f2, int v)
+        {
+            const int sr = 22050; const float f0 = 210f, dur = 0.075f;
+            int n = (int)(sr * dur);
+            var d = new float[n]; float peak = 0;
+            for (int i = 0; i < n; i++)
+            {
+                float t = i / (float)sr, x = 0;
+                float glide = f0 * (1f + 0.12f * (1 - t / dur));   // 살짝 내려가는 음
+                for (int h = 1; h <= 14; h++)
+                {
+                    float hf = h * glide;
+                    float a = Mathf.Exp(-Mathf.Pow((hf - f1) / 260f, 2)) + 0.7f * Mathf.Exp(-Mathf.Pow((hf - f2) / 380f, 2)) + 0.12f / h;
+                    x += a * Mathf.Sin(2 * Mathf.PI * hf * t);
+                }
+                float env = Mathf.Min(1, t / 0.006f) * Mathf.Exp(-t * 26f);
+                d[i] = x * env; peak = Mathf.Max(peak, Mathf.Abs(d[i]));
+            }
+            for (int i = 0; i < n; i++) d[i] = d[i] / peak * 0.7f;
+            var clip = AudioClip.Create($"blip{v}", n, 1, sr, false); clip.SetData(d, 0);
+            return clip;
+        }
+
+        void Blip(string agent, char ch)
+        {
+            if (!voice || blips == null || agent == null) return;
+            int v;
+            if (ch >= 0xAC00 && ch <= 0xD7A3) v = JungToVowel[((ch - 0xAC00) / 28) % 21];
+            else if (char.IsLetterOrDigit(ch)) v = ch % 5;
+            else return;
+            float p = VoicePitch.TryGetValue(agent, out var vp) ? vp : 1f;
+            voice.pitch = p * Random.Range(0.94f, 1.06f);
+            voice.PlayOneShot(blips[v]);
         }
 
         void CircleButton(string label, Vector2 anchor, Vector2 pos, UnityEngine.Events.UnityAction onClick)
@@ -649,9 +781,17 @@ namespace SteelMind.Scenario
         }
 
         // 대사 한 줄: 이름표 → 한 글자씩 → ▼ → 클릭·Space로 다음
+        // 문장이 끝나면(. ? !) 줄을 바꿔 한 줄에 한 문장씩 보이게 한다. "0.01mm"처럼 뒤에 공백이 없으면 그대로.
+        static string SplitSentences(string s)
+        {
+            if (string.IsNullOrEmpty(s)) return s;
+            return System.Text.RegularExpressions.Regex.Replace(s, @"([.?!…])[ \t]+(?=\S)", "$1\n");
+        }
+
         IEnumerator Say(string agent, string stance, string text, string sub, bool me)
         {
             if (!vn) yield break;
+            text = SplitSentences(text);
             bool narr = agent == null;
             yield return Place(narr ? null : agent);
             vnPlate.gameObject.SetActive(!narr);
@@ -679,6 +819,7 @@ namespace SteelMind.Scenario
             for (int i = 1; i <= text.Length && !skip; i++)
             {
                 vnLine.text = text.Substring(0, i);
+                if (!narr && i % 2 == 1) Blip(agent, text[i - 1]);
                 float c = 0; while (c < CharDelay && !skip) { c += Time.deltaTime; yield return null; }
             }
             vnLine.text = text;
@@ -690,7 +831,7 @@ namespace SteelMind.Scenario
             while (!skip)
             {
                 bob += Time.deltaTime;
-                vnNext.anchoredPosition = new Vector2(-80, 30 - Mathf.Abs(Mathf.Sin(bob * 5f)) * 6f);
+                vnNext.anchoredPosition = new Vector2(-100, 30 - Mathf.Abs(Mathf.Sin(bob * 5f)) * 6f);
                 yield return null;
             }
             skip = false;
