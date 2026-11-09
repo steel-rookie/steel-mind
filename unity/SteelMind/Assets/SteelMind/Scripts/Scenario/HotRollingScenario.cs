@@ -177,7 +177,7 @@ namespace SteelMind.Scenario
             while (deciding) yield return null;
 
             var c = ev.choices[picks[i]];
-            yield return Say("player", null, $"{Abc[picks[i]]}. {c.label}", c.detail, true);
+            yield return Say("player", null, c.label, c.detail, true);
             if (c.reactions != null)
                 foreach (var r in c.reactions) yield return Say(r.agent, r.stance, r.line, null, false);
             yield return WaitNext(i + 1 < n ? "다음 사건으로" : "결과 보기");
@@ -658,10 +658,11 @@ namespace SteelMind.Scenario
         }
 
         // 글이 다 들어갔을 때의 폭으로 말풍선 너비를 정한다(최대 BubbleMax)
-        float FitWidth(Text t, string full, float pad)
+        float FitWidth(Text t, string full, float pad, int size = 0)
         {
             var settings = t.GetGenerationSettings(new Vector2(BubbleMax - pad, 0));
             settings.horizontalOverflow = HorizontalWrapMode.Overflow;
+            if (size > 0) settings.fontSize = Mathf.RoundToInt(size * Mathf.Max(t.pixelsPerUnit, 0.01f));
             float w = t.cachedTextGeneratorForLayout.GetPreferredWidth(full, settings) / Mathf.Max(t.pixelsPerUnit, 0.01f);
             return Mathf.Min(BubbleMax, w + pad);
         }
@@ -673,22 +674,27 @@ namespace SteelMind.Scenario
             var (name, color, persona) = Agents.TryGetValue(agent, out var v) ? v : (agent, "#EEF0F3", "");
             var row = NewRect("Msg", msgs);
             var rh = HLayout(row.gameObject, 12, me ? TextAnchor.UpperRight : TextAnchor.UpperLeft);
-            rh.reverseArrangement = me;
-            var ava = NewRect("Avatar", row);
-            var ai = ava.gameObject.AddComponent<Image>(); ai.sprite = LoadSprite($"Portraits/{agent}"); ai.preserveAspect = true;
-            LE(ava.gameObject, 56, 75);
+            if (!me)
+            {
+                var ava = NewRect("Avatar", row);
+                var ai = ava.gameObject.AddComponent<Image>(); ai.sprite = LoadSprite($"Portraits/{agent}"); ai.preserveAspect = true;
+                LE(ava.gameObject, 56, 75);
+            }
             var bub = NewRect("Bubble", row);
-            Round(bub.gameObject, me ? Teal : Hex("#303030"), 0.85f);
+            Round(bub.gameObject, me ? Hex("#2B6F63") : Hex("#303030"), 0.85f);
             VLayout(bub.gameObject, 18, 12, 3);
-            var hr = NewRect("Head", bub); HLayout(hr.gameObject, 6, TextAnchor.MiddleLeft);
-            var nm = AddText(hr, $"<b>{name}</b>", 16, me ? Hex("#0D2420") : Hex(color), FontStyle.Normal, TextAnchor.MiddleLeft);
-            nm.horizontalOverflow = HorizontalWrapMode.Overflow;
-            if (!me && !string.IsNullOrEmpty(persona)) Chip(hr, persona, Hex("#FFFFFF", 0.08f), Dim, false);
-            if (stance != null && StanceBadge.TryGetValue(stance, out var badge)) Chip(hr, stance, badge, Color.white, true);
-            var t = AddText(bub, "", 18, me ? Hex("#0D2420") : Body, me ? FontStyle.Bold : FontStyle.Normal);
+            if (!me)
+            {
+                var hr = NewRect("Head", bub); HLayout(hr.gameObject, 8, TextAnchor.MiddleLeft);
+                var nm = AddText(hr, $"<b>{name}</b>", 16, Hex(color), FontStyle.Normal, TextAnchor.MiddleLeft);
+                nm.horizontalOverflow = HorizontalWrapMode.Overflow;
+                if (!string.IsNullOrEmpty(persona)) { var pe = AddText(hr, persona, 13, Dim, FontStyle.Normal, TextAnchor.MiddleLeft); pe.horizontalOverflow = HorizontalWrapMode.Overflow; }
+                if (stance != null && StanceBadge.TryGetValue(stance, out var badge)) Chip(hr, stance, badge, Color.white, true);
+            }
+            var t = AddText(bub, "", me ? 17 : 18, me ? Color.white : Body, me ? FontStyle.Bold : FontStyle.Normal);
             float width = FitWidth(t, text, 36);
-            if (!string.IsNullOrEmpty(sub)) width = Mathf.Max(width, FitWidth(t, sub, 36) * 14f / 18f);
-            width = Mathf.Max(width, 200);
+            if (!string.IsNullOrEmpty(sub)) width = Mathf.Max(width, FitWidth(t, sub, 36, 14));
+            width = Mathf.Max(width, me ? 120 : 200);
             LE(bub.gameObject, width, -1, 0);
             ScrollToBottom();
 
@@ -696,17 +702,17 @@ namespace SteelMind.Scenario
             while (w < (me ? 0.25f : TypingDots) && !skip)
             {
                 int d = Mathf.FloorToInt(w / 0.2f) % 3 + 1;
-                t.text = C(me ? "#0D2420" : "#8A8F99", new string('●', d));
+                t.text = C(me ? "#CFEAE4" : "#8A8F99", new string('●', d));
                 w += Time.deltaTime; yield return null;
             }
             for (int i = 1; i <= text.Length && !skip; i++)
             {
-                t.text = text.Substring(0, i) + C(me ? "#0D2420" : ColorHex(Teal), "▍");
+                t.text = text.Substring(0, i) + C(me ? "#CFEAE4" : ColorHex(Teal), "▍");
                 if (i % 4 == 0) ScrollToBottom();
                 float c = 0; while (c < CharDelay && !skip) { c += Time.deltaTime; yield return null; }
             }
             t.text = text;
-            if (!string.IsNullOrEmpty(sub)) AddText(bub, sub, 14, me ? Hex("#22524A") : Dim);
+            if (!string.IsNullOrEmpty(sub)) AddText(bub, sub, 14, me ? Hex("#CFEAE4") : Dim);
             ScrollToBottom();
             skip = false;
             yield return Wait(NextSpeaker);
