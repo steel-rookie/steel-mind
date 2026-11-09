@@ -57,7 +57,9 @@ namespace SteelMind.Scenario
         readonly HashSet<string> flags = new HashSet<string>();
         int current = -1;
         bool deciding, chatting, skip, showingResult, guiding;
-        Coroutine resume;
+        Coroutine resume, fade;
+        AudioSource normalBgm, alarmBgm;
+        float normalVolume = 0.5f;
 
         RollingLine line;
         LineProcess process;
@@ -91,6 +93,7 @@ namespace SteelMind.Scenario
             round = MakeRoundSprite(64, 18);
             triangle = MakeTriangleSprite(48);
             BuildCanvas();
+            SetupMusic();
             Restart();
         }
 
@@ -108,6 +111,8 @@ namespace SteelMind.Scenario
             if (line) { line.ClearWarnings(); line.SetRunning(true); }
             if (process) process.speed = 1f;
             SetFrozen(false);
+            if (normalBgm) { normalBgm.volume = normalVolume; if (!normalBgm.isPlaying) normalBgm.Play(); }
+            if (alarmBgm) { alarmBgm.volume = 0; alarmBgm.Stop(); }
             StartCoroutine(Run());
         }
 
@@ -132,6 +137,7 @@ namespace SteelMind.Scenario
         IEnumerator GoToSite(int i)
         {
             var ev = def.events[i];
+            Music(true);
             if (line && !string.IsNullOrEmpty(ev.warn)) line.SetWarning(ev.warn, true);
             var eq = line ? line.equipment.Find(e => e.id == ev.warn) : null;
             if (eq == null || !eq.renderer || !player) yield break;
@@ -178,6 +184,41 @@ namespace SteelMind.Scenario
             CloseChat();
             chatting = false;
             SetFrozen(false);
+            Music(false);
+        }
+
+        // ── 음악: 평소 공장 음악 ↔ 사건 경보 음악 (서로 서서히 바뀜) ──
+        void SetupMusic()
+        {
+            var cam = Camera.main;
+            if (cam) normalBgm = cam.GetComponent<AudioSource>();
+            if (normalBgm) normalVolume = normalBgm.volume;
+            var clip = Resources.Load<AudioClip>("Audio/bgm_alarm");
+            if (!clip) return;
+            alarmBgm = gameObject.AddComponent<AudioSource>();
+            alarmBgm.clip = clip; alarmBgm.loop = true; alarmBgm.playOnAwake = false; alarmBgm.volume = 0;
+        }
+
+        void Music(bool alarm)
+        {
+            if (fade != null) StopCoroutine(fade);
+            fade = StartCoroutine(Crossfade(alarm, alarm ? 0.6f : 1.5f));
+        }
+
+        IEnumerator Crossfade(bool alarm, float dur)
+        {
+            if (alarm && alarmBgm && !alarmBgm.isPlaying) alarmBgm.Play();
+            if (!alarm && normalBgm && !normalBgm.isPlaying) normalBgm.Play();
+            float n0 = normalBgm ? normalBgm.volume : 0, a0 = alarmBgm ? alarmBgm.volume : 0, t = 0;
+            while (t < dur)
+            {
+                t += Time.deltaTime; float k = t / dur;
+                if (normalBgm) normalBgm.volume = Mathf.Lerp(n0, alarm ? 0 : normalVolume, k);
+                if (alarmBgm) alarmBgm.volume = Mathf.Lerp(a0, alarm ? 0.55f : 0, k);
+                yield return null;
+            }
+            if (!alarm && alarmBgm) alarmBgm.Stop();
+            fade = null;
         }
 
         void Choose(int k)
