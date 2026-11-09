@@ -318,7 +318,7 @@ namespace SteelMind.Scenario
         IEnumerator Toast(string head, string body, float secs)
         {
             var rt = NewRect("AiToast", canvas.transform);
-            rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(1, 1); rt.anchoredPosition = new Vector2(-24, -84);
+            rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0, 1); rt.anchoredPosition = new Vector2(24, -24);
             var bg = Round(rt.gameObject, Hex("#0F1F1C", 0.95f), 1.4f);
             var o = rt.gameObject.AddComponent<Outline>(); o.effectColor = Teal; o.effectDistance = new Vector2(2, -2);
             var v = VLayout(rt.gameObject, 16, 14, 6);
@@ -327,8 +327,8 @@ namespace SteelMind.Scenario
             var h = AddText(rt, $"<b>◆ {head}</b>", 16, Teal); h.horizontalOverflow = HorizontalWrapMode.Overflow;
             var t = AddText(rt, body, 18, Color.white); t.horizontalOverflow = HorizontalWrapMode.Overflow;
             float a = 0;
-            while (a < 0.25f) { a += Time.deltaTime; cg.alpha = a / 0.25f; rt.anchoredPosition = new Vector2(-24 + 30 * (1 - a / 0.25f), -84); yield return null; }
-            cg.alpha = 1; rt.anchoredPosition = new Vector2(-24, -84);
+            while (a < 0.25f) { a += Time.deltaTime; cg.alpha = a / 0.25f; rt.anchoredPosition = new Vector2(24 - 30 * (1 - a / 0.25f), -24); yield return null; }
+            cg.alpha = 1; rt.anchoredPosition = new Vector2(24, -24);
             yield return new WaitForSeconds(secs);
             a = 0;
             while (a < 0.3f && rt) { a += Time.deltaTime; cg.alpha = 1 - a / 0.3f; yield return null; }
@@ -520,6 +520,8 @@ namespace SteelMind.Scenario
                 if (k.spaceKey.wasPressedThisFrame || k.enterKey.wasPressedThisFrame || k.numpadEnterKey.wasPressedThisFrame) skip = true;
             }
             else if ((showingResult || finished) && k.rKey.wasPressedThisFrame) Restart();
+            else if (showingResult && !runLog && (k.rightArrowKey.wasPressedThisFrame || k.dKey.wasPressedThisFrame)) ShowPage(reportPage + 1, 1);
+            else if (showingResult && !runLog && (k.leftArrowKey.wasPressedThisFrame || k.aKey.wasPressedThisFrame)) ShowPage(reportPage - 1, -1);
             else if (showingResult && k.escapeKey.wasPressedThisFrame) { if (runLog) { Destroy(runLog.gameObject); runLog = null; } else CloseReport(); }
         }
 
@@ -1114,21 +1116,34 @@ namespace SteelMind.Scenario
             overlay.gameObject.AddComponent<Image>().color = Hex("#141312", 0.97f);
             var view = NewRect("Viewport", overlay); view.anchorMin = Vector2.zero; view.anchorMax = Vector2.one; view.offsetMin = view.offsetMax = Vector2.zero;
             view.gameObject.AddComponent<RectMask2D>();
-            var page = NewRect("Page", view); page.anchorMin = page.anchorMax = new Vector2(0.5f, 1); page.pivot = new Vector2(0.5f, 1); page.sizeDelta = new Vector2(1040, 0);
-            var pv = VLayout(page.gameObject, 0, 28, 16); pv.padding = new RectOffset(0, 0, 28, 110);
+            // 머리는 위에 고정, 본문은 장(페이지)으로 나눠 ◀ ▶ 로 넘긴다
+            view.offsetMax = new Vector2(0, -118); view.offsetMin = new Vector2(0, 84 + 46);
+            var page = NewRect("Head", overlay); page.anchorMin = page.anchorMax = new Vector2(0.5f, 1); page.pivot = new Vector2(0.5f, 1); page.sizeDelta = new Vector2(1040, 0);
+            var pv = VLayout(page.gameObject, 0, 0, 6); pv.padding = new RectOffset(0, 0, 18, 0);
             page.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-            var sr = view.gameObject.AddComponent<ScrollRect>(); sr.content = page; sr.viewport = view; sr.horizontal = false; sr.scrollSensitivity = 40; sr.movementType = ScrollRect.MovementType.Clamped;
+            var sr = view.gameObject.AddComponent<ScrollRect>(); sr.viewport = view; sr.horizontal = false; sr.scrollSensitivity = 40; sr.movementType = ScrollRect.MovementType.Clamped;
+            reportPages.Clear(); reportScroll = sr;
+            string[] pageTitles = { "진단 요약", "대처 역량 5가지", "교육 · 사수 · 직무", "AI가 고른 사건", "동료 의견과 사건 기록", "회차 기록" };
+            foreach (var ttl in pageTitles)
+            {
+                var pg = NewRect("Page", view); pg.anchorMin = pg.anchorMax = new Vector2(0.5f, 1); pg.pivot = new Vector2(0.5f, 1); pg.sizeDelta = new Vector2(1040, 0);
+                var pgv = VLayout(pg.gameObject, 0, 0, 14); pgv.padding = new RectOffset(0, 0, 6, 24);
+                pg.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+                pg.gameObject.AddComponent<CanvasGroup>();
+                reportPages.Add((pg, ttl));
+            }
+            RectTransform P(int i) => reportPages[i].rt;
 
             // 머리
             AddText(page, $"<b>STEEL MIND · 대처 역량 진단 · {record.no}회차</b>", 14, Teal);
             AddText(page, "<b>돌발상황 대처 역량 진단 보고서</b>", 34, Color.white);
-            AddText(page, "선택마다 5가지 대처 역량을 채점하고, AI가 약하거나 덜 확인된 역량을 노린 돌발상황을 골라 냈습니다. 역량 기준은 NCS 열간압연 능력단위와 비기술적 역량 연구에 근거합니다. 모든 값은 데모용입니다.", 15, Dim);
+            AddText(page, "선택마다 5가지 대처 역량을 채점하고, AI가 약하거나 덜 확인된 역량을 노린 돌발상황을 골라 냈습니다. 근거: NCS 열간압연 능력단위 · 비기술적 역량 연구. 모든 값은 데모용입니다.", 14, Dim);
 
             var strong = model.Strengths(); var weak = model.Weaknesses();
             Competency Def(string id) { foreach (var c in def.competencies) if (c.id == id) return c; return null; }
 
             // 1줄: 진단 요약 | 운영 효율
-            var row1 = NewRect("Row1", page); var h1 = HLayout(row1.gameObject, 16); h1.childForceExpandWidth = true; h1.childForceExpandHeight = true;
+            var row1 = NewRect("Row1", P(0)); var h1 = HLayout(row1.gameObject, 16); h1.childForceExpandWidth = true; h1.childForceExpandHeight = true;
             var typeCard = ReportCard(row1); LE(typeCard.gameObject, 12, -1, 1.3f);
             var diagChip = AiTag(typeCard, "AI 진단 요약");
             var diagTitle = AddText(typeCard, $"<b>{diag.title}</b>", 34, Color.white);
@@ -1150,7 +1165,7 @@ namespace SteelMind.Scenario
             }
 
             // 2줄: 역량 레이더 + 역량별 점수
-            var c2 = ReportCard(page);
+            var c2 = ReportCard(P(1));
             AddText(c2, "<b>대처 역량 5가지</b>  <color=#A3A8B2>선택별 점수 평균 (−2 ~ +2) · 확인 횟수</color>", 17, Body);
             var row2 = NewRect("Row2", c2); HLayout(row2.gameObject, 24, TextAnchor.MiddleLeft);
             var radarBox = NewRect("Radar", row2); LE(radarBox.gameObject, 300, 260);
@@ -1181,7 +1196,7 @@ namespace SteelMind.Scenario
             }
 
             // 3줄: 맞춤 교육 | 추천 사수 | 어울리는 현장 직무
-            var row3 = NewRect("Row3", page); var h3r = HLayout(row3.gameObject, 16); h3r.childForceExpandWidth = true; h3r.childForceExpandHeight = true;
+            var row3 = NewRect("Row3", P(2)); var h3r = HLayout(row3.gameObject, 16); h3r.childForceExpandWidth = true; h3r.childForceExpandHeight = true;
             var focus = weak.Count > 0 ? weak : new List<CompetencyState> { model.states[CompetencyModel.Ids.OrderBy(i => model.states[i].Mean).First()] };
             var edu = ReportCard(row3); LE(edu.gameObject, 10, -1, 1);
             AddText(edu, "<b>맞춤 교육</b>", 17, Teal);
@@ -1198,7 +1213,7 @@ namespace SteelMind.Scenario
             foreach (var st in jobs) { var dd = Def(st.id); if (dd != null) { AddText(job, $"<b>{dd.role}</b>", 15, Body); AddText(job, dd.ncs, 12, Dim); } }
 
             // 4줄: AI가 고른 돌발상황 기록
-            var c4a = ReportCard(page, 22, 6);
+            var c4a = ReportCard(P(3), 22, 6);
             AiTag(c4a, "AI가 고른 사건과 이유");
             for (int i = 0; i < r.events.Count; i++)
             {
@@ -1209,8 +1224,8 @@ namespace SteelMind.Scenario
             }
 
             // 5줄: Agent 회의
-            var c3 = ReportCard(page);
-            AiTag(c3, "Agent 회의");
+            var c3 = ReportCard(P(4));
+            AiTag(c3, "동료 의견");
             var rowA = NewRect("Agents", c3); var h3 = HLayout(rowA.gameObject, 12); h3.childForceExpandWidth = true; h3.childForceExpandHeight = true;
             foreach (var v in rep.agents)
             {
@@ -1227,7 +1242,7 @@ namespace SteelMind.Scenario
             }
 
             // 6줄: 사건별 기록
-            var c4 = ReportCard(page, 22, 0);
+            var c4 = ReportCard(P(4), 22, 0);
             AddText(c4, "<b>사건별 기록</b>", 17, Body);
             Spacer(c4, 8);
             TableRow(c4, "사건", "고른 행동", "최선의 행동", "효율 손실", Dim, Dim, Dim, Dim, true);
@@ -1239,7 +1254,7 @@ namespace SteelMind.Scenario
             }
 
             // 회차 기록 (모든 판의 선택과 결과)
-            var runsCard = ReportCard(page, 22, 0);
+            var runsCard = ReportCard(P(5), 22, 0);
             var rh = NewRect("Head", runsCard); HLayout(rh.gameObject, 8, TextAnchor.MiddleLeft);
             var rt = AddText(rh, "<b>회차 기록</b>  <color=#A3A8B2>끝낸 판은 자동으로 저장됩니다 (최근 순)</color>", 17, Body, FontStyle.Normal, TextAnchor.MiddleLeft); LE(rt.gameObject, -1, -1, 1);
             var clearBtn = SmallButton(rh, "기록 지우기");
@@ -1264,6 +1279,9 @@ namespace SteelMind.Scenario
             var restart = Button_(btns, "다시 플레이 (R)", Yellow, Hex("#1A1408"), 52); LE(restart.gameObject, 210, 52);
             restart.onClick.AddListener(Restart);
             LayoutRebuilder.ForceRebuildLayoutImmediate(page);
+            foreach (var pg in reportPages) LayoutRebuilder.ForceRebuildLayoutImmediate(pg.rt);
+            BuildPageNav();
+            ShowPage(0, 0);
 
             // 효율 숫자 내려가기
             float dur = 1.2f, tt = 0;
@@ -1277,6 +1295,64 @@ namespace SteelMind.Scenario
                 yield return null;
             }
             big.text = r.finalEfficiency + "%";
+        }
+
+        // ── 보고서 장 넘기기 ──
+        readonly List<(RectTransform rt, string title)> reportPages = new List<(RectTransform, string)>();
+        ScrollRect reportScroll;
+        int reportPage;
+        Text pageLabel;
+        readonly List<Image> pageDots = new List<Image>();
+        Coroutine pageAnim;
+
+        void BuildPageNav()
+        {
+            pageDots.Clear();
+            var nav = NewRect("PageNav", overlay); nav.anchorMin = nav.anchorMax = new Vector2(0.5f, 0); nav.pivot = new Vector2(0.5f, 0);
+            nav.anchoredPosition = new Vector2(0, 88); nav.sizeDelta = new Vector2(700, 40);
+            var h = HLayout(nav.gameObject, 14, TextAnchor.MiddleCenter);
+            var prev = Button_(nav, "◀", Tile, Body, 36); LE(prev.gameObject, 52, 36); prev.onClick.AddListener(() => ShowPage(reportPage - 1, -1));
+            var mid = NewRect("Mid", nav); VLayout(mid.gameObject, 0, 0, 4); LE(mid.gameObject, 320, 40);
+            pageLabel = AddText(mid, "", 15, Body, FontStyle.Normal, TextAnchor.MiddleCenter);
+            var dots = NewRect("Dots", mid); HLayout(dots.gameObject, 8, TextAnchor.MiddleCenter);
+            for (int i = 0; i < reportPages.Count; i++)
+            {
+                var d = NewRect("Dot", dots); var im = Round(d.gameObject, CardLine, 0.5f); LE(d.gameObject, 8, 8);
+                int idx = i; var b = d.gameObject.AddComponent<Button>(); b.onClick.AddListener(() => ShowPage(idx, idx > reportPage ? 1 : -1));
+                pageDots.Add(im);
+            }
+            var next = Button_(nav, "▶", Tile, Body, 36); LE(next.gameObject, 52, 36); next.onClick.AddListener(() => ShowPage(reportPage + 1, 1));
+        }
+
+        void ShowPage(int i, int dir)
+        {
+            if (reportPages.Count == 0) return;
+            i = Mathf.Clamp(i, 0, reportPages.Count - 1);
+            if (i == reportPage && dir != 0) return;
+            reportPage = i;
+            for (int k = 0; k < reportPages.Count; k++) reportPages[k].rt.gameObject.SetActive(k == i);
+            var pg = reportPages[i].rt;
+            if (reportScroll) { reportScroll.content = pg; reportScroll.verticalNormalizedPosition = 1; }
+            if (pageLabel) pageLabel.text = $"<b>{reportPages[i].title}</b>   <color=#A3A8B2>{i + 1} / {reportPages.Count}</color>";
+            for (int k = 0; k < pageDots.Count; k++) pageDots[k].color = k == i ? Teal : CardLine;
+            if (pageAnim != null) StopCoroutine(pageAnim);
+            pageAnim = StartCoroutine(SlideIn(pg, dir));
+        }
+
+        IEnumerator SlideIn(RectTransform pg, int dir)
+        {
+            var cg = pg.GetComponent<CanvasGroup>();
+            float t = 0, dur = 0.25f;
+            while (t < dur && pg)
+            {
+                t += Time.unscaledDeltaTime; float k = Mathf.SmoothStep(0, 1, t / dur);
+                pg.anchoredPosition = new Vector2(Mathf.Lerp(60f * dir, 0, k), pg.anchoredPosition.y);
+                if (cg) cg.alpha = dir == 0 ? 1 : k;
+                yield return null;
+            }
+            if (pg) pg.anchoredPosition = new Vector2(0, pg.anchoredPosition.y);
+            if (cg) cg.alpha = 1;
+            pageAnim = null;
         }
 
         void TableRow(Transform parent, string a, string b, string c, string d, Color ca, Color cb, Color cc, Color cd, bool head)
