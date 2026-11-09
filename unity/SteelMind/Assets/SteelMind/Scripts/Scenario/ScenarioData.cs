@@ -76,5 +76,6 @@ namespace SteelMind.Scenario
         public Competency[] competencies;
         public ScenarioEvent[] events;               // 기본 사건 (앞의 baseCount개를 먼저 낸다)
         public ScenarioEvent[] surprises;            // AI가 약점을 보고 골라 내는 돌발상황
+        public ScenarioEvent[] retrains;             // 맞춤 재훈련 전용 (역량마다 2개, 조건이 다른 처음 보는 상황)
     }
 }

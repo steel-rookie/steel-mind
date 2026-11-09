@@ -13,7 +13,9 @@ namespace SteelMind.Scenario
     /// </summary>
     public static class GeminiClient
     {
-        static string key, model;
+        static string key, model, found;
+        // 빠르고 안정적인 기본 모델 (2026-11 테스트: 응답 약 1초). gemini-2.5-flash는 새 사용자에게 막혀 404
+        const string Fallback = "gemini-3.5-flash-lite";
         static bool loaded;
 
         public static bool Available { get { Load(); return !string.IsNullOrEmpty(key); } }
@@ -21,8 +23,10 @@ namespace SteelMind.Scenario
 
         static void Load()
         {
-            if (loaded) return;
+            // 키를 못 찾았으면 매번 다시 읽는다 (.env를 나중에 저장해도 다시 Play하면 바로 연결)
+            if (loaded && !string.IsNullOrEmpty(key)) return;
             loaded = true;
+            key = null; model = null;
             key = Environment.GetEnvironmentVariable("GEMINI_API_KEY");
             model = Environment.GetEnvironmentVariable("GEMINI_MODEL");
             foreach (var rel in new[] { "../.env", "../../../.env", "../../.env" })
@@ -31,6 +35,7 @@ namespace SteelMind.Scenario
                 {
                     var p = Path.GetFullPath(Path.Combine(Application.dataPath, rel));
                     if (!File.Exists(p)) continue;
+                    found = p;
                     foreach (var raw in File.ReadAllLines(p))
                     {
                         var line = raw.Trim();
@@ -43,7 +48,10 @@ namespace SteelMind.Scenario
                 }
                 catch { }
             }
-            if (string.IsNullOrEmpty(model)) model = "gemini-2.5-flash";
+            if (string.IsNullOrEmpty(model)) model = Fallback;
+            Debug.Log(string.IsNullOrEmpty(key)
+                ? $"[Gemini] 키 없음 → 규칙 기반으로 진행 (.env 위치: {found ?? "못 찾음"}, GEMINI_API_KEY=값 이 있어야 함)"
+                : $"[Gemini] 연결 준비됨 · 모델 {model}");
         }
 
         [Serializable] class Part { public string text; }
@@ -55,6 +63,19 @@ namespace SteelMind.Scenario
         public static IEnumerator Ask(string prompt, float timeout, Action<string> done)
         {
             if (!Available) { done(null); yield break; }
+            string result = null; long code = 0;
+            yield return Send(prompt, timeout, (t, c) => { result = t; code = c; });
+            if (result == null && code == 404 && model != Fallback)
+            {
+                Debug.LogWarning($"[Gemini] 모델 {model} 을(를) 쓸 수 없어 {Fallback} 로 다시 시도합니다");
+                model = Fallback;
+                yield return Send(prompt, timeout, (t, c) => { result = t; code = c; });
+            }
+            done(result);
+        }
+
+        static IEnumerator Send(string prompt, float timeout, Action<string, long> done)
+        {
             string body = "{\"contents\":[{\"parts\":[{\"text\":" + Quote(prompt) + "}]}]," +
                           "\"generationConfig\":{\"responseMimeType\":\"application/json\",\"temperature\":0.4}}";
             string url = $"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent";
@@ -69,14 +90,15 @@ namespace SteelMind.Scenario
                 if (req.result != UnityWebRequest.Result.Success)
                 {
                     Debug.LogWarning($"[Gemini] 실패: {req.responseCode} {req.error}");
-                    done(null); yield break;
+                    done(null, req.responseCode); yield break;
                 }
                 try
                 {
                     var r = JsonUtility.FromJson<Response>(req.downloadHandler.text);
-                    done(r?.candidates?[0]?.content?.parts?[0]?.text);
+                    var parts = r?.candidates?[0]?.content?.parts;
+                    done(parts != null && parts.Length > 0 ? parts[parts.Length - 1].text : null, req.responseCode);
                 }
-                catch (Exception e) { Debug.LogWarning("[Gemini] 응답 해석 실패: " + e.Message); done(null); }
+                catch (Exception e) { Debug.LogWarning("[Gemini] 응답 해석 실패: " + e.Message); done(null, req.responseCode); }
             }
         }
 
