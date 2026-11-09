@@ -318,7 +318,7 @@ namespace SteelMind.Scenario
                 if (k.spaceKey.wasPressedThisFrame || k.enterKey.wasPressedThisFrame || k.numpadEnterKey.wasPressedThisFrame) skip = true;
             }
             else if ((showingResult || finished) && k.rKey.wasPressedThisFrame) Restart();
-            else if (showingResult && k.escapeKey.wasPressedThisFrame) CloseReport();
+            else if (showingResult && k.escapeKey.wasPressedThisFrame) { if (runLog) { Destroy(runLog.gameObject); runLog = null; } else CloseReport(); }
         }
 
         // ── 길 안내 ────────────────────────────────────────────
@@ -755,7 +755,7 @@ namespace SteelMind.Scenario
         const string HistoryKey = "steelmind.history";
         const string RunsKey = "steelmind.runs";
 
-        [System.Serializable] class RunRecord { public int no; public string when, path, type, title; public int efficiency, bestCount, events; public bool accident; public string[] choices; public string[] events_; }
+        [System.Serializable] class RunRecord { public int no; public string when, path, type, title; public int efficiency, bestCount, events; public bool accident; public string[] choices; public string[] events_; public int[] losses; public bool[] best; public string[] bestLabels; public string[] carryNotes; }
         [System.Serializable] class RunList { public List<RunRecord> runs = new List<RunRecord>(); }
 
         static RunList LoadRuns()
@@ -776,6 +776,8 @@ namespace SteelMind.Scenario
                 when = System.DateTime.Now.ToString("MM/dd HH:mm"), path = rep.pathCode, type = rep.type, title = def.title,
                 efficiency = rep.run.finalEfficiency, bestCount = rep.bestCount, events = def.events.Length, accident = rep.accident,
                 choices = rep.run.events.ConvertAll(e => e.chosen.label).ToArray(), events_ = rep.run.events.ConvertAll(e => e.ev.title).ToArray(),
+                losses = rep.run.events.ConvertAll(e => e.Total).ToArray(), best = rep.run.events.ConvertAll(e => e.chosen.best).ToArray(),
+                bestLabels = rep.run.events.ConvertAll(e => e.best.label).ToArray(), carryNotes = rep.run.events.ConvertAll(e => e.carried ? e.ev.carry.note : "").ToArray(),
             };
             list.runs.Add(rec); SaveRuns(list);
             return rec;
@@ -921,6 +923,8 @@ namespace SteelMind.Scenario
             var btns = NewRect("Buttons", barRt); btns.anchorMin = btns.anchorMax = new Vector2(0.5f, 0.5f); btns.sizeDelta = new Vector2(1040, 52);
             var bh2 = HLayout(btns.gameObject, 12, TextAnchor.MiddleRight); bh2.childForceExpandHeight = true;
             var info = AddText(btns, $"{record.no}회차 · {r.finalEfficiency}% · {rep.type}  <color=#A3A8B2>저장됨</color>", 16, Body, FontStyle.Normal, TextAnchor.MiddleLeft); LE(info.gameObject, -1, -1, 1);
+            var logBtn = Button_(btns, "이전 기록", Tile, Body, 52); LE(logBtn.gameObject, 160, 52);
+            logBtn.onClick.AddListener(() => OpenRunLog(record.no));
             var close = Button_(btns, "닫기 (Esc)", Tile, Body, 52); LE(close.gameObject, 170, 52);
             close.onClick.AddListener(CloseReport);
             var restart = Button_(btns, "다시 플레이 (R)", Yellow, Hex("#1A1408"), 52); LE(restart.gameObject, 210, 52);
@@ -1011,6 +1015,57 @@ namespace SteelMind.Scenario
                 AddText(item, string.Join("   ·   ", parts), 13, Dim);
                 var gap = NewRect("Gap", box); LE(gap.gameObject, -1, 8);
             }
+        }
+
+        RectTransform runLog;
+
+        // 이전 기록 창: 모든 회차를 최근 순으로, 사건마다 고른 행동·최선 여부·손실까지
+        void OpenRunLog(int currentNo)
+        {
+            if (runLog) { Destroy(runLog.gameObject); runLog = null; return; }
+            runLog = NewRect("RunLog", overlay);
+            runLog.anchorMin = Vector2.zero; runLog.anchorMax = Vector2.one; runLog.offsetMin = runLog.offsetMax = Vector2.zero;
+            runLog.gameObject.AddComponent<Image>().color = new Color(0, 0, 0, 0.7f);
+            var win = NewRect("Window", runLog); win.anchorMin = new Vector2(0.5f, 0.5f); win.anchorMax = new Vector2(0.5f, 0.5f); win.sizeDelta = new Vector2(900, 620);
+            Round(win.gameObject, CardBg, 1.0f);
+            var wo = win.gameObject.AddComponent<Outline>(); wo.effectColor = CardLine; wo.effectDistance = new Vector2(1, -1);
+            VLayout(win.gameObject, 0, 0, 0);
+            var head = NewRect("Head", win); var hh = HLayout(head.gameObject, 10, TextAnchor.MiddleLeft); hh.padding = new RectOffset(22, 16, 14, 14); LE(head.gameObject).flexibleHeight = 0;
+            var runs = LoadRuns().runs;
+            var title = AddText(head, $"<b>이전 기록</b>  <color=#A3A8B2>{runs.Count}판 · 최근 순</color>", 20, Body, FontStyle.Normal, TextAnchor.MiddleLeft); LE(title.gameObject, -1, -1, 1);
+            var x = SmallButton(head, "닫기"); x.onClick.AddListener(() => { if (runLog) Destroy(runLog.gameObject); runLog = null; });
+            var view = NewRect("Viewport", win); view.gameObject.AddComponent<RectMask2D>(); var vle = LE(view.gameObject); vle.flexibleHeight = 1;
+            var list = NewRect("List", view); list.anchorMin = new Vector2(0, 1); list.anchorMax = new Vector2(1, 1); list.pivot = new Vector2(0.5f, 1); list.offsetMin = list.offsetMax = Vector2.zero;
+            VLayout(list.gameObject, 22, 8, 12);
+            list.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            var sr = view.gameObject.AddComponent<ScrollRect>(); sr.content = list; sr.viewport = view; sr.horizontal = false; sr.scrollSensitivity = 40; sr.movementType = ScrollRect.MovementType.Clamped;
+            if (runs.Count == 0) AddText(list, "저장된 기록이 없습니다.", 15, Dim);
+            for (int i = runs.Count - 1; i >= 0; i--)
+            {
+                var r = runs[i];
+                var card = NewRect("Run", list); Round(card.gameObject, r.no == currentNo ? Hex("#1F2C2A") : Tile, 1.4f);
+                if (r.no == currentNo) { var o = card.gameObject.AddComponent<Outline>(); o.effectColor = Teal; o.effectDistance = new Vector2(1, -1); }
+                VLayout(card.gameObject, 18, 12, 6);
+                var top = NewRect("Top", card); HLayout(top.gameObject, 14, TextAnchor.MiddleLeft);
+                AddText(top, $"<b>{r.no}회차</b>", 19, Body, FontStyle.Normal, TextAnchor.MiddleLeft).horizontalOverflow = HorizontalWrapMode.Overflow;
+                AddText(top, $"<b>{r.efficiency}%</b>", 19, LossColor(100 - r.efficiency), FontStyle.Normal, TextAnchor.MiddleLeft).horizontalOverflow = HorizontalWrapMode.Overflow;
+                AddText(top, r.type, 16, Teal, FontStyle.Normal, TextAnchor.MiddleLeft).horizontalOverflow = HorizontalWrapMode.Overflow;
+                AddText(top, $"최선 {r.bestCount}/{r.events}" + (r.accident ? "  <color=#FF6B6B>안전사고</color>" : ""), 14, Dim, FontStyle.Normal, TextAnchor.MiddleLeft).horizontalOverflow = HorizontalWrapMode.Overflow;
+                var when = AddText(top, r.when + (r.no == currentNo ? "  · 이번 판" : ""), 13, Dim, FontStyle.Normal, TextAnchor.MiddleRight); LE(when.gameObject, -1, -1, 1);
+                if (r.choices == null) continue;
+                for (int k = 0; k < r.choices.Length; k++)
+                {
+                    var row = NewRect("Event", card); var rh = HLayout(row.gameObject, 10, TextAnchor.MiddleLeft); rh.padding = new RectOffset(0, 0, 2, 2);
+                    var ev = AddText(row, $"{k + 1}. {(r.events_ != null && k < r.events_.Length ? r.events_[k] : "")}", 14, Dim); LE(ev.gameObject, 250);
+                    bool isBest = r.best != null && k < r.best.Length && r.best[k];
+                    var ch = AddText(row, r.choices[k], 14, Body); LE(ch.gameObject, 200);
+                    var bl = AddText(row, isBest ? "최선" : (r.bestLabels != null && k < r.bestLabels.Length ? "최선: " + r.bestLabels[k] : ""), 13, isBest ? Hex("#6FCF97") : Dim); LE(bl.gameObject, 230);
+                    int loss = r.losses != null && k < r.losses.Length ? r.losses[k] : 0;
+                    var lt = AddText(row, r.losses == null ? "" : (loss > 0 ? $"<b>−{loss}%</b>" : "<b>0%</b>"), 14, LossColor(loss), FontStyle.Normal, TextAnchor.MiddleRight); LE(lt.gameObject, -1, -1, 1);
+                    if (r.carryNotes != null && k < r.carryNotes.Length && !string.IsNullOrEmpty(r.carryNotes[k])) AddText(card, $"     ↳ {r.carryNotes[k]}", 13, Red);
+                }
+            }
+            LayoutRebuilder.ForceRebuildLayoutImmediate(list);
         }
 
         void CloseReport()
