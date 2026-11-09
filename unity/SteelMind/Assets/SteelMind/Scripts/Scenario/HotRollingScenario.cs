@@ -1418,7 +1418,7 @@ namespace SteelMind.Scenario
             for (int i = 0; i < r.events.Count; i++)
             {
                 var e = r.events[i];
-                bool sur = surprisePool.Contains(e.ev);
+                bool sur = surprisePool.Any(x => x.id == e.ev.id);
                 string why = pickAt.TryGetValue(i, out var pk) ? (pk.byGemini ? "[Gemini] " : "") + pk.reason : "기본 측정 · 모든 사람이 같은 상황으로 기준선을 잽니다";
                 LogRow(logBox, (i + 1).ToString(), e.ev.title + (sur ? "  <color=#E0B84A><b>돌발</b></color>" : ""), why, e.chosen.label,
                     i < eventDeltas.Count ? DeltaText(eventDeltas[i]) : "", false);
@@ -1661,7 +1661,7 @@ namespace SteelMind.Scenario
         {
             // 재훈련 전용 상황을 먼저, 모자라면 아직 안 본 돌발상황·기본 상황에서 채운다
             var cands = (def.retrains ?? new ScenarioEvent[0]).Concat(surprisePool).Concat(baseEvents)
-                .Where(e => !played.Contains(e) && e.probes != null && System.Array.IndexOf(e.probes, k) >= 0)
+                .Where(e => !played.Any(x => x.id == e.id) && e.probes != null && System.Array.IndexOf(e.probes, k) >= 0)
                 .OrderByDescending(e => e.probes[0] == k ? 1 : 0)
                 .Take(2).ToList();
             if (cands.Count == 0) { StartCoroutine(AiToast("맞춤 재훈련", $"{model.Name(k)}을(를) 확인할 남은 상황이 없습니다", 2.5f, false)); return; }
