@@ -316,7 +316,29 @@ window.SCENARIO = {
      "flag": "overheated",
      "lineSpeed": 1,
      "resumeAfter": 0,
-     "keepWarning": true
+     "keepWarning": true,
+     "reactions": [
+      {
+       "agent": "production",
+       "stance": "찬성",
+       "line": "좋아요! 이대로면 납기 맞춥니다. 역시 결단력 있으시네요."
+      },
+      {
+       "agent": "quality",
+       "stance": "불만",
+       "line": "편차 그래프 보셨어요? 이 코일들 다 재검사 대상입니다."
+      },
+      {
+       "agent": "equipment",
+       "stance": "불만",
+       "line": "롤 교체비 견적서 미리 뽑아 둘게요… 휴."
+      },
+      {
+       "agent": "safety",
+       "stance": "경고",
+       "line": "출입 금지 테이프라도 바로 칩니다. 사람 다치면 끝이에요."
+      }
+     ]
     },
     {
      "id": "reduce_speed",
@@ -331,7 +353,29 @@ window.SCENARIO = {
      },
      "best": true,
      "lineSpeed": 0.55,
-     "resumeAfter": 0
+     "resumeAfter": 0,
+     "reactions": [
+      {
+       "agent": "production",
+       "stance": "불만",
+       "line": "감속이요? 오늘 주문량은 어떻게 맞춥니까. 야근 확정이네요."
+      },
+      {
+       "agent": "equipment",
+       "stance": "찬성",
+       "line": "잘하셨어요. 롤이 숨 좀 쉬겠네요."
+      },
+      {
+       "agent": "safety",
+       "stance": "경고",
+       "line": "좋습니다. 그래도 주변 인원 통제는 같이 해 주세요."
+      },
+      {
+       "agent": "quality",
+       "stance": "찬성",
+       "line": "온도 안정되면 편차도 금방 잡힙니다."
+      }
+     ]
     },
     {
      "id": "stop_and_inspect",
@@ -345,7 +389,29 @@ window.SCENARIO = {
       "cost": 2
      },
      "lineSpeed": 0,
-     "resumeAfter": 3
+     "resumeAfter": 3,
+     "reactions": [
+      {
+       "agent": "production",
+       "stance": "불만",
+       "line": "라인을 세운다고요? 오늘 출하는 포기하라는 거죠?"
+      },
+      {
+       "agent": "quality",
+       "stance": "찬성",
+       "line": "멈춰 두면 불량 코일은 더 안 나옵니다."
+      },
+      {
+       "agent": "equipment",
+       "stance": "경고",
+       "line": "점검은 좋은데, 재가동 예열만 한참 걸려요."
+      },
+      {
+       "agent": "safety",
+       "stance": "찬성",
+       "line": "출입 통제 완료. 이게 원칙입니다."
+      }
+     ]
     }
    ]
   },
@@ -401,7 +467,24 @@ window.SCENARIO = {
      },
      "flag": "accident",
      "lineSpeed": 0,
-     "resumeAfter": 6
+     "resumeAfter": 6,
+     "reactions": [
+      {
+       "agent": "production",
+       "stance": "찬성",
+       "line": "다행이다, 라인 안 멈췄어요."
+      },
+      {
+       "agent": "safety",
+       "stance": "경고",
+       "line": "…무전이 늦었습니다. 작업자 부상입니다. 이건 막을 수 있었어요."
+      },
+      {
+       "agent": "equipment",
+       "stance": "불만",
+       "line": "결국 사고로 라인이 섰네요. 제일 비싼 정지예요."
+      }
+     ]
     },
     {
      "id": "slow_and_clear",
@@ -416,7 +499,24 @@ window.SCENARIO = {
      },
      "best": true,
      "lineSpeed": 0.4,
-     "resumeAfter": 3
+     "resumeAfter": 3,
+     "reactions": [
+      {
+       "agent": "production",
+       "stance": "불만",
+       "line": "또 감속… 목표는 빠듯해졌지만 사고보단 낫죠."
+      },
+      {
+       "agent": "safety",
+       "stance": "찬성",
+       "line": "작업자 이탈 확인했습니다. 잘하셨습니다."
+      },
+      {
+       "agent": "equipment",
+       "stance": "찬성",
+       "line": "급정지보다 설비 부담이 훨씬 적었어요. 깔끔합니다."
+      }
+     ]
     },
     {
      "id": "emergency_stop",
@@ -430,7 +530,24 @@ window.SCENARIO = {
       "cost": 3
      },
      "lineSpeed": 0,
-     "resumeAfter": 4
+     "resumeAfter": 4,
+     "reactions": [
+      {
+       "agent": "production",
+       "stance": "불만",
+       "line": "완전히 세우면 오늘 목표는 물 건너갔습니다."
+      },
+      {
+       "agent": "safety",
+       "stance": "찬성",
+       "line": "사람부터 지켰습니다. 맞는 판단이에요."
+      },
+      {
+       "agent": "equipment",
+       "stance": "경고",
+       "line": "급정지 충격이 꽤 컸어요. 재가동 전에 롤 점검 필요합니다."
+      }
+     ]
     }
    ]
   },
