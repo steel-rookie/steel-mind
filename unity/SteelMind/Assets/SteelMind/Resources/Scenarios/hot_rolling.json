@@ -64,6 +64,7 @@
   "events": [
     {
       "id": "furnace_low_temperature",
+      "pressure": true,
       "level": "LEVEL 1",
       "delay": 5,
       "warn": "reheating_furnace",
@@ -514,6 +515,7 @@
     },
     {
       "id": "rolling_temperature",
+      "pressure": true,
       "level": "LEVEL 2",
       "delay": 6,
       "warn": "finishing_mill",
@@ -689,6 +691,7 @@
     },
     {
       "id": "coiler_side_shift",
+      "pressure": true,
       "level": "LEVEL 2",
       "delay": 6,
       "warn": "coiler",
@@ -1089,6 +1092,7 @@
     },
     {
       "id": "rush_order",
+      "pressure": true,
       "level": "돌발",
       "warn": "coiler",
       "probes": [
@@ -2242,6 +2246,7 @@
     },
     {
       "id": "rt_ship_dispute",
+      "pressure": true,
       "level": "재훈련",
       "warn": "coiler",
       "probes": [

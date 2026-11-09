@@ -1,0 +1,19 @@
+{
+  "format": "steelmind-run-v2",
+  "savedAt": "2026-11-09T20:10:42+09:00",
+  "source": "unity",
+  "scenario": "hot_rolling_test",
+  "role": "신입",
+  "virtual": false,
+  "competencies": [{"key": "aware", "name": "상황 인식"}, {"key": "safety", "name": "안전 우선"}, {"key": "judge", "name": "위기 판단"}, {"key": "tech", "name": "설비·공정 이해"}, {"key": "team", "name": "소통·조율"}],
+  "scores": {"aware": 58, "safety": 19, "judge": 33, "tech": 62, "team": 62},
+  "counts": {"aware": 3, "safety": 4, "judge": 3, "tech": 2, "team": 2},
+  "log": [
+    {"type": "result", "id": "furnace_low_temperature", "title": "가열로 슬라브 온도 미달", "kind": "base", "ci": 0, "choice": "그대로 추출", "best": false, "bestCi": 1, "accident": false, "sec": 37.8, "secChoice": 13.1, "to": false, "pressure": true, "probes": [], "report": [], "ci2": null, "followedAgent": "production", "tests": ["judge", "tech"]},
+    {"type": "result", "id": "roughing_bar_drift", "title": "조압연기 바 쏠림", "kind": "base", "ci": 1, "choice": "롤 간격 보정", "best": true, "bestCi": 1, "accident": false, "sec": 32.6, "secChoice": 7.8, "to": false, "pressure": false, "probes": [], "report": [], "ci2": null, "followedAgent": "equipment", "tests": ["aware", "tech"]},
+    {"type": "result", "id": "worker_in_zone", "title": "작업자 위험 구역 진입", "kind": "base", "ci": 0, "choice": "무전 경고 후 계속", "best": false, "bestCi": 1, "accident": true, "sec": 35.0, "secChoice": 12.7, "to": false, "pressure": false, "probes": [], "report": [], "ci2": null, "followedAgent": "production", "tests": ["safety", "team"]},
+    {"type": "result", "id": "crane_overload", "title": "코일 크레인 과부하 경보", "kind": "surprise", "ci": 2, "choice": "경보 리셋 후 계속", "best": false, "bestCi": 1, "accident": false, "sec": 34.0, "secChoice": 5.1, "to": false, "pressure": false, "probes": [], "report": [], "ci2": null, "followedAgent": "equipment", "tests": ["safety", "judge"]},
+    {"type": "result", "id": "pipe_burst", "title": "3번 냉각수 배관 파열", "kind": "surprise", "ci": 1, "choice": "밸브 차단·제어반 전원 차단·구역 통제", "best": true, "bestCi": 1, "accident": false, "sec": 59.3, "secChoice": 27.4, "to": false, "pressure": false, "probes": [], "report": [], "ci2": null, "followedAgent": "equipment", "tests": ["safety", "aware"]},
+    {"type": "result", "id": "rolling_temperature", "title": "사상압연기 온도 상승", "kind": "base", "ci": 0, "choice": "속도 유지", "best": false, "bestCi": 1, "accident": false, "sec": 43.0, "secChoice": 2.1, "to": false, "pressure": true, "probes": [], "report": [], "ci2": null, "followedAgent": "production", "tests": ["safety", "judge"]}
+  ]
+}

@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "steelmind-run-v2",
+  "title": "STEEL MIND 진단 기록 (한 판)",
+  "description": "Unity와 HTML 시연이 판이 끝날 때 저장하는 형식. tools/cohort-report 가 여러 개를 모아 기수 진단 보고서를 만든다. 이름·사번 같은 개인 정보는 넣지 않는다.",
+  "type": "object",
+  "required": ["format", "savedAt", "source", "role", "virtual", "log"],
+  "properties": {
+    "format": { "const": "steelmind-run-v2" },
+    "savedAt": { "type": "string", "description": "ISO 8601 시각 (시간대 포함)" },
+    "source": { "enum": ["unity", "html"] },
+    "scenario": { "type": "string", "description": "시나리오 id (예: hot_rolling)" },
+    "role": { "enum": ["신입", "경력"], "description": "보고서의 비교 기준" },
+    "virtual": { "type": "boolean", "description": "자동 시연·가상 플레이면 true (보고서가 실제와 구분)" },
+    "competencies": {
+      "type": "array",
+      "description": "이 기록의 역량 정의 그대로 (개수 고정 아님). HTML 시연 기록은 생략 가능 (보고서가 시연 정의를 씀)",
+      "items": { "type": "object", "required": ["key", "name"], "properties": { "key": { "type": "string" }, "name": { "type": "string" } } }
+    },
+    "scores": { "type": "object", "description": "역량 key → 0~100. 규칙 엔진이 계산한 값", "additionalProperties": { "type": "number" } },
+    "counts": { "type": "object", "description": "(선택) 역량 key → 그 역량을 잰 사건 수. 0이면 보고서가 '측정 안 됨'으로 본다", "additionalProperties": { "type": "integer" } },
+    "log": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["type", "id"],
+        "properties": {
+          "type": { "description": "result = 한 사건의 판단. 그 밖의 type 은 보고서가 무시", "type": "string" },
+          "id": { "type": "string", "description": "사건 id (시나리오 JSON과 같게)" },
+          "ci": { "type": ["integer", "null"], "description": "고른 선택지 번호 (0부터)" },
+          "sec": { "type": ["number", "null"], "description": "사건이 뜬 뒤 결정까지 걸린 초" },
+          "to": { "type": "boolean", "description": "시간 초과로 자동 실행됐는지" },
+          "pressure": { "type": "boolean", "description": "재촉(생산 압박·시간 압박)이 있는 사건인지" },
+          "probes": { "type": "array", "items": { "type": "string" }, "description": "결정 전에 한 확인 행동, 누른 순서대로. 기능이 없으면 빈 배열" },
+          "report": { "type": "array", "items": { "type": "string" }, "description": "알린 대상. 기능이 없으면 빈 배열" },
+          "ci2": { "type": ["integer", "null"], "description": "상황이 바뀐 뒤 2차 판단 번호" },
+          "followedAgent": { "type": ["string", "null"], "description": "(선택) 고른 선택을 추천한 Agent" },
+          "title": { "type": "string", "description": "(Unity) 사건 제목. 보고서가 시나리오 파일 없이 그린다" },
+          "kind": { "enum": ["base", "surprise", "retrain"], "description": "(Unity) 기본 측정 · AI가 고른 돌발 · 맞춤 재훈련" },
+          "choice": { "type": "string", "description": "(Unity) 고른 선택지 글자" },
+          "best": { "type": "boolean", "description": "(Unity) 고른 선택이 최선인지" },
+          "bestCi": { "type": "integer", "description": "(Unity) 최선 선택지 번호" },
+          "accident": { "type": "boolean", "description": "(Unity) 고른 선택이 사람이 다칠 수 있는 선택인지" },
+          "secChoice": { "type": ["number", "null"], "description": "(Unity) 선택지가 나온 뒤 결정까지 걸린 초" },
+          "tests": { "type": "array", "items": { "type": "string" }, "description": "(Unity) 이 사건이 주로 재는 역량 key. 시나리오 JSON의 probes 와 같은 값 (뜻이 달라 이름을 바꿈)" }
+        }
+      }
+    }
+  }
+}

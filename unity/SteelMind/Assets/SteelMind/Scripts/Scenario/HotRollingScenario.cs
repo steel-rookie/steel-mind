@@ -190,7 +190,7 @@ namespace SteelMind.Scenario
             StopAllCoroutines();
             resume = null;
             picks.Clear(); flags.Clear();
-            played.Clear(); def.events = new ScenarioEvent[0]; eventDeltas.Clear(); pickAt.Clear();
+            played.Clear(); def.events = new ScenarioEvent[0]; eventDeltas.Clear(); pickAt.Clear(); decideTimes.Clear(); runLogPath = null;
             retrainTarget = null; retrainBefore = null; retrainBase = null; retrainEvent = null; retraining = false; retrainFrom = -1; retrainEvents = null;
             if (canvas) foreach (Transform ch in canvas.transform) if (ch.name == "AiToast") Destroy(ch.gameObject);
             model = new CompetencyModel(def);
@@ -424,6 +424,7 @@ namespace SteelMind.Scenario
         IEnumerator EventChat(int i)
         {
             current = i; chatting = true; skip = false;
+            shownAt = Time.unscaledTime;   // 진단 기록: 사건이 뜬 시각
             var ev = def.events[i];
             int n = Mathf.Max(planned, def.events.Length);
             SetFrozen(true);
@@ -433,6 +434,7 @@ namespace SteelMind.Scenario
             foreach (var a in ev.agents) yield return Say(a.agent, null, a.say, a.why, false);
             yield return Say(null, null, $"쟁점 · {ev.chief}\n어떻게 하시겠습니까?", null, false);
             UnlockChoices();
+            choicesAt = Time.unscaledTime;
             deciding = true;
             while (deciding) yield return null;
 
@@ -486,6 +488,7 @@ namespace SteelMind.Scenario
             if (k < 0 || k >= ev.choices.Length) return;
             var c = ev.choices[k];
             picks.Add(k);
+            decideTimes.Add((Time.unscaledTime - shownAt, Time.unscaledTime - choicesAt));
             if (!string.IsNullOrEmpty(c.flag)) flags.Add(c.flag);
             if (model != null)
             {
@@ -1239,6 +1242,7 @@ namespace SteelMind.Scenario
                 if (at >= 0) { all.runs[at] = record; SaveRuns(all); }
             }
             lastRecord = record;
+            if (!retraining) SaveRunLog();   // 기수 보고서용 진단 기록 (기본 진단만. 재훈련은 같은 사람이 겹치므로 빼기)
             showingResult = true; finished = true;
             var strong = model.Strengths(); var weak = model.Weaknesses();
             var unknown = CompetencyModel.Ids.Where(i => model.states[i].count == 0).ToList();
@@ -1405,7 +1409,11 @@ namespace SteelMind.Scenario
                 rt0.onClick.AddListener(() => StartRetrain(k0));
             }
             var again = Button_(btns, "처음으로 (R)", RCard, RText, 44); LE(again.gameObject, 130, 44); again.onClick.AddListener(Restart);
-            var dl = Button_(btns, "진단 기록 파일로 저장", RCard, RText, 44); LE(dl.gameObject, 190, 44); dl.onClick.AddListener(() => SaveDiagnosisJson(record, r));
+            // 기수 보고서의 비교 기준 (신입 ↔ 경력). 바꾸면 방금 저장한 진단 기록 파일도 고쳐 쓴다.
+            var role = Button_(btns, $"구분: {RunLog.Role}", RCard, RText, 44); LE(role.gameObject, 110, 44);
+            var roleText = role.GetComponentInChildren<Text>();
+            role.onClick.AddListener(() => { RunLog.Role = RunLog.Role == "신입" ? "경력" : "신입"; roleText.text = $"구분: {RunLog.Role}"; if (runLogPath != null) SaveRunLog(); });
+            var dl = Button_(btns, "기록 폴더", RCard, RText, 44); LE(dl.gameObject, 110, 44); dl.onClick.AddListener(RunLog.OpenFolder);
             var close = Button_(btns, "닫기 (Esc)", RCard, RText, 44); LE(close.gameObject, 120, 44); close.onClick.AddListener(CloseReport);
 
             // ── 2. 재훈련 전후 (가운데를 기준으로 왼쪽 BEFORE · 오른쪽 AFTER 막대 그래프) ──
@@ -1469,21 +1477,29 @@ namespace SteelMind.Scenario
             var line = NewRect("Line", parent); line.gameObject.AddComponent<Image>().color = RLine; LE(line.gameObject, -1, 1);
         }
 
-        [System.Serializable] class DiagJson { public int run; public string when; public string[] competency; public int[] score, confidence; public string[] events, choices, aiReasons; }
+        // ── 진단 기록 (steelmind-run-v2, tools/cohort-report 가 읽음): 사건별 선택·결정 시간·재촉 여부만 기록한다 ──
+        float shownAt, choicesAt;
+        readonly List<(float sec, float secChoice)> decideTimes = new List<(float, float)>();
+        string runLogPath;
 
-        void SaveDiagnosisJson(RunRecord record, RunResult r)
+        void SaveRunLog()
         {
-            var j = new DiagJson
+            var entries = new List<RunLog.Entry>();
+            for (int i = 0; i < picks.Count && i < played.Count; i++)
             {
-                run = record.no, when = System.DateTime.Now.ToString("yyyy-MM-dd HH:mm"),
-                competency = CompetencyModel.Ids.Select(model.Name).ToArray(),
-                score = CompetencyModel.Ids.Select(Score).ToArray(), confidence = CompetencyModel.Ids.Select(Conf).ToArray(),
-                events = r.events.Select(e => e.ev.title).ToArray(), choices = r.events.Select(e => e.chosen.label).ToArray(),
-                aiReasons = Enumerable.Range(0, r.events.Count).Select(i => pickAt.TryGetValue(i, out var pk) ? pk.reason : "기본 측정").ToArray(),
-            };
-            string path = System.IO.Path.Combine(Application.persistentDataPath, $"steelmind_진단기록_{record.no}회차.json");
-            try { System.IO.File.WriteAllText(path, JsonUtility.ToJson(j, true)); StartCoroutine(AiToast("진단 기록을 파일로 저장했습니다", path, 4f, false)); }
-            catch (System.Exception e) { StartCoroutine(AiToast("저장 실패", e.Message, 4f, false)); }
+                var ev = played[i];
+                string kind = System.Array.IndexOf(baseEvents, ev) >= 0 ? "base" : System.Array.IndexOf(surprisePool, ev) >= 0 ? "surprise" : "retrain";
+                (float sec, float secChoice) t = i < decideTimes.Count ? decideTimes[i] : (-1f, -1f);
+                entries.Add(new RunLog.Entry { ev = ev, ci = picks[i], sec = t.sec, secChoice = t.secChoice, kind = kind });
+            }
+            var comps = CompetencyModel.Ids.Select(id => (id, model.Name(id), Score(id), model.states[id].count));
+            try
+            {
+                bool first = runLogPath == null;
+                runLogPath = RunLog.Save(def, entries, comps, runLogPath);
+                if (first) StartCoroutine(AiToast("진단 기록을 저장했습니다", runLogPath, 4f, false));
+            }
+            catch (System.Exception e) { StartCoroutine(AiToast("진단 기록 저장 실패", e.Message, 4f, false)); }
         }
 
         // 재훈련 뒤 각 역량 점수: 재훈련 상황에서 확인한 역량은 그 상황들로만 계산, 확인하지 않은 역량은 그대로

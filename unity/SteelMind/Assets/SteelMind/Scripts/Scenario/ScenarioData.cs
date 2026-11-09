@@ -61,6 +61,7 @@ namespace SteelMind.Scenario
     {
         public string id, level, warn, title, desc, chief;
         public float delay;
+        public bool pressure;            // 생산·시간 재촉이 있는 사건 (기수 보고서의 재촉 분석용 표시. 점수에는 안 씀)
         public string[] probes;          // 이 사건이 주로 시험하는 역량
         public AgentLine[] agents;
         public Choice[] choices;
