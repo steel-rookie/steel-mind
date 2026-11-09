@@ -10,6 +10,7 @@
       "scene": "Ironmaking",
       "hover": "hover_Ironmaking",
       "mask": "mask_Ironmaking",
+      "here": "here_Ironmaking",
       "pin": [
         101.5,
         43
@@ -20,6 +21,7 @@
       "scene": "Steelmaking",
       "hover": "hover_Steelmaking",
       "mask": "mask_Steelmaking",
+      "here": "here_Steelmaking",
       "pin": [
         199.5,
         76
@@ -30,6 +32,7 @@
       "scene": "Casting",
       "hover": "hover_Casting",
       "mask": "mask_Casting",
+      "here": "here_Casting",
       "pin": [
         74.0,
         153
@@ -40,6 +43,7 @@
       "scene": "Rolling",
       "hover": "hover_Rolling",
       "mask": "mask_Rolling",
+      "here": "here_Rolling",
       "pin": [
         245.0,
         163

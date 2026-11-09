@@ -80,7 +80,6 @@ namespace SteelMind
         }
 
         [System.Serializable] class Zone { public string label; public int[] rect; public int[] anchor; }
-        RectTransform pin;
 
         void Open()
         {
@@ -101,7 +100,7 @@ namespace SteelMind
             dim.gameObject.AddComponent<Button>().onClick.AddListener(Close);
 
             // 지도 그림: 게임 톤 섬 지도 (444x282 도트). 화면 안에서 비율을 지키며 최대한 크게.
-            // 바다·구름·연기·이름표·마우스 강조(호박색 외곽선 + 정보창)·클릭 이동은 IslandMapView가 맡는다.
+            // 바다·구름·연기·이름표·마우스 강조(호박색 외곽선 + 정보창)·클릭 이동·지금 공정 주황 테는 IslandMapView가 맡는다.
             panel = R("Map", root, new Vector2(0.04f, 0.09f), new Vector2(0.96f, 0.97f));
             string here = SceneManager.GetActiveScene().name;
             var view = IslandMapView.Build(panel, Go, here);
@@ -111,16 +110,6 @@ namespace SteelMind
                 frame.effectColor = new Color32(190, 120, 36, 255); frame.effectDistance = new Vector2(4, -4);
             }
 
-            // 현재 위치 핀 (지금 있는 공정 위)
-            int curIdx = System.Array.FindIndex(Maps, x => x.scene == here);
-            if (view && curIdx >= 0)
-            {
-                pin = R("Pin", view.Board, view.PinAnchor(curIdx), view.PinAnchor(curIdx)); pin.pivot = new Vector2(0.5f, 0);
-                pin.anchoredPosition = new Vector2(0, 6); pin.sizeDelta = new Vector2(150, 40);
-                var pi = pin.gameObject.AddComponent<Image>(); pi.color = new Color32(229, 83, 61, 255); pi.raycastTarget = false;
-                var pt = T(pin, "▼ 현재 위치", 18, Color.white, bold); Stretch(pt.rectTransform, 0, 0);
-                var labels = view.Board.Find("Labels"); if (labels) pin.SetSiblingIndex(labels.GetSiblingIndex() + 1);   // 마우스 강조·정보창보다 아래
-            }
             var foot = T(panel, "가고 싶은 공장을 누르세요 · 숫자 1~4 · 닫기 M", 16, new Color32(220, 228, 236, 255), font);
             Place(foot.rectTransform, new Vector2(0.5f, 0), new Vector2(0, -22), new Vector2(900, 24));   // 지도 바로 아래
             var fs = foot.gameObject.AddComponent<Shadow>(); fs.effectColor = new Color(0, 0, 0, 0.8f);
@@ -147,11 +136,6 @@ namespace SteelMind
                 }
             }
             return rt;
-        }
-
-        void LateUpdate()
-        {
-            if (pin) pin.localScale = Vector3.one * (1f + 0.06f * Mathf.Abs(Mathf.Sin(Time.unscaledTime * 4f)));
         }
 
         RectTransform R(string n, Transform p, Vector2 aMin, Vector2 aMax)
