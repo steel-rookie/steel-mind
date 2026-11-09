@@ -52,18 +52,34 @@ namespace SteelMind.EditorTools
             AssetDatabase.Refresh();
             ConfigureSprites(Common);
             foreach (var d in ProcessDirs()) BuildOne(d);
-            var order = new List<EditorBuildSettingsScene>();
+            BuildTitleScene();
+            var order = new List<EditorBuildSettingsScene> { new EditorBuildSettingsScene(TitleScene, true) };
             foreach (var n in SceneSwitcher.Scenes)
             {
                 var p = $"{SceneDir}/{n}.unity";
                 if (File.Exists(p)) order.Add(new EditorBuildSettingsScene(p, true));
             }
             EditorBuildSettings.scenes = order.ToArray();
-            var rolling = $"{SceneDir}/Ironmaking.unity";
+            var rolling = TitleScene;
             if (File.Exists(rolling)) EditorSceneManager.OpenScene(rolling);
         }
 
         public static void BuildFromCommandLine() => Build();
+
+        public const string TitleScene = SceneDir + "/Title.unity";
+
+        // 메인 화면: 카메라와 TitleScreen만 있는 장면 (화면은 실행할 때 코드로 만든다)
+        public static void BuildTitleScene()
+        {
+            var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            var camGo = new GameObject("Main Camera"); camGo.tag = "MainCamera";
+            var cam = camGo.AddComponent<Camera>(); cam.orthographic = true; cam.clearFlags = CameraClearFlags.SolidColor; cam.backgroundColor = Color.black;
+            camGo.AddComponent<AudioListener>();
+            new GameObject("Title").AddComponent<TitleScreen>();
+            Directory.CreateDirectory(SceneDir);
+            EditorSceneManager.SaveScene(scene, TitleScene);
+            Debug.Log($"[RollingMap] 메인 화면 장면을 만들었습니다: {TitleScene}");
+        }
 
         public static void BuildOne(string artDir)
         {
