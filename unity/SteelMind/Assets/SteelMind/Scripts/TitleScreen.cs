@@ -151,9 +151,13 @@ namespace SteelMind
 
         IEnumerator Leave()
         {
-            yield return FadeTo(1f, 0.6f);
-            Travel.from = "Title";
-            SceneManager.LoadScene(firstScene);
+            // 글자를 먼저 걷어 내고, 공장으로 천천히 넘어간다
+            float t = 0;
+            var logo = bg ? bg.parent.Find("Logo") : null;
+            CanvasGroup g = null;
+            if (logo) { g = logo.GetComponent<CanvasGroup>(); if (!g) g = logo.gameObject.AddComponent<CanvasGroup>(); }
+            while (t < 0.5f) { t += Time.deltaTime; if (g) g.alpha = 1 - t / 0.5f; if (hint) hint.color = new Color(1, 1, 1, 1 - t / 0.5f); yield return null; }
+            SceneFade.Go(firstScene, 0.9f, 1.4f);
         }
 
         IEnumerator FadeTo(float a, float dur)
