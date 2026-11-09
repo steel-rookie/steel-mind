@@ -323,27 +323,11 @@ namespace SteelMind.EditorTools
                 minimap.player = player.transform; minimap.map = mm; minimap.marker = mk; minimap.mapSizePx = mapSize;
             }
 
-            // 전체 공정 보기 (왼쪽 위)
-            var ovBtn = MakeButton("OverviewButton", canvasGo.transform, new Vector2(0, 1), new Vector2(250, 48), new Vector2(16, -16),
-                "전체 공정 보기 (Tab)", new Color32(232, 173, 34, 235), out var ovText);
+            // 버튼은 두지 않고 단축키만: Tab 전체 공정 보기, 1~4 공정 이동, M 미니맵, H UI 숨기기
             var ov = cam.gameObject.AddComponent<OverviewCamera>();
-            ov.cam = cam; ov.follow = cam.GetComponent<CameraFollow>(); ov.playerMove = player.GetComponent<PlayerMove>();
-            ov.label = ovText; ov.mapSizePx = mapSize;
-            foreach (var b in cam.GetComponents<Behaviour>()) if (b.GetType().Name == "PixelPerfectCamera") ov.pixelPerfect = b;
-            UnityEventTools.AddPersistentListener(ovBtn.onClick, ov.Toggle);
-
-            // 공정 바꾸기 (위 가운데)
-            var switcher = canvasGo.AddComponent<SceneSwitcher>();
-            var cur = string.IsNullOrEmpty(L.scene) ? "" : L.scene;
-            for (int i = 0; i < SceneSwitcher.Scenes.Length; i++)
-            {
-                bool here = SceneSwitcher.Scenes[i] == cur;
-                var b = MakeButton("Process_" + SceneSwitcher.Scenes[i], canvasGo.transform, new Vector2(0.5f, 1), new Vector2(100, 44),
-                    new Vector2(-220 + i * 110, -16), SceneSwitcher.Labels[i],
-                    here ? new Color32(255, 212, 71, 245) : new Color32(58, 52, 64, 230), out var t);
-                if (!here) t.color = new Color32(230, 226, 220, 255);
-                UnityEventTools.AddIntPersistentListener(b.onClick, switcher.Load, i);
-            }
+            ov.cam = cam; ov.follow = cam.GetComponent<CameraFollow>(); ov.playerMove = player.GetComponent<PlayerMove>(); ov.mapSizePx = mapSize;
+            foreach (var bh in cam.GetComponents<Behaviour>()) if (bh.GetType().Name == "PixelPerfectCamera") ov.pixelPerfect = bh;
+            canvasGo.AddComponent<SceneSwitcher>();
 
             // H 키로 미니맵·전체 공정 보기·공정 버튼을 숨기기/보이기 (버튼 없음)
             var toggle = canvasGo.AddComponent<UiToggle>();

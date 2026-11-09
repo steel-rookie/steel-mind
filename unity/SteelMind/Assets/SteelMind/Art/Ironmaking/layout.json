@@ -333,19 +333,20 @@
     1136,
     8
    ]
-  },
-  {
-   "id": "left_edge",
-   "rect": [
-    -8,
-    0,
-    8,
-    752
-   ]
   }
  ],
  "scene": "Ironmaking",
  "portals": [
+  {
+   "scene": "Rolling",
+   "label": "← 압연",
+   "rect": [
+    -4,
+    182,
+    6,
+    570
+   ]
+  },
   {
    "scene": "Steelmaking",
    "label": "제강 →",
@@ -358,6 +359,13 @@
   }
  ],
  "spawns": [
+  {
+   "scene": "Rolling",
+   "pos": [
+    20,
+    712
+   ]
+  },
   {
    "scene": "Steelmaking",
    "pos": [
