@@ -93,6 +93,8 @@ namespace SteelMind.Scenario
             player = FindFirstObjectByType<PlayerMove>();
             if (player) body = player.GetComponent<Rigidbody2D>();
             font = Resources.Load<Font>("Fonts/Galmuri11") ?? Font.CreateDynamicFontFromOSFont(new[] { "Malgun Gothic", "Apple SD Gothic Neo", "AppleGothic", "Arial" }, 20);   // 도트 글꼴 갈무리(OFL)
+            reportFont = Resources.Load<Font>("Fonts/Pretendard-Regular") ?? font;   // 보고서는 읽기 쉬운 글꼴 (Pretendard, OFL)
+            reportBold = Resources.Load<Font>("Fonts/Pretendard-Bold") ?? reportFont;
             round = MakeRoundSprite(64, 18);
             triangle = MakeTriangleSprite(48);
             BuildCanvas();
@@ -304,6 +306,7 @@ namespace SteelMind.Scenario
             {
                 AddText(coachBox, "<b>AI 코칭</b>", 15, Teal);
                 foreach (var c in d.coaching) AddText(coachBox, "• " + c, 15, Body);
+                ApplyReportFont(coachBox);
                 LayoutRebuilder.ForceRebuildLayoutImmediate(coachBox);
                 if (overlay) LayoutRebuilder.ForceRebuildLayoutImmediate(overlay);
             }
@@ -968,7 +971,7 @@ namespace SteelMind.Scenario
             }
             vnLine.text = text;
             vnWhy.text = sub ?? "";
-            vnNext.gameObject.SetActive(true);
+            vnNext.gameObject.SetActive(false);   // ▼ 표시는 쓰지 않는다 (» 스킵만)
             skip = false;
             if (fastAll) { yield return null; yield break; }
             float bob = 0;
@@ -1106,13 +1109,27 @@ namespace SteelMind.Scenario
 
         // ── 결과 보고서 (STEEL MIND 2.0 시안: 탭 · 레이더 · 강점/보완 근거 · 학습 경로 · 맞춤 재훈련) ──
         static readonly Color RBg = Hex("#0D1117"), RCard = Hex("#151B24"), RLine = Hex("#263043"), RBlue = Hex("#4CC3FF"),
-            ROk = Hex("#6FCF97"), RNo = Hex("#FF8A80"), RMute = Hex("#8B96A8"), RText = Hex("#E8ECF2"), RWarn = Hex("#E0B84A");
+            ROk = Hex("#6FCF97"), RNo = Hex("#FF8A80"), RMute = Hex("#AAB4C5"), RText = Hex("#F1F4F8"), RWarn = Hex("#E0B84A");
         RunRecord lastRecord;
         string retrainTarget;
         Dictionary<string, int> retrainBefore;
         float[] retrainBase;
         ScenarioEvent retrainEvent;
         bool retraining;
+
+        Font reportFont, reportBold;
+
+        void ApplyReportFont(Transform root)
+        {
+            if (!root || !reportFont) return;
+            foreach (var t in root.GetComponentsInChildren<Text>(true))
+            {
+                bool bold = t.fontStyle == FontStyle.Bold || t.fontStyle == FontStyle.BoldAndItalic;
+                t.font = bold ? reportBold : reportFont;
+                if (bold) t.fontStyle = FontStyle.Normal;
+                t.lineSpacing = 1.1f;
+            }
+        }
 
         int Score(string id) => Mathf.RoundToInt(model.Radar(id) * 100);
         float Sd(string id) => 0.2887f / Mathf.Sqrt(model.states[id].count + 1f);
@@ -1223,7 +1240,7 @@ namespace SteelMind.Scenario
                 var lt = AddText(lab, model.Name(id), 13, RMute, FontStyle.Normal, TextAnchor.MiddleCenter);
                 var ltr = lt.rectTransform; ltr.anchorMin = Vector2.zero; ltr.anchorMax = Vector2.one; ltr.offsetMin = ltr.offsetMax = Vector2.zero;
                 var sc = NewRect("Score", radarBox); sc.anchorMin = sc.anchorMax = new Vector2(0.5f, 0.5f); sc.sizeDelta = new Vector2(80, 20);
-                sc.anchoredPosition = dirv * (RR * vals[i]) + new Vector2(0, 13);
+                sc.anchoredPosition = dirv * Mathf.Max(RR * vals[i] + 14f, 30f);
                 var st = AddText(sc, model.states[id].count == 0 ? "근거 없음" : Score(id).ToString(), 12, model.states[id].count == 0 ? RMute : RText, FontStyle.Bold, TextAnchor.MiddleCenter);
                 var str = st.rectTransform; str.anchorMin = Vector2.zero; str.anchorMax = Vector2.one; str.offsetMin = str.offsetMax = Vector2.zero;
                 var dot = NewRect("Dot", radarBox); dot.anchorMin = dot.anchorMax = new Vector2(0.5f, 0.5f); dot.sizeDelta = new Vector2(7, 7);
@@ -1315,10 +1332,11 @@ namespace SteelMind.Scenario
             var rtt = AddText(rhd, "<b>회차 기록</b>  <color=#8B96A8>끝낸 판은 자동으로 저장됩니다 (최근 순)</color>", 16, RText, FontStyle.Normal, TextAnchor.MiddleLeft); LE(rtt.gameObject, -1, -1, 1);
             var clearBtn = SmallButton(rhd, "기록 지우기");
             var runsBox = NewRect("Runs", runsCard); VLayout(runsBox.gameObject, 0, 8, 0);
-            System.Action draw = () => DrawRuns(runsBox, record.no);
+            System.Action draw = () => { DrawRuns(runsBox, record.no); ApplyReportFont(runsBox); };
             clearBtn.onClick.AddListener(() => { SaveRuns(new RunList()); draw(); });
             draw();
 
+            ApplyReportFont(overlay);
             LayoutRebuilder.ForceRebuildLayoutImmediate(page);
             foreach (var pg in reportPages) LayoutRebuilder.ForceRebuildLayoutImmediate(pg.rt);
             ShowPage(0, 0);
