@@ -1389,7 +1389,7 @@ namespace SteelMind.Scenario
                 rt0.onClick.AddListener(() => StartRetrain(k0));
             }
             var again = Button_(btns, "처음으로 (R)", RCard, RText, 44); LE(again.gameObject, 130, 44); again.onClick.AddListener(Restart);
-            var dl = Button_(btns, "진단 기록 JSON 저장", RCard, RText, 44); LE(dl.gameObject, 190, 44); dl.onClick.AddListener(() => SaveDiagnosisJson(record, r));
+            var dl = Button_(btns, "진단 기록 파일로 저장", RCard, RText, 44); LE(dl.gameObject, 190, 44); dl.onClick.AddListener(() => SaveDiagnosisJson(record, r));
             var close = Button_(btns, "닫기 (Esc)", RCard, RText, 44); LE(close.gameObject, 120, 44); close.onClick.AddListener(CloseReport);
 
             // ── 2. AI 판단 로그 ──
@@ -1463,7 +1463,7 @@ namespace SteelMind.Scenario
                 aiReasons = Enumerable.Range(0, r.events.Count).Select(i => pickAt.TryGetValue(i, out var pk) ? pk.reason : "기본 측정").ToArray(),
             };
             string path = System.IO.Path.Combine(Application.persistentDataPath, $"steelmind_진단기록_{record.no}회차.json");
-            try { System.IO.File.WriteAllText(path, JsonUtility.ToJson(j, true)); StartCoroutine(AiToast("진단 기록 저장", path, 4f, false)); }
+            try { System.IO.File.WriteAllText(path, JsonUtility.ToJson(j, true)); StartCoroutine(AiToast("진단 기록을 파일로 저장했습니다", path, 4f, false)); }
             catch (System.Exception e) { StartCoroutine(AiToast("저장 실패", e.Message, 4f, false)); }
         }
 
