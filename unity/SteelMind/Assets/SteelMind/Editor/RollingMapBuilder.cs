@@ -1,101 +1,142 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
+using UnityEditor.Events;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 
 namespace SteelMind.EditorTools
 {
     /// <summary>
-    /// Art/Rolling/layout.json을 읽어 압연 맵 장면(Scenes/Rolling.unity)을 만든다.
-    /// 메뉴: STEEL MIND > 압연 맵 만들기. 그림을 다시 뽑았으면 이 메뉴를 다시 누르면 된다.
+    /// Art/&lt;공정&gt;/layout.json마다 장면(Scenes/&lt;공정&gt;.unity)을 만든다. 제선·제강·연주·압연.
+    /// 메뉴: STEEL MIND > 공정 맵 전부 만들기. 그림이 바뀌면 RollingMapAutoBuild가 자동으로 다시 만든다.
     /// </summary>
     public static class RollingMapBuilder
     {
-        const string ArtDir = "Assets/SteelMind/Art/Rolling";
-        const string ScenePath = "Assets/SteelMind/Scenes/Rolling.unity";
-        const float PPU = 16f;
-        const string PlayerPrefix = "player_";
+        public const string ArtRoot = "Assets/SteelMind/Art";
+        public const string SceneDir = "Assets/SteelMind/Scenes";
+        const string Common = ArtRoot + "/Common";
         const string BgmPath = "Assets/SteelMind/Audio/bgm_rolling_mill.wav";
-        // 카메라에 보이는 화면 크기(px). 작을수록 캐릭터가 크게 보인다
+        const float PPU = 16f;
         const int ViewW = 320, ViewH = 180;
+        static string dir;
 
-        [Serializable] class MapInfo { public int width, height, tile, pixelsPerUnit, wallHeight; }
+        [Serializable] class MapInfo { public int width, height, wallHeight; public string title; }
         [Serializable] class LayerInfo { public string id, file, toggle; public int order; }
         [Serializable] class ObjInfo { public string id, label, file, warnFile, toggle; public int[] rect; public int[] collider; public int sortY; public bool equipment; }
         [Serializable] class ColInfo { public string id; public int[] rect; }
         [Serializable] class FxInfo { public int stripTop, stripHeight, furnaceExit, coilRadius; public int[] furnaceGlow, descaler, roughing, finishing, runout, coil, sprayShort, sprayLong; }
-        [Serializable] class Layout { public MapInfo map; public LayerInfo[] layers; public ObjInfo[] objects; public ColInfo[] colliders; public int[] spawn; public FxInfo fx; }
+        [Serializable] class EffInfo { public string type, target, file; public string[] files; public float[] path; public float x, y, x0, x1, speed, fps, interval, pause, rate, period; public int order; public bool pingpong; }
+        [Serializable] class PortalInfo { public string scene, label; public int[] rect; }
+        [Serializable] class SpawnInfo { public string scene; public float[] pos; }
+        [Serializable] class Layout { public PortalInfo[] portals; public SpawnInfo[] spawns; public string scene; public MapInfo map; public LayerInfo[] layers; public ObjInfo[] objects; public ColInfo[] colliders; public int[] spawn; public FxInfo fx; public EffInfo[] effects; }
 
-        [MenuItem("STEEL MIND/압연 맵 만들기")]
+        public static IEnumerable<string> ProcessDirs()
+        {
+            foreach (var d in Directory.GetDirectories(ArtRoot))
+                if (File.Exists(Path.Combine(d, "layout.json"))) yield return d.Replace('\\', '/');
+        }
+
+        public static string SceneFor(string artDir)
+        {
+            var L = JsonUtility.FromJson<Layout>(File.ReadAllText(Path.Combine(artDir, "layout.json")));
+            return $"{SceneDir}/{(string.IsNullOrEmpty(L.scene) ? Path.GetFileName(artDir) : L.scene)}.unity";
+        }
+
+        [MenuItem("STEEL MIND/공정 맵 전부 만들기")]
         public static void Build()
         {
             AssetDatabase.Refresh();
-            var json = AssetDatabase.LoadAssetAtPath<TextAsset>($"{ArtDir}/layout.json");
-            if (!json) { Debug.LogError($"[RollingMap] {ArtDir}/layout.json 이 없습니다."); return; }
-            var L = JsonUtility.FromJson<Layout>(json.text);
-            ConfigureSprites();
+            ConfigureSprites(Common);
+            foreach (var d in ProcessDirs()) BuildOne(d);
+            var order = new List<EditorBuildSettingsScene>();
+            foreach (var n in SceneSwitcher.Scenes)
+            {
+                var p = $"{SceneDir}/{n}.unity";
+                if (File.Exists(p)) order.Add(new EditorBuildSettingsScene(p, true));
+            }
+            EditorBuildSettings.scenes = order.ToArray();
+            var rolling = $"{SceneDir}/Ironmaking.unity";
+            if (File.Exists(rolling)) EditorSceneManager.OpenScene(rolling);
+        }
 
+        public static void BuildFromCommandLine() => Build();
+
+        public static void BuildOne(string artDir)
+        {
+            dir = artDir;
+            var L = JsonUtility.FromJson<Layout>(File.ReadAllText($"{dir}/layout.json"));
+            ConfigureSprites(dir);
+            var scenePath = SceneFor(dir);
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             var unlit = AssetDatabase.LoadAssetAtPath<Material>("Packages/com.unity.render-pipelines.universal/Runtime/Materials/Sprite-Unlit-Default.mat");
 
-            var root = new GameObject("RollingMap");
+            var root = new GameObject("Map");
             var line = root.AddComponent<RollingLine>();
-
             foreach (var layer in L.layers)
             {
                 var go = MakeSprite(layer.id, layer.file, Vector2.zero, layer.order, root.transform, unlit);
                 if (layer.toggle == "line_running") go.SetActive(false);
             }
-
             var objects = new GameObject("Objects").transform;
             objects.SetParent(root.transform, false);
             foreach (var o in L.objects)
             {
-                var pos = new Vector2(o.rect[0], o.rect[1]);
-                var go = MakeSprite(o.id, o.file, pos, o.sortY, objects, unlit);
+                var go = MakeSprite(o.id, o.file, new Vector2(o.rect[0], o.rect[1]), o.sortY, objects, unlit);
                 if (o.collider != null && o.collider.Length == 4) AddBox(go, o.collider);
                 if (o.toggle == "line_running") go.SetActive(false);
                 if (o.equipment)
-                    line.equipment.Add(new RollingLine.Equipment
-                    {
-                        id = o.id, label = o.label, renderer = go.GetComponent<SpriteRenderer>(),
-                        normal = LoadSprite(o.file), warn = LoadSprite(o.warnFile),
-                    });
+                    line.equipment.Add(new RollingLine.Equipment { id = o.id, label = o.label, renderer = go.GetComponent<SpriteRenderer>(), normal = LoadSprite(o.file), warn = LoadSprite(o.warnFile) });
             }
-
             if (L.fx != null && L.fx.descaler != null && L.fx.descaler.Length == 2)
-                line.runningOnly.Add(MakeProcess(L.fx, root.transform, objects));
+                line.runningOnly.Add(MakeRollingProcess(L.fx, root.transform, objects));
+            if (L.effects != null && L.effects.Length > 0)
+                line.runningOnly.Add(MakeEffects(L.effects, root.transform, objects));
 
             var walls = new GameObject("Walls").transform;
             walls.SetParent(root.transform, false);
-            foreach (var c in L.colliders)
-            {
-                var go = new GameObject(c.id);
-                go.transform.SetParent(walls, false);
-                AddBox(go, c.rect);
-            }
+            foreach (var c in L.colliders) { var go = new GameObject(c.id); go.transform.SetParent(walls, false); AddBox(go, c.rect); }
+
+            if (L.portals != null)
+                foreach (var pt in L.portals)
+                {
+                    var go = new GameObject("Portal_" + pt.scene);
+                    go.transform.SetParent(walls, false);
+                    AddBox(go, pt.rect);
+                    go.GetComponent<BoxCollider2D>().isTrigger = true;
+                    var portal = go.AddComponent<Portal>(); portal.scene = pt.scene; portal.label = pt.label;
+                }
 
             var player = MakePlayer(L, unlit);
+            if (L.spawns != null && L.spawns.Length > 0)
+            {
+                var ws = player.AddComponent<WorldSpawn>();
+                ws.scenes = new string[L.spawns.Length]; ws.points = new Vector2[L.spawns.Length];
+                for (int i = 0; i < L.spawns.Length; i++) { ws.scenes[i] = L.spawns[i].scene; ws.points[i] = new Vector2(L.spawns[i].pos[0], L.spawns[i].pos[1]); }
+            }
             var cam = MakeCamera(L, player.transform);
             MakeUI(L, cam, player);
 
-            Directory.CreateDirectory(Path.GetDirectoryName(ScenePath));
-            EditorSceneManager.SaveScene(scene, ScenePath);
-            AddToBuildSettings(ScenePath);
-            Debug.Log($"[RollingMap] 장면을 만들었습니다: {ScenePath} (물체 {L.objects.Length}개)");
+            Directory.CreateDirectory(SceneDir);
+            EditorSceneManager.SaveScene(scene, scenePath);
+            Debug.Log($"[RollingMap] 장면을 만들었습니다: {scenePath} (물체 {L.objects.Length}개)");
         }
 
-        // 배치 모드용: Unity -batchmode -executeMethod SteelMind.EditorTools.RollingMapBuilder.BuildFromCommandLine -quit
-        public static void BuildFromCommandLine() => Build();
-
-        static void ConfigureSprites()
+        static void ConfigureSprites(string folder)
         {
-            foreach (var guid in AssetDatabase.FindAssets("t:Texture2D", new[] { ArtDir }))
+            if (!AssetDatabase.IsValidFolder(folder)) return;
+            foreach (var guid in AssetDatabase.FindAssets("t:Texture2D", new[] { folder }))
             {
                 var path = AssetDatabase.GUIDToAssetPath(guid);
                 if (!(AssetImporter.GetAtPath(path) is TextureImporter ti)) continue;
+                bool player = Path.GetFileName(path).StartsWith("player_");
+                var s = new TextureImporterSettings();
+                ti.ReadTextureSettings(s);
+                var align = (int)(player ? SpriteAlignment.BottomCenter : SpriteAlignment.TopLeft);
+                if (ti.textureType == TextureImporterType.Sprite && ti.filterMode == FilterMode.Point && s.spriteAlignment == align && ti.spritePixelsPerUnit == PPU) continue;
                 ti.textureType = TextureImporterType.Sprite;
                 ti.spriteImportMode = SpriteImportMode.Single;
                 ti.spritePixelsPerUnit = PPU;
@@ -104,19 +145,20 @@ namespace SteelMind.EditorTools
                 ti.mipmapEnabled = false;
                 ti.alphaIsTransparency = true;
                 ti.maxTextureSize = 4096;
-                var s = new TextureImporterSettings();
                 ti.ReadTextureSettings(s);
                 s.spriteMeshType = SpriteMeshType.FullRect;
-                s.spriteAlignment = (int)(Path.GetFileName(path).StartsWith(PlayerPrefix) ? SpriteAlignment.BottomCenter : SpriteAlignment.TopLeft);
+                s.spriteAlignment = align;
                 ti.SetTextureSettings(s);
                 ti.SaveAndReimport();
             }
         }
 
-        static Sprite LoadSprite(string file) =>
-            string.IsNullOrEmpty(file) ? null : AssetDatabase.LoadAssetAtPath<Sprite>($"{ArtDir}/{file}");
+        static Sprite LoadSprite(string file)
+        {
+            if (string.IsNullOrEmpty(file)) return null;
+            return AssetDatabase.LoadAssetAtPath<Sprite>($"{dir}/{file}") ?? AssetDatabase.LoadAssetAtPath<Sprite>($"{Common}/{file}");
+        }
 
-        // 지도 px(왼쪽 위 기준, 아래로 +) → world (아래로 -)
         static Vector3 ToWorld(float px, float py) => new Vector3(px / PPU, -py / PPU, 0);
 
         static GameObject MakeSprite(string name, string file, Vector2 px, int order, Transform parent, Material mat)
@@ -128,7 +170,7 @@ namespace SteelMind.EditorTools
             sr.sprite = LoadSprite(file);
             sr.sortingOrder = order;
             if (mat) sr.sharedMaterial = mat;
-            if (!sr.sprite) Debug.LogWarning($"[RollingMap] 그림을 찾지 못했습니다: {file}");
+            if (!sr.sprite) Debug.LogWarning($"[RollingMap] 그림을 찾지 못했습니다: {dir}/{file}");
             return go;
         }
 
@@ -140,7 +182,7 @@ namespace SteelMind.EditorTools
             box.size = new Vector2(r[2] / PPU, r[3] / PPU);
         }
 
-        static GameObject MakeProcess(FxInfo f, Transform root, Transform objects)
+        static GameObject MakeRollingProcess(FxInfo f, Transform root, Transform objects)
         {
             var go = new GameObject("Process");
             go.transform.SetParent(root, false);
@@ -157,6 +199,27 @@ namespace SteelMind.EditorTools
             return go;
         }
 
+        static GameObject MakeEffects(EffInfo[] effects, Transform root, Transform objects)
+        {
+            var go = new GameObject("Process");
+            go.transform.SetParent(root, false);
+            var p = go.AddComponent<ProcessFx>();
+            p.objects = objects;
+            for (int i = 0; i < 4; i++) p.steam[i] = LoadSprite($"fx_steam_{i}.png");
+            foreach (var e in effects)
+            {
+                var files = e.files != null && e.files.Length > 0 ? e.files : new[] { e.file };
+                var sprites = new List<Sprite>();
+                foreach (var f in files) { var s = LoadSprite(f); if (s) sprites.Add(s); }
+                p.effects.Add(new ProcessFx.Fx
+                {
+                    type = e.type, target = e.target, sprites = sprites.ToArray(), path = e.path, x = e.x, y = e.y, x0 = e.x0, x1 = e.x1,
+                    speed = e.speed, fps = e.fps, interval = e.interval, pause = e.pause, rate = e.rate, period = e.period, order = e.order, pingpong = e.pingpong,
+                });
+            }
+            return go;
+        }
+
         static GameObject MakePlayer(Layout L, Material mat)
         {
             var go = new GameObject("Player");
@@ -165,20 +228,16 @@ namespace SteelMind.EditorTools
             sr.sprite = LoadSprite("player_down_0.png");
             if (mat) sr.sharedMaterial = mat;
             var body = go.AddComponent<Rigidbody2D>();
-            body.gravityScale = 0;
-            body.freezeRotation = true;
+            body.gravityScale = 0; body.freezeRotation = true;
             var box = go.AddComponent<BoxCollider2D>();
-            box.size = new Vector2(12 / PPU, 6 / PPU);
-            box.offset = new Vector2(0, 3 / PPU);
+            box.size = new Vector2(12 / PPU, 6 / PPU); box.offset = new Vector2(0, 3 / PPU);
             go.AddComponent<PlayerMove>();
             go.AddComponent<YSort>();
             var anim = go.AddComponent<PlayerAnimator>();
             for (int i = 0; i < 4; i++)
             {
-                anim.down[i] = LoadSprite($"player_down_{i}.png");
-                anim.left[i] = LoadSprite($"player_left_{i}.png");
-                anim.right[i] = LoadSprite($"player_right_{i}.png");
-                anim.up[i] = LoadSprite($"player_up_{i}.png");
+                anim.down[i] = LoadSprite($"player_down_{i}.png"); anim.left[i] = LoadSprite($"player_left_{i}.png");
+                anim.right[i] = LoadSprite($"player_right_{i}.png"); anim.up[i] = LoadSprite($"player_up_{i}.png");
             }
             return go;
         }
@@ -198,86 +257,16 @@ namespace SteelMind.EditorTools
             follow.mapSizePx = new Vector2(L.map.width, L.map.height);
             go.AddComponent<AudioListener>();
             var bgm = AssetDatabase.LoadAssetAtPath<AudioClip>(BgmPath);
-            if (bgm)
-            {
-                var src = go.AddComponent<AudioSource>();
-                src.clip = bgm; src.loop = true; src.playOnAwake = true; src.volume = 0.5f;
-            }
-
-            // URP Pixel Perfect Camera (ViewW x ViewH, 16 PPU). 패키지가 없으면 건너뛴다.
+            if (bgm) { var src = go.AddComponent<AudioSource>(); src.clip = bgm; src.loop = true; src.playOnAwake = true; src.volume = 0.5f; }
             Type t = null;
             foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
                 if ((t = asm.GetType("UnityEngine.Rendering.Universal.PixelPerfectCamera")) != null) break;
             if (t != null)
             {
                 var ppc = go.AddComponent(t);
-                Set(ppc, "assetsPPU", (int)PPU);
-                Set(ppc, "refResolutionX", ViewW);
-                Set(ppc, "refResolutionY", ViewH);
+                Set(ppc, "assetsPPU", (int)PPU); Set(ppc, "refResolutionX", ViewW); Set(ppc, "refResolutionY", ViewH);
             }
-            else Debug.LogWarning("[RollingMap] Pixel Perfect Camera를 찾지 못했습니다. 카메라에 직접 붙여 주세요.");
             return cam;
-        }
-
-        static void MakeUI(Layout L, Camera cam, GameObject player)
-        {
-            var mapSize = new Vector2(L.map.width, L.map.height);
-            var canvasGo = new GameObject("UI");
-            var canvas = canvasGo.AddComponent<Canvas>();
-            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
-            var scaler = canvasGo.AddComponent<UnityEngine.UI.CanvasScaler>();
-            scaler.uiScaleMode = UnityEngine.UI.CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1280, 720);
-            canvasGo.AddComponent<UnityEngine.UI.GraphicRaycaster>();
-
-            // 미니맵 (오른쪽 위)
-            var mmSprite = LoadSprite("ui_minimap.png");
-            var mm = new GameObject("Minimap", typeof(RectTransform)).GetComponent<RectTransform>();
-            mm.SetParent(canvasGo.transform, false);
-            mm.anchorMin = mm.anchorMax = mm.pivot = new Vector2(1, 1);
-            float mmW = 400f, mmH = mmW * mmSprite.rect.height / mmSprite.rect.width;
-            mm.sizeDelta = new Vector2(mmW, mmH);
-            mm.anchoredPosition = new Vector2(-16, -16);
-            var mmImg = mm.gameObject.AddComponent<UnityEngine.UI.Image>(); mmImg.sprite = mmSprite;
-            var mk = new GameObject("Marker", typeof(RectTransform)).GetComponent<RectTransform>();
-            mk.SetParent(mm, false);
-            mk.anchorMin = mk.anchorMax = new Vector2(0, 1); mk.pivot = new Vector2(0.5f, 0.5f);
-            mk.sizeDelta = new Vector2(10, 10);
-            mk.gameObject.AddComponent<UnityEngine.UI.Image>().sprite = LoadSprite("ui_marker.png");
-            var minimap = canvasGo.AddComponent<Minimap>();
-            minimap.player = player.transform; minimap.map = mm; minimap.marker = mk; minimap.mapSizePx = mapSize;
-
-            // 전체 공정 보기 버튼 (왼쪽 위)
-            var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            var btnRt = new GameObject("OverviewButton", typeof(RectTransform)).GetComponent<RectTransform>();
-            btnRt.SetParent(canvasGo.transform, false);
-            btnRt.anchorMin = btnRt.anchorMax = btnRt.pivot = new Vector2(0, 1);
-            btnRt.sizeDelta = new Vector2(260, 52);
-            btnRt.anchoredPosition = new Vector2(16, -16);
-            var bg = btnRt.gameObject.AddComponent<UnityEngine.UI.Image>();
-            bg.color = new Color32(232, 173, 34, 235);
-            var btn = btnRt.gameObject.AddComponent<UnityEngine.UI.Button>();
-            var txtRt = new GameObject("Label", typeof(RectTransform)).GetComponent<RectTransform>();
-            txtRt.SetParent(btnRt, false);
-            txtRt.anchorMin = Vector2.zero; txtRt.anchorMax = Vector2.one; txtRt.offsetMin = txtRt.offsetMax = Vector2.zero;
-            var txt = txtRt.gameObject.AddComponent<UnityEngine.UI.Text>();
-            txt.font = font; txt.fontSize = 24; txt.fontStyle = FontStyle.Bold; txt.alignment = TextAnchor.MiddleCenter;
-            txt.color = new Color32(20, 16, 24, 255); txt.text = "전체 공정 보기 (Tab)";
-
-            var ov = cam.gameObject.AddComponent<OverviewCamera>();
-            ov.cam = cam; ov.follow = cam.GetComponent<CameraFollow>(); ov.playerMove = player.GetComponent<PlayerMove>();
-            ov.label = txt; ov.mapSizePx = mapSize;
-            foreach (var b in cam.GetComponents<Behaviour>())
-                if (b.GetType().Name == "PixelPerfectCamera") ov.pixelPerfect = b;
-            UnityEditor.Events.UnityEventTools.AddPersistentListener(btn.onClick, ov.Toggle);
-
-            // UI 클릭용 EventSystem (새 Input System 모듈)
-            var es = new GameObject("EventSystem");
-            es.AddComponent<UnityEngine.EventSystems.EventSystem>();
-            Type mod = null;
-            foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
-                if ((mod = asm.GetType("UnityEngine.InputSystem.UI.InputSystemUIInputModule")) != null) break;
-            if (mod != null) es.AddComponent(mod); else es.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
         }
 
         static void Set(object o, string prop, object v)
@@ -286,12 +275,82 @@ namespace SteelMind.EditorTools
             if (p != null && p.CanWrite) p.SetValue(o, v);
         }
 
-        static void AddToBuildSettings(string path)
+        static RectTransform Rect(string name, Transform parent, Vector2 anchor, Vector2 size, Vector2 pos)
         {
-            var list = new System.Collections.Generic.List<EditorBuildSettingsScene>(EditorBuildSettings.scenes);
-            list.RemoveAll(s => s.path == path);
-            list.Insert(0, new EditorBuildSettingsScene(path, true));
-            EditorBuildSettings.scenes = list.ToArray();
+            var rt = new GameObject(name, typeof(RectTransform)).GetComponent<RectTransform>();
+            rt.SetParent(parent, false);
+            rt.anchorMin = rt.anchorMax = rt.pivot = anchor;
+            rt.sizeDelta = size; rt.anchoredPosition = pos;
+            return rt;
+        }
+
+        static Button MakeButton(string name, Transform parent, Vector2 anchor, Vector2 size, Vector2 pos, string label, Color32 color, out Text text)
+        {
+            var rt = Rect(name, parent, anchor, size, pos);
+            rt.gameObject.AddComponent<Image>().color = color;
+            var btn = rt.gameObject.AddComponent<Button>();
+            var tr = new GameObject("Label", typeof(RectTransform)).GetComponent<RectTransform>();
+            tr.SetParent(rt, false); tr.anchorMin = Vector2.zero; tr.anchorMax = Vector2.one; tr.offsetMin = tr.offsetMax = Vector2.zero;
+            text = tr.gameObject.AddComponent<Text>();
+            text.font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            text.fontSize = 22; text.fontStyle = FontStyle.Bold; text.alignment = TextAnchor.MiddleCenter;
+            text.color = new Color32(20, 16, 24, 255); text.text = label;
+            return btn;
+        }
+
+        static void MakeUI(Layout L, Camera cam, GameObject player)
+        {
+            var mapSize = new Vector2(L.map.width, L.map.height);
+            var canvasGo = new GameObject("UI");
+            var canvas = canvasGo.AddComponent<Canvas>();
+            canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            var scaler = canvasGo.AddComponent<CanvasScaler>();
+            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
+            scaler.referenceResolution = new Vector2(1280, 720);
+            canvasGo.AddComponent<GraphicRaycaster>();
+
+            // 미니맵 (오른쪽 위)
+            var mmSprite = LoadSprite("ui_minimap.png");
+            if (mmSprite)
+            {
+                float mmW = 360f, mmH = mmW * mmSprite.rect.height / mmSprite.rect.width;
+                var mm = Rect("Minimap", canvasGo.transform, new Vector2(1, 1), new Vector2(mmW, mmH), new Vector2(-16, -16));
+                mm.gameObject.AddComponent<Image>().sprite = mmSprite;
+                var mk = Rect("Marker", mm, new Vector2(0, 1), new Vector2(10, 10), Vector2.zero);
+                mk.pivot = new Vector2(0.5f, 0.5f);
+                mk.gameObject.AddComponent<Image>().sprite = LoadSprite("ui_marker.png");
+                var minimap = canvasGo.AddComponent<Minimap>();
+                minimap.player = player.transform; minimap.map = mm; minimap.marker = mk; minimap.mapSizePx = mapSize;
+            }
+
+            // 전체 공정 보기 (왼쪽 위)
+            var ovBtn = MakeButton("OverviewButton", canvasGo.transform, new Vector2(0, 1), new Vector2(250, 48), new Vector2(16, -16),
+                "전체 공정 보기 (Tab)", new Color32(232, 173, 34, 235), out var ovText);
+            var ov = cam.gameObject.AddComponent<OverviewCamera>();
+            ov.cam = cam; ov.follow = cam.GetComponent<CameraFollow>(); ov.playerMove = player.GetComponent<PlayerMove>();
+            ov.label = ovText; ov.mapSizePx = mapSize;
+            foreach (var b in cam.GetComponents<Behaviour>()) if (b.GetType().Name == "PixelPerfectCamera") ov.pixelPerfect = b;
+            UnityEventTools.AddPersistentListener(ovBtn.onClick, ov.Toggle);
+
+            // 공정 바꾸기 (위 가운데)
+            var switcher = canvasGo.AddComponent<SceneSwitcher>();
+            var cur = string.IsNullOrEmpty(L.scene) ? "" : L.scene;
+            for (int i = 0; i < SceneSwitcher.Scenes.Length; i++)
+            {
+                bool here = SceneSwitcher.Scenes[i] == cur;
+                var b = MakeButton("Process_" + SceneSwitcher.Scenes[i], canvasGo.transform, new Vector2(0.5f, 1), new Vector2(100, 44),
+                    new Vector2(-220 + i * 110, -16), SceneSwitcher.Labels[i],
+                    here ? new Color32(255, 212, 71, 245) : new Color32(58, 52, 64, 230), out var t);
+                if (!here) t.color = new Color32(230, 226, 220, 255);
+                UnityEventTools.AddIntPersistentListener(b.onClick, switcher.Load, i);
+            }
+
+            var es = new GameObject("EventSystem");
+            es.AddComponent<UnityEngine.EventSystems.EventSystem>();
+            Type mod = null;
+            foreach (var asm in AppDomain.CurrentDomain.GetAssemblies())
+                if ((mod = asm.GetType("UnityEngine.InputSystem.UI.InputSystemUIInputModule")) != null) break;
+            if (mod != null) es.AddComponent(mod); else es.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
         }
     }
 }

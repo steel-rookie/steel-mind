@@ -1,0 +1,689 @@
+fileFormatVersion: 2
+guid: 1c2b1c620fde0458483877b62ff9347f
+TextureImporter:
+  internalIDToNameTable:
+  - first:
+      213: -5182034294534178870
+    second: eq_rails_0
+  - first:
+      213: 3398119315331083089
+    second: eq_rails_1
+  - first:
+      213: -7112244915756806811
+    second: eq_rails_2
+  - first:
+      213: -2335564491540400470
+    second: eq_rails_3
+  - first:
+      213: -5975761288153494699
+    second: eq_rails_4
+  - first:
+      213: 6044232608504499054
+    second: eq_rails_5
+  - first:
+      213: -1654838026211761685
+    second: eq_rails_6
+  - first:
+      213: -8414280075241614755
+    second: eq_rails_7
+  - first:
+      213: 1879808903831425103
+    second: eq_rails_8
+  - first:
+      213: -4978558984823253486
+    second: eq_rails_9
+  - first:
+      213: -5438199412950619946
+    second: eq_rails_10
+  - first:
+      213: -405642591877743498
+    second: eq_rails_11
+  - first:
+      213: -9104395728355735007
+    second: eq_rails_12
+  - first:
+      213: -4717924707284447019
+    second: eq_rails_13
+  - first:
+      213: 7594319636521349837
+    second: eq_rails_14
+  - first:
+      213: -4551964560206367377
+    second: eq_rails_15
+  - first:
+      213: -7692563974588877792
+    second: eq_rails_16
+  - first:
+      213: -4511505479884120723
+    second: eq_rails_17
+  - first:
+      213: 4432454894929194441
+    second: eq_rails_18
+  - first:
+      213: 3180895163069829324
+    second: eq_rails_19
+  - first:
+      213: 8917340016091474596
+    second: eq_rails_20
+  - first:
+      213: -8412331197687923852
+    second: eq_rails_21
+  externalObjects: {}
+  serializedVersion: 13
+  mipmaps:
+    mipMapMode: 0
+    enableMipMap: 0
+    sRGBTexture: 1
+    linearTexture: 0
+    fadeOut: 0
+    borderMipMap: 0
+    mipMapsPreserveCoverage: 0
+    alphaTestReferenceValue: 0.5
+    mipMapFadeDistanceStart: 1
+    mipMapFadeDistanceEnd: 3
+  bumpmap:
+    convertToNormalMap: 0
+    externalNormalMap: 0
+    heightScale: 0.25
+    normalMapFilter: 0
+    flipGreenChannel: 0
+  isReadable: 0
+  streamingMipmaps: 0
+  streamingMipmapsPriority: 0
+  vTOnly: 0
+  ignoreMipmapLimit: 0
+  grayScaleToAlpha: 0
+  generateCubemap: 6
+  cubemapConvolution: 0
+  seamlessCubemap: 0
+  textureFormat: 1
+  maxTextureSize: 2048
+  textureSettings:
+    serializedVersion: 2
+    filterMode: 1
+    aniso: 1
+    mipBias: 0
+    wrapU: 1
+    wrapV: 1
+    wrapW: 1
+  nPOTScale: 0
+  lightmap: 0
+  compressionQuality: 50
+  spriteMode: 2
+  spriteExtrude: 1
+  spriteMeshType: 1
+  alignment: 0
+  spritePivot: {x: 0.5, y: 0.5}
+  spritePixelsToUnits: 100
+  spriteBorder: {x: 0, y: 0, z: 0, w: 0}
+  spriteGenerateFallbackPhysicsShape: 1
+  alphaUsage: 1
+  alphaIsTransparency: 1
+  spriteTessellationDetail: -1
+  textureType: 8
+  textureShape: 1
+  singleChannelComponent: 0
+  flipbookRows: 1
+  flipbookColumns: 1
+  maxTextureSizeSet: 0
+  compressionQualitySet: 0
+  textureFormatSet: 0
+  ignorePngGamma: 0
+  applyGammaDecoding: 0
+  swizzle: 50462976
+  cookieLightType: 0
+  platformSettings:
+  - serializedVersion: 4
+    buildTarget: DefaultTexturePlatform
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  - serializedVersion: 4
+    buildTarget: Standalone
+    maxTextureSize: 2048
+    resizeAlgorithm: 0
+    textureFormat: -1
+    textureCompression: 1
+    compressionQuality: 50
+    crunchedCompression: 0
+    allowsAlphaSplitting: 0
+    overridden: 0
+    ignorePlatformSupport: 0
+    androidETC2FallbackOverride: 0
+    forceMaximumCompressionQuality_BC6H_BC7: 0
+  spriteSheet:
+    serializedVersion: 2
+    sprites:
+    - serializedVersion: 2
+      name: eq_rails_0
+      rect:
+        serializedVersion: 2
+        x: 2
+        y: 2
+        width: 517
+        height: 20
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: ac7f564c347b518b0800000000000000
+      internalID: -5182034294534178870
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: eq_rails_1
+      rect:
+        serializedVersion: 2
+        x: 523
+        y: 2
+        width: 86
+        height: 20
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 15be3b6638b882f20800000000000000
+      internalID: 3398119315331083089
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: eq_rails_2
+      rect:
+        serializedVersion: 2
+        x: 611
+        y: 14
+        width: 10
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 56dccb07eea3c4d90800000000000000
+      internalID: -7112244915756806811
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: eq_rails_3
+      rect:
+        serializedVersion: 2
+        x: 625
+        y: 2
+        width: 32
+        height: 20
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: aa6f7b32878669fd0800000000000000
+      internalID: -2335564491540400470
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: eq_rails_4
+      rect:
+        serializedVersion: 2
+        x: 658
+        y: 11
+        width: 9
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 55b8415f4c4d11da0800000000000000
+      internalID: -5975761288153494699
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: eq_rails_5
+      rect:
+        serializedVersion: 2
+        x: 711
+        y: 14
+        width: 11
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: e6b4eb1a88d61e350800000000000000
+      internalID: 6044232608504499054
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: eq_rails_6
+      rect:
+        serializedVersion: 2
+        x: 723
+        y: 2
+        width: 18
+        height: 20
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: be1e6d63595d809e0800000000000000
+      internalID: -1654838026211761685
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: eq_rails_7
+      rect:
+        serializedVersion: 2
+        x: 742
+        y: 11
+        width: 6
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d5293923ad87a3b80800000000000000
+      internalID: -8414280075241614755
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: eq_rails_8
+      rect:
+        serializedVersion: 2
+        x: 784
+        y: 11
+        width: 6
+        height: 10
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f401d760d3c661a10800000000000000
+      internalID: 1879808903831425103
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: eq_rails_9
+      rect:
+        serializedVersion: 2
+        x: 791
+        y: 14
+        width: 7
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 216d7481bfa98eab0800000000000000
+      internalID: -4978558984823253486
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: eq_rails_10
+      rect:
+        serializedVersion: 2
+        x: 797
+        y: 2
+        width: 49
+        height: 20
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 6d8275d5272a784b0800000000000000
+      internalID: -5438199412950619946
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: eq_rails_11
+      rect:
+        serializedVersion: 2
+        x: 849
+        y: 14
+        width: 14
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 67cbb5d363ede5af0800000000000000
+      internalID: -405642591877743498
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: eq_rails_12
+      rect:
+        serializedVersion: 2
+        x: 609
+        y: 3
+        width: 12
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 12ac5cc7250b6a180800000000000000
+      internalID: -9104395728355735007
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: eq_rails_13
+      rect:
+        serializedVersion: 2
+        x: 658
+        y: 2
+        width: 22
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 5d09541b970968eb0800000000000000
+      internalID: -4717924707284447019
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: eq_rails_14
+      rect:
+        serializedVersion: 2
+        x: 680
+        y: 2
+        width: 10
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: dc2f0a51971746960800000000000000
+      internalID: 7594319636521349837
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: eq_rails_15
+      rect:
+        serializedVersion: 2
+        x: 700
+        y: 2
+        width: 22
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: f657bbe895c24d0c0800000000000000
+      internalID: -4551964560206367377
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: eq_rails_16
+      rect:
+        serializedVersion: 2
+        x: 742
+        y: 2
+        width: 17
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 024b9a272d58e3590800000000000000
+      internalID: -7692563974588877792
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: eq_rails_17
+      rect:
+        serializedVersion: 2
+        x: 759
+        y: 2
+        width: 14
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: d6d57454ba9e361c0800000000000000
+      internalID: -4511505479884120723
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: eq_rails_18
+      rect:
+        serializedVersion: 2
+        x: 773
+        y: 2
+        width: 17
+        height: 9
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 9cd22372e3e338d30800000000000000
+      internalID: 4432454894929194441
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: eq_rails_19
+      rect:
+        serializedVersion: 2
+        x: 791
+        y: 3
+        width: 7
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: cc019863c4fc42c20800000000000000
+      internalID: 3180895163069829324
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: eq_rails_20
+      rect:
+        serializedVersion: 2
+        x: 849
+        y: 3
+        width: 9
+        height: 7
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 4aa2280af71c0cb70800000000000000
+      internalID: 8917340016091474596
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: eq_rails_21
+      rect:
+        serializedVersion: 2
+        x: 857
+        y: 3
+        width: 6
+        height: 6
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      customData: 
+      outline: []
+      physicsShape: []
+      tessellationDetail: -1
+      bones: []
+      spriteID: 47bffdc9855614b80800000000000000
+      internalID: -8412331197687923852
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    outline: []
+    customData: 
+    physicsShape: []
+    bones: []
+    spriteID: 
+    internalID: 0
+    vertices: []
+    indices: 
+    edges: []
+    weights: []
+    secondaryTextures: []
+    spriteCustomMetadata:
+      entries: []
+    nameFileIdTable:
+      eq_rails_0: -5182034294534178870
+      eq_rails_1: 3398119315331083089
+      eq_rails_10: -5438199412950619946
+      eq_rails_11: -405642591877743498
+      eq_rails_12: -9104395728355735007
+      eq_rails_13: -4717924707284447019
+      eq_rails_14: 7594319636521349837
+      eq_rails_15: -4551964560206367377
+      eq_rails_16: -7692563974588877792
+      eq_rails_17: -4511505479884120723
+      eq_rails_18: 4432454894929194441
+      eq_rails_19: 3180895163069829324
+      eq_rails_2: -7112244915756806811
+      eq_rails_20: 8917340016091474596
+      eq_rails_21: -8412331197687923852
+      eq_rails_3: -2335564491540400470
+      eq_rails_4: -5975761288153494699
+      eq_rails_5: 6044232608504499054
+      eq_rails_6: -1654838026211761685
+      eq_rails_7: -8414280075241614755
+      eq_rails_8: 1879808903831425103
+      eq_rails_9: -4978558984823253486
+  mipmapLimitGroupName: 
+  pSDRemoveMatte: 0
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

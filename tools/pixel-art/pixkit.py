@@ -27,7 +27,11 @@ MAT_RAMP = {
     'Blue_Steel': 'slate', 'Cladding': 'warm', 'Concrete': 'warm', 'Slab_Cold': 'steel',
     'Safety_Yellow': 'ochre', 'Hot_Slab': 'hot', 'Water_Spray': 'water',
     'Lit_Window': 'lit', 'Screen': 'screen', 'Paint_Red': 'red', 'Paint_Green': 'green', 'Rust': 'rust',
+    'Copper': 'rust', 'Oven_Brick': 'rust', 'Scrap': 'steel', 'Belt_Rubber': 'dark', 'Coke': 'dark', 'Glass': 'slate',
+    'Iron_Ore': 'rust', 'Sinter': 'rust', 'Refractory': 'warm', 'Molten_Steel': 'hot', 'Slag_Hot': 'hot', 'Water': 'water',
+    'Slag_Granulated': 'warm', 'Limestone': 'bright', 'Coal': 'dark', 'Slab_Cooling': 'hot',
 }
+HOT_MATS = {'Hot_Slab', 'Molten_Steel', 'Slag_Hot', 'Slab_Cooling'}
 EMISSIVE = {'hot', 'lit', 'screen'}
 OUTLINE = hx('#0b0a0e')
 WARN = hx('#ff5a44'); WARN_DARK = hx('#7a1d18')

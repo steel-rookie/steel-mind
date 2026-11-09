@@ -5,7 +5,8 @@
   "tile": 16,
   "pixelsPerUnit": 16,
   "wallHeight": 160,
-  "note": "좌표는 지도 왼쪽 위가 (0,0)인 px. rect=[x,y,w,h], collider는 바닥 발자국, sortY가 클수록 앞에 그린다."
+  "note": "좌표는 지도 왼쪽 위가 (0,0)인 px. rect=[x,y,w,h], collider는 바닥 발자국, sortY가 클수록 앞에 그린다.",
+  "title": "압연 공장  HOT STRIP MILL"
  },
  "layers": [
   {
@@ -394,8 +395,8 @@
   }
  ],
  "spawn": [
-  640,
-  536
+  60,
+  396
  ],
  "colliders": [
   {
@@ -426,12 +427,12 @@
    ]
   },
   {
-   "id": "left_edge",
+   "id": "front_gap",
    "rect": [
-    -8,
-    0,
-    8,
-    560
+    600,
+    560,
+    80,
+    8
    ]
   },
   {
@@ -482,5 +483,27 @@
    979,
    220
   ]
- }
+ },
+ "scene": "Rolling",
+ "portals": [
+  {
+   "scene": "Casting",
+   "label": "← 연주",
+   "rect": [
+    -4,
+    166,
+    6,
+    394
+   ]
+  }
+ ],
+ "spawns": [
+  {
+   "scene": "Casting",
+   "pos": [
+    20,
+    396
+   ]
+  }
+ ]
 }
