@@ -1,12 +1,6 @@
 # 비밀값
 .env
 
-# 정답 라벨은 레포에 올리지 않는다 (블라인드 평가)
-eval/labels/
-
-# 원본 데이터는 올리지 않는다 (용량·라이선스)
-data/raw/
-
 # Node
 node_modules/
 dist/

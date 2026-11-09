@@ -1,0 +1,21 @@
+{
+  "event_id": "rolling_temperature",
+  "proposals": {
+    "production": {
+      "say": "속도를 유지해야 오늘 주문량을 맞춥니다.",
+      "why": "감속하면 남은 코일 출하가 늦어져요.",
+      "rec": "continue_production"
+    },
+    "equipment": {
+      "say": "속도를 낮추고 롤 냉각부터 확인하죠.",
+      "why": "이대로 오르면 롤이 상해 더 오래 멈춥니다.",
+      "rec": "reduce_speed"
+    },
+    "safety": {
+      "say": "과열 구역 주변 인원부터 빼 주세요.",
+      "why": "설비 이상이 커지면 근처 사람이 먼저 다칩니다.",
+      "rec": "stop_and_inspect"
+    }
+  },
+  "chief": "납기를 지킬지, 더 큰 정지와 사고를 막을지가 쟁점입니다."
+}
