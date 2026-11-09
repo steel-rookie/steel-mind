@@ -1,0 +1,419 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>STEEL MIND Agent 시나리오 설계</title>
+<style>
+@font-face { font-family: "NotoKR"; font-weight: 400; src: local("Noto Sans KR"), url("file:///C:/Windows/Fonts/NotoSansKR-Regular.ttf"); }
+@font-face { font-family: "NotoKR"; font-weight: 700; src: local("Noto Sans KR Bold"), url("file:///C:/Windows/Fonts/NotoSansKR-Bold.ttf"); }
+:root {
+  --ink: #0f1720; --muted: #55606c; --faint: #8a94a0; --line: #e3e6ea; --bg: #ffffff; --soft: #f4f6f8;
+  --blue: #2a78d6; --blue-soft: #e6f0fb; --orange: #eb6834; --orange-soft: #fdeee7;
+  --green: #1f9d6b; --green-soft: #e4f5ee; --navy: #13294b;
+  --game: #1d1a18; --game2: rgba(255,255,255,.07); --mint: #6cc3b0; --gtext: #f2f2f2; --gmuted: #b9b9be;
+  --c-prod: #7aa7ff; --c-qual: #c99bff; --c-equip: #f0a04b; --c-safe: #6fcf97;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--ink); }
+body { font-family: "NotoKR", "Noto Sans KR", "Malgun Gothic", sans-serif; font-size: 15px; line-height: 1.7; }
+.wrap { max-width: 980px; margin: 0 auto; padding: 0 16px 64px; }
+header.hero { background: var(--navy); color: #fff; }
+header.hero .wrap { padding-top: 48px; padding-bottom: 40px; }
+.kicker { font-size: 12px; font-weight: 700; letter-spacing: .12em; color: var(--blue); }
+.hero .kicker { color: #8fbaf0; }
+h1 { font-size: clamp(28px, 5vw, 40px); line-height: 1.2; margin: 8px 0 10px; letter-spacing: -.02em; }
+.hero p { color: #c3cfdf; max-width: 720px; margin: 0; }
+.hero .meta { margin-top: 18px; font-size: 13px; color: #8193ad; }
+.cast { display: flex; gap: 14px; margin-top: 26px; flex-wrap: wrap; }
+.cast figure { margin: 0; text-align: center; font-size: 12px; color: #c3cfdf; }
+.cast img { width: 56px; height: 56px; display: block; margin: 0 auto 4px; }
+h2 { font-size: 24px; margin: 56px 0 6px; letter-spacing: -.01em; }
+h2 .n { color: var(--line); font-size: 32px; margin-right: 8px; }
+h3 { font-size: 17px; margin: 28px 0 8px; }
+.lead { color: var(--muted); margin: 0 0 18px; }
+p { margin: 0 0 10px; }
+.muted { color: var(--muted); } .small { font-size: 13.5px; } .xs { font-size: 12.5px; }
+code { font-family: Consolas, monospace; font-size: .92em; background: var(--soft); padding: 1px 5px; border-radius: 4px; }
+.grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
+.grid3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+.card { background: var(--soft); border-radius: 12px; padding: 16px 18px; }
+.card.info { background: var(--blue-soft); } .card.warn { background: var(--orange-soft); } .card.ok { background: var(--green-soft); }
+.card .t { display: block; font-weight: 700; margin-bottom: 4px; }
+.card p:last-child { margin-bottom: 0; }
+.tag { display: inline-block; font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: 99px; }
+.tag.ok { background: var(--green-soft); color: var(--green); } .tag.no { background: var(--orange-soft); color: var(--orange); } .tag.keep { background: var(--blue-soft); color: var(--blue); }
+.tbl { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font-size: 12.5px; color: var(--muted); }
+td.c, th.c { text-align: center; }
+.nw { white-space: nowrap; }
+.sp { image-rendering: pixelated; }
+.t-prod { filter: none; } .t-qual { filter: hue-rotate(55deg) saturate(1.3); }
+.t-equip { filter: hue-rotate(170deg) saturate(1.6); } .t-safe { filter: hue-rotate(-80deg) saturate(1.3); }
+
+/* formula */
+.formula { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; font-weight: 700; font-size: 17px; margin: 8px 0 4px; }
+.formula span.box { background: var(--soft); border-radius: 10px; padding: 8px 14px; }
+.formula span.box.hl { background: var(--navy); color: #fff; }
+.formula span.op { color: var(--faint); }
+
+/* rules with bad/good */
+.rule { border: 1px solid var(--line); border-radius: 12px; padding: 16px 18px; margin-bottom: 12px; }
+.rule h4 { margin: 0 0 4px; font-size: 16px; }
+.rule .why { color: var(--muted); font-size: 14px; margin-bottom: 10px; }
+.bg2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; }
+.bad, .good { border-radius: 10px; padding: 10px 12px; font-size: 14px; }
+.bad { background: var(--orange-soft); } .good { background: var(--green-soft); }
+.bad b, .good b { font-size: 12px; display: block; }
+.bad b { color: var(--orange); } .good b { color: var(--green); }
+
+/* character sheets */
+.agent { border-radius: 14px; border: 1px solid var(--line); overflow: hidden; }
+.agent .top { display: flex; gap: 14px; align-items: center; padding: 14px 16px; background: var(--soft); border-bottom: 3px solid var(--c); }
+.agent .top img { width: 64px; height: 64px; flex: none; }
+.agent .top .nm { font-size: 19px; font-weight: 700; line-height: 1.2; }
+.agent .top .role { font-size: 13px; color: var(--muted); }
+.agent .body { padding: 12px 16px 14px; font-size: 14px; }
+.agent dl { margin: 0; display: grid; grid-template-columns: 76px 1fr; gap: 6px 10px; }
+.agent dt { color: var(--muted); font-size: 12.5px; font-weight: 700; padding-top: 2px; }
+.agent dd { margin: 0; }
+.agent .line { margin-top: 10px; background: var(--game); color: var(--gtext); border-radius: 4px 12px 12px 12px; padding: 8px 12px; font-size: 13.5px; }
+.agent .line i { font-style: normal; display: block; font-size: 12px; color: var(--c); font-weight: 700; }
+
+/* map */
+.map { position: relative; border-radius: 12px; overflow: hidden; }
+.map img { display: block; width: 100%; }
+.pin { position: absolute; transform: translate(-50%, -50%); background: var(--orange); color: #fff; font-size: 12px; font-weight: 700; padding: 3px 10px; border-radius: 99px; white-space: nowrap; box-shadow: 0 2px 8px rgba(0,0,0,.4); }
+.pin.alt { background: rgba(15,23,32,.85); }
+
+/* stance matrix */
+.stance td.on { font-weight: 700; }
+.dot { display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: var(--c); vertical-align: -1px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; }
+.chip img { width: 22px; height: 22px; }
+
+/* game mock */
+.mock { background: var(--game); color: var(--gtext); border-radius: 12px; padding: 14px; }
+.mock .bub { display: flex; gap: 8px; margin-bottom: 8px; align-items: flex-start; }
+.mock .bub img { width: 34px; height: 34px; flex: none; }
+.mock .bub div { background: var(--game2); border-radius: 4px 12px 12px 12px; padding: 6px 10px; font-size: 13.5px; line-height: 1.5; }
+.mock .bub div i { font-style: normal; font-weight: 700; display: block; font-size: 12px; }
+.mock .bub div em { font-style: normal; color: var(--gmuted); display: block; font-size: 12.5px; }
+.mock .chief { background: rgba(108,195,176,.14); border-radius: 10px; padding: 8px 12px; font-size: 13.5px; margin-top: 4px; }
+.mock .chief b { color: var(--mint); }
+
+pre { background: var(--soft); border-radius: 12px; padding: 14px 16px; overflow-x: auto; font-size: 13px; line-height: 1.6; margin: 0; }
+pre code { background: none; padding: 0; }
+.check { list-style: none; padding: 0; margin: 0; }
+.check li { padding: 8px 0 8px 30px; border-bottom: 1px solid var(--line); position: relative; font-size: 14.5px; }
+.check li::before { content: ""; position: absolute; left: 4px; top: 12px; width: 14px; height: 14px; border: 2px solid var(--blue); border-radius: 4px; }
+.verdict { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+footer { border-top: 1px solid var(--line); margin-top: 56px; padding-top: 14px; font-size: 12.5px; color: var(--faint); }
+@media (max-width: 600px) { .agent dl { grid-template-columns: 1fr; } .agent dt { padding-top: 6px; } }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="kicker">STEEL MIND · AGENT 시나리오 설계서</div>
+    <h1>재미는 Agent들의 말에서 나옵니다</h1>
+    <p>STEEL MIND에는 쓰러뜨릴 적이 없습니다. 플레이어가 고민하는 대상은 Agent들의 말뿐입니다. Agent가 뻔한 말을 하면 정답이 보이고, 정답이 보이면 게임은 끝납니다. 이 문서는 Agent가 "그럴듯하게 엇갈리도록" 만드는 규칙입니다.</p>
+    <div class="cast">
+      <figure><img class="sp t-prod" src="../proposal/v2/assets/worker.png" alt="">생산</figure>
+      <figure><img class="sp t-qual" src="../proposal/v2/assets/worker.png" alt="">품질</figure>
+      <figure><img class="sp t-equip" src="../proposal/v2/assets/worker.png" alt="">설비</figure>
+      <figure><img class="sp t-safe" src="../proposal/v2/assets/worker.png" alt="">안전</figure>
+    </div>
+    <div class="meta">작성 박소영(게임 시스템·Agent 구조) · 2026-11-09 · 함께 볼 사람: 신원민(시나리오·점수), 김다영(Agent 응답), 양수빈(화면)</div>
+  </div>
+</header>
+
+<main class="wrap">
+
+<!-- 01 -->
+<h2><span class="n">01</span>고민이 생기는 공식</h2>
+<p class="lead">플레이어가 20초 동안 진짜로 고민하려면 세 가지가 동시에 있어야 합니다. 하나라도 빠지면 선택이 쉬워집니다.</p>
+<div class="formula">
+  <span class="box">그럴듯한 반대 의견</span><span class="op">×</span>
+  <span class="box">시간 압박</span><span class="op">×</span>
+  <span class="box">나중에 돌아오는 대가</span><span class="op">=</span>
+  <span class="box hl">고민</span>
+</div>
+<div class="grid3" style="margin-top: 14px">
+  <div class="card"><span class="t">반대 의견이 약하면</span><p class="small muted">"생산 Agent가 억지를 부리네" → 안전만 누르면 끝. 고민이 없습니다.</p></div>
+  <div class="card"><span class="t">시간이 넉넉하면</span><p class="small muted">표를 계산해서 정답을 찾습니다. 퍼즐이 되고 현장 감각은 사라집니다.</p></div>
+  <div class="card"><span class="t">대가가 바로 보이면</span><p class="small muted">손해가 적은 쪽을 고르면 됩니다. "지금은 괜찮은데…"라는 유혹이 없습니다.</p></div>
+</div>
+
+<!-- 02 -->
+<h2><span class="n">02</span>Agent 시나리오 작성 규칙 6가지</h2>
+<p class="lead">사건을 새로 쓰거나 Agent 대사를 고칠 때 이 규칙을 지킵니다. 대사 예시는 MVP 사건 1(사상압연기 온도 상승)입니다.</p>
+
+<div class="rule">
+  <h4>① 모든 Agent는 자기 자리에서 맞는 말을 한다</h4>
+  <div class="why">악역 Agent를 만들지 않습니다. 생산 Agent가 틀린 사람이 되는 순간 플레이어는 고민하지 않습니다.</div>
+  <div class="bg2">
+    <div class="bad"><b>나쁜 예</b>생산: "안전 같은 건 나중에 생각하죠. 일단 돌립시다."</div>
+    <div class="good"><b>좋은 예</b>생산: "속도를 유지해야 오늘 주문량을 맞춥니다. 감속하면 남은 코일 출하가 늦어져요."</div>
+  </div>
+</div>
+<div class="rule">
+  <h4>② 의견은 반드시 갈린다 (만장일치 사건 금지)</h4>
+  <div class="why">Agent가 모두 같은 선택지를 추천하면 그 사건은 버튼 누르기입니다. 최소 2개 선택지가 추천을 받아야 합니다. 2:1:1이나 2:2 구도가 가장 좋습니다.</div>
+  <div class="bg2">
+    <div class="bad"><b>나쁜 예</b>4명 모두 "감속 후 점검"을 추천</div>
+    <div class="good"><b>좋은 예</b>속도 유지 1(생산) · 감속 점검 2(설비·품질) · 정지 1(안전)</div>
+  </div>
+</div>
+<div class="rule">
+  <h4>③ 이유는 그 Agent가 지키는 숫자로 말한다</h4>
+  <div class="why">Agent마다 관심 지표가 다릅니다. 같은 상황도 생산은 출하량으로, 설비는 고장 시간으로, 안전은 사람으로 봅니다. 이유가 겹치면 Agent를 나눈 의미가 없습니다.</div>
+  <div class="bg2">
+    <div class="bad"><b>나쁜 예</b>설비: "위험하니까 감속하죠." / 안전: "위험하니까 멈추죠."</div>
+    <div class="good"><b>좋은 예</b>설비: "이대로 오르면 롤이 상해 더 오래 멈춥니다." / 안전: "설비 이상이 커지면 근처 사람이 먼저 다칩니다."</div>
+  </div>
+</div>
+<div class="rule">
+  <h4>④ 당장의 이득에는 나중의 청구서를 붙인다</h4>
+  <div class="why">유혹적인 선택지는 지금 숫자가 좋아 보여야 하고, 대가는 다음 사건에서 돌아와야 합니다. 그래야 "지금은 괜찮은데…"라는 고민이 생깁니다.</div>
+  <div class="bg2">
+    <div class="bad"><b>나쁜 예</b>속도 유지 = 즉시 안전 −50, 바로 실패</div>
+    <div class="good"><b>좋은 예</b>속도 유지 = 생산 +12, 대신 설비가 달아오른 채 다음 사건 시작(안전 −5)</div>
+  </div>
+</div>
+<div class="rule">
+  <h4>⑤ 쟁점 요약은 편들지 않는다</h4>
+  <div class="why">Agent 발언 뒤에 나오는 한 줄 요약은 무엇과 무엇을 맞바꾸는지만 말합니다. 답을 알려 주면 Agent 회의가 무의미해집니다.</div>
+  <div class="bg2">
+    <div class="bad"><b>나쁜 예</b>"안전이 제일 중요하니 정지하는 게 좋겠습니다."</div>
+    <div class="good"><b>좋은 예</b>"납기를 지킬지, 더 큰 정지와 사고를 막을지가 쟁점입니다."</div>
+  </div>
+</div>
+<div class="rule">
+  <h4>⑥ 시간이 다 되면 가장 쉬운 유혹이 실행된다</h4>
+  <div class="why">결정을 미루는 것도 결정입니다. 시간 초과 시 기본 행동은 "아무것도 안 바꾸기", 즉 속도 유지처럼 가장 위험하지만 가장 편한 선택으로 둡니다.</div>
+  <div class="bg2">
+    <div class="bad"><b>나쁜 예</b>시간 초과 = 가장 안전한 선택 자동 실행(기다리는 게 이득)</div>
+    <div class="good"><b>좋은 예</b>시간 초과 = 속도 유지 / 무전 후 계속(기다리면 손해)</div>
+  </div>
+</div>
+
+<!-- 03 -->
+<h2><span class="n">03</span>Agent 캐릭터 시트</h2>
+<p class="lead">LLM에게 주는 페르소나이자 대사를 쓸 때의 기준입니다. 캐릭터는 팀 시안의 작업자 캐릭터를 Agent 색으로 바꿔 씁니다.</p>
+<div class="grid2" style="grid-template-columns: repeat(auto-fit, minmax(380px, 1fr))">
+  <div class="agent" style="--c: var(--c-prod)">
+    <div class="top"><img class="sp t-prod" src="../proposal/v2/assets/worker.png" alt=""><div><div class="nm">생산 Agent</div><div class="role">지키는 지표: 생산량 · 납기</div></div></div>
+    <div class="body"><dl>
+      <dt>성격</dt><dd>급하고 현실적입니다. 오늘 목표를 놓치는 것을 가장 싫어합니다.</dd>
+      <dt>말투</dt><dd>짧고 숫자로 말합니다. "남은 코일", "출하", "오늘"을 자주 씁니다.</dd>
+      <dt>강하게 주장</dt><dd>라인을 멈추거나 늦추자는 의견이 나올 때</dd>
+      <dt>역할</dt><dd>유혹을 맡습니다. 가장 편하고 위험한 선택지를 그럴듯하게 만듭니다.</dd>
+    </dl>
+    <div class="line"><i>생산</i>또 멈추면 오늘 목표는 못 맞춥니다. 무전으로 알리고 라인은 계속 돌립시다.</div></div>
+  </div>
+  <div class="agent" style="--c: var(--c-equip)">
+    <div class="top"><img class="sp t-equip" src="../proposal/v2/assets/worker.png" alt=""><div><div class="nm">설비 Agent</div><div class="role">지키는 지표: 설비 수명 · 정비 비용</div></div></div>
+    <div class="body"><dl>
+      <dt>성격</dt><dd>신중하고 멀리 봅니다. "지금 10분 vs 나중 하루"로 생각합니다.</dd>
+      <dt>말투</dt><dd>원인과 결과를 이어 말합니다. "이대로 가면 …해서 더 오래 멈춥니다."</dd>
+      <dt>강하게 주장</dt><dd>설비가 무리하고 있다는 신호가 보일 때</dd>
+      <dt>역할</dt><dd>중간안을 맡습니다. 감속·점검처럼 양쪽을 조금씩 지키는 선택지를 추천합니다.</dd>
+    </dl>
+    <div class="line"><i>설비</i>급정지는 설비에 부담이지만 감속은 위험을 줄입니다. 감속하고 작업자가 나간 걸 확인한 뒤 올리죠.</div></div>
+  </div>
+  <div class="agent" style="--c: var(--c-safe)">
+    <div class="top"><img class="sp t-safe" src="../proposal/v2/assets/worker.png" alt=""><div><div class="nm">안전 Agent</div><div class="role">지키는 지표: 안전 지수(하한 60)</div></div></div>
+    <div class="body"><dl>
+      <dt>성격</dt><dd>단호하고 타협하지 않습니다. 사람이 걸린 문제에는 물러서지 않습니다.</dd>
+      <dt>말투</dt><dd>가장 짧게, 명령형으로 말합니다. 느낌표를 쓸 수 있는 유일한 Agent입니다.</dd>
+      <dt>강하게 주장</dt><dd>사람이 위험 구역에 있거나 설비 이상이 커질 때</dd>
+      <dt>역할</dt><dd>극단안을 맡습니다. 정지·통제처럼 생산을 크게 내주는 선택지를 추천합니다.</dd>
+    </dl>
+    <div class="line"><i>안전</i>지금 바로 라인을 멈춰야 합니다! 사람이 있는 구역에서 설비를 돌리면 안 됩니다.</div></div>
+  </div>
+  <div class="agent" style="--c: var(--c-qual)">
+    <div class="top"><img class="sp t-qual" src="../proposal/v2/assets/worker.png" alt=""><div><div class="nm">품질 Agent</div><div class="role">지키는 지표: 품질(두께·편차)</div></div></div>
+    <div class="body"><dl>
+      <dt>성격</dt><dd>꼼꼼하고 조건을 따집니다. 숫자가 흔들리는 것을 싫어합니다.</dd>
+      <dt>말투</dt><dd>"조건", "편차", "고르지 않다"로 말합니다. 단정하기보다 확인을 권합니다.</dd>
+      <dt>강하게 주장</dt><dd>온도·속도가 급하게 바뀌어 제품 상태가 흔들릴 때</dd>
+      <dt>역할</dt><dd>균형추를 맡습니다. 사건마다 다른 Agent 편에 서서 구도를 2:1:1로 만듭니다.</dd>
+    </dl>
+    <div class="line"><i>품질</i>온도가 흔들리면 강판 두께가 고르지 않아요. 속도를 조정해 조건을 안정시키는 게 좋습니다.</div></div>
+  </div>
+</div>
+<p class="xs muted" style="margin-top: 10px">확장 Agent(에너지·물류·환경)도 같은 칸(성격·말투·강하게 주장·역할)을 채워서 추가합니다.</p>
+
+<!-- 04 -->
+<h2><span class="n">04</span>MVP 사건 2개: 구도와 점검</h2>
+<p class="lead">사건은 공장의 실제 위치에서 터집니다. 각 사건에서 누가 무엇을 추천하는지, 위 규칙을 통과하는지 확인합니다.</p>
+<div class="map">
+  <img src="../proposal/v2/assets/hsm2_background.png" alt="열연 2라인 배경과 사건 위치">
+  <div class="pin" style="left: 57%; top: 24%">사건 1 · 사상압연 롤 온도 상승</div>
+  <div class="pin" style="left: 76%; top: 60%">사건 2 · 런아웃 테이블 작업자 진입</div>
+  <div class="pin alt" style="left: 22%; top: 24%">확장 · 가열로 전력 피크</div>
+  <div class="pin alt" style="left: 88%; top: 88%">확장 · 코일 출하 지연</div>
+</div>
+
+<h3>사건 1 · 사상압연기 온도 상승 <span class="tag no">LEVEL 1</span></h3>
+<div class="grid2">
+  <div class="mock">
+    <div class="bub"><img class="sp t-prod" src="../proposal/v2/assets/worker.png" alt=""><div><i style="color: var(--c-prod)">생산</i>속도를 유지해야 오늘 주문량을 맞춥니다.<em>감속하면 남은 코일 출하가 늦어져요.</em></div></div>
+    <div class="bub"><img class="sp t-equip" src="../proposal/v2/assets/worker.png" alt=""><div><i style="color: var(--c-equip)">설비</i>속도를 낮추고 롤 냉각부터 확인하죠.<em>이대로 오르면 롤이 상해 더 오래 멈춥니다.</em></div></div>
+    <div class="bub"><img class="sp t-safe" src="../proposal/v2/assets/worker.png" alt=""><div><i style="color: var(--c-safe)">안전</i>과열 구역 주변 인원부터 빼 주세요.<em>설비 이상이 커지면 근처 사람이 먼저 다칩니다.</em></div></div>
+    <div class="bub"><img class="sp t-qual" src="../proposal/v2/assets/worker.png" alt=""><div><i style="color: var(--c-qual)">품질</i>온도가 흔들리면 강판 두께가 고르지 않아요.<em>속도를 조정해 조건을 안정시키는 게 좋습니다.</em></div></div>
+    <div class="chief"><b>쟁점</b> 납기를 지킬지, 더 큰 정지와 사고를 막을지가 쟁점입니다.</div>
+  </div>
+  <div>
+    <div class="tbl"><table class="stance">
+      <tr><th>선택지</th><th>추천한 Agent</th><th class="c">변화(생산·품질·안전·비용)</th></tr>
+      <tr><td><b>1 속도 유지</b><br><span class="xs muted">시간 초과 시 실행</span></td><td><span class="chip"><span class="dot" style="--c: var(--c-prod)"></span>생산</span></td><td class="c nw">+12 · −6 · −18 · +4</td></tr>
+      <tr><td><b>2 감속 후 점검</b></td><td><span class="chip"><span class="dot" style="--c: var(--c-equip)"></span>설비</span> <span class="chip"><span class="dot" style="--c: var(--c-qual)"></span>품질</span></td><td class="c nw">−5 · +3 · +6 · −6</td></tr>
+      <tr><td><b>3 정지·구역 통제</b></td><td><span class="chip"><span class="dot" style="--c: var(--c-safe)"></span>안전</span></td><td class="c nw">−14 · +4 · +12 · −10</td></tr>
+    </table></div>
+    <div class="verdict" style="margin-top: 12px">
+      <div class="card ok"><span class="t">통과</span><p class="small">1:2:1 구도로 의견이 갈립니다(②). 속도 유지의 대가가 다음 사건으로 넘어갑니다(④).</p></div>
+      <div class="card warn"><span class="t">다듬을 점</span><p class="small">안전 Agent의 "인원부터 빼 주세요"는 정지보다 통제에 가깝습니다. 추천과 말이 정확히 맞도록 "라인을 세우고 구역을 막죠"로 바꾸는 것을 제안합니다.</p></div>
+    </div>
+  </div>
+</div>
+
+<h3>사건 2 · 작업자 위험 구역 진입 <span class="tag no">LEVEL 2</span></h3>
+<div class="grid2">
+  <div class="mock">
+    <div class="bub"><img class="sp t-prod" src="../proposal/v2/assets/worker.png" alt=""><div><i style="color: var(--c-prod)">생산</i>무전으로 알리고 라인은 계속 돌립시다.<em>또 멈추면 오늘 목표는 못 맞춥니다.</em></div></div>
+    <div class="bub"><img class="sp t-safe" src="../proposal/v2/assets/worker.png" alt=""><div><i style="color: var(--c-safe)">안전</i>지금 바로 라인을 멈춰야 합니다!<em>사람이 있는 구역에서 설비를 돌리면 안 됩니다.</em></div></div>
+    <div class="bub"><img class="sp t-equip" src="../proposal/v2/assets/worker.png" alt=""><div><i style="color: var(--c-equip)">설비</i>감속하고, 작업자가 나간 걸 확인한 뒤 올리죠.<em>급정지는 설비에 부담이지만 감속은 위험을 줄입니다.</em></div></div>
+    <div class="chief"><b>쟁점</b> 여기서 안전은 점수가 아니라 조건입니다. 안전이 60 아래로 떨어지면 미션 실패입니다.</div>
+  </div>
+  <div>
+    <div class="tbl"><table class="stance">
+      <tr><th>선택지</th><th>추천한 Agent</th><th class="c">변화(생산·품질·안전·비용)</th></tr>
+      <tr><td><b>1 무전 경고 후 계속</b><br><span class="xs muted">시간 초과 시 실행</span></td><td><span class="chip"><span class="dot" style="--c: var(--c-prod)"></span>생산</span></td><td class="c nw">+6 · 0 · −45 · +2</td></tr>
+      <tr><td><b>2 감속 후 구역 비우기</b></td><td><span class="chip"><span class="dot" style="--c: var(--c-equip)"></span>설비</span></td><td class="c nw">−4 · 0 · +4 · −3</td></tr>
+      <tr><td><b>3 즉시 정지</b></td><td><span class="chip"><span class="dot" style="--c: var(--c-safe)"></span>안전</span></td><td class="c nw">−12 · 0 · +14 · −8</td></tr>
+    </table></div>
+    <div class="verdict" style="margin-top: 12px">
+      <div class="card ok"><span class="t">통과</span><p class="small">세 Agent가 세 선택지를 하나씩 추천합니다(②). 시간 초과 시 가장 편한 선택이 실행됩니다(⑥).</p></div>
+      <div class="card warn"><span class="t">다듬을 점</span><p class="small">선택지 1은 앞에서 무엇을 했든 항상 실패입니다(안전 −45). 고민이 아니라 함정이 됩니다(규칙 ④ 위반). 아래 밸런스 제안을 참고하세요.</p></div>
+    </div>
+  </div>
+</div>
+
+<!-- 05 -->
+<h2><span class="n">05</span>밸런스 점검: 9가지 결말</h2>
+<p class="lead">사건 1과 사건 2의 선택 조합 9가지를 시안 규칙(시작값 70·80·90·75, 가중치 30·25·35·10%, 안전 하한 60)으로 계산했습니다.</p>
+<div class="tbl"><table>
+  <tr><th>사건 1 \ 사건 2</th><th class="c">1 무전 후 계속</th><th class="c">2 감속·구역 비우기</th><th class="c">3 즉시 정지</th></tr>
+  <tr><td class="nw"><b>1</b> 속도 유지</td><td class="c" style="background: var(--orange-soft)"><b style="color: var(--orange)">실패</b> <span class="xs muted">60.7 · 안전 22</span></td><td class="c" style="background: var(--blue-soft)"><b style="color: var(--blue)">B</b> <span class="xs muted">74.3</span></td><td class="c" style="background: var(--blue-soft)"><b style="color: var(--blue)">B</b> <span class="xs muted">74.9</span></td></tr>
+  <tr><td class="nw"><b>2</b> 감속 후 점검</td><td class="c" style="background: var(--orange-soft)"><b style="color: var(--orange)">실패</b> <span class="xs muted">67.0 · 안전 51</span></td><td class="c" style="background: var(--green-soft)"><b style="color: var(--green)">A</b> <span class="xs muted">80.6</span></td><td class="c" style="background: var(--blue-soft)"><b style="color: var(--blue)">B</b> <span class="xs muted">77.8</span></td></tr>
+  <tr><td class="nw"><b>3</b> 정지·구역 통제</td><td class="c" style="background: var(--orange-soft)"><b style="color: var(--orange)">실패</b> <span class="xs muted">65.5 · 안전 55</span></td><td class="c" style="background: var(--blue-soft)"><b style="color: var(--blue)">B</b> <span class="xs muted">77.8</span></td><td class="c" style="background: var(--blue-soft)"><b style="color: var(--blue)">B</b> <span class="xs muted">74.9</span></td></tr>
+</table></div>
+
+<div class="grid2" style="margin-top: 16px">
+  <div class="card warn"><span class="t">지금 시안의 문제</span>
+    <ul class="small" style="margin: 0; padding-left: 18px">
+      <li>사건 2의 선택지 1은 9가지 중 3가지 모두 실패입니다. 앞 선택과 상관없는 함정입니다.</li>
+      <li>A는 한 경로(감속 → 감속)뿐이고 S는 어떤 경로로도 나오지 않습니다.</li>
+      <li>사건 1에서 정지를 고르면 안전이 100에 걸려 남는 점수가 버려집니다.</li>
+    </ul></div>
+  <div class="card info"><span class="t">제안 (원민 님 결정)</span>
+    <ul class="small" style="margin: 0; padding-left: 18px">
+      <li><b>사건 2 선택지 1의 안전 −45 → −30.</b> 사건 1에서 무리했으면 실패, 안전을 쌓아 두었으면 통과합니다. 앞 선택이 뒤를 결정하는 구조가 됩니다.</li>
+      <li><b>S 기준 다시 정하기.</b> 지금 가중치에서는 품질·안전·비용이 높아도 생산량이 88 이상이어야 S(90점)에 닿습니다. S 기준을 낮출지, 균형 잡힌 경로(감속 → 감속)에 생산 보상을 줄지 정합니다.</li>
+      <li>수정 후 9가지를 다시 계산해 22:00에 고정합니다.</li>
+    </ul></div>
+</div>
+
+<!-- 06 -->
+<h2><span class="n">06</span>사건 하나를 쓰는 틀</h2>
+<p class="lead">새 사건은 이 형식으로 씁니다. 시안 코드의 필드 이름을 그대로 따릅니다. 수치(<code>effect</code>)는 원민 님, 대사(<code>agents</code>)는 이 문서 규칙대로 작성합니다.</p>
+<pre><code>{
+  "id": "rolling_temperature",
+  "at": 5,                          // 미션 시작 후 몇 초에 터지는지
+  "level": "LEVEL 1",
+  "warn": "finishing_mill",         // 깜빡일 설비 (화면 위치)
+  "title": "사상압연기 온도 상승",
+  "desc": "롤 온도가 기준보다 빠르게 오릅니다. 오늘 출하할 코일 주문이 남아 있습니다.",
+  "agents": [                       // 2명 이상, 추천이 최소 2갈래로 갈려야 함
+    { "a": "production", "say": "…", "why": "…", "rec": "continue_production" }
+  ],
+  "chief": "납기를 지킬지, 더 큰 정지와 사고를 막을지가 쟁점입니다.",   // 편들지 않음
+  "choices": [                      // 정확히 3개, 모두 최소 한 지표는 손해
+    { "id": "continue_production", "t": "속도 유지", "s": "…",
+      "effect": { "production": 12, "quality": -6, "safety": -18, "cost": 4 },
+      "flag": "overheated" }        // 다음 사건에 넘길 상태
+  ],
+  "timeout": "continue_production", // 시간 초과 시 실행: 가장 편하고 위험한 선택
+  "carry": "overheated → 다음 사건 안전 −5"
+}</code></pre>
+
+<h3>사건을 추가하기 전 점검표</h3>
+<ul class="check">
+  <li>Agent 추천이 최소 2갈래로 갈린다 (만장일치 아님)</li>
+  <li>모든 Agent가 자기 지표로 된 이유를 댄다 (이유가 서로 겹치지 않음)</li>
+  <li>선택지 3개 모두 최소 한 지표에서 손해를 본다 (공짜 선택지 없음)</li>
+  <li>가장 유혹적인 선택지의 대가가 이번 또는 다음 사건에 분명히 돌아온다</li>
+  <li>쟁점 한 줄이 무엇과 무엇을 맞바꾸는지만 말한다 (편들지 않음)</li>
+  <li>시간 초과 시 기본 행동이 "가장 편하고 위험한 선택"이다</li>
+  <li>앞 사건 결과와 합쳐 9가지 결말을 다시 계산했고, 항상 실패하는 선택지가 없다</li>
+</ul>
+
+<!-- 07 -->
+<h2><span class="n">07</span>LLM으로 대사 만들기</h2>
+<p class="lead">MVP는 위 시안 대사로 먼저 완성하고, LLM은 같은 형식의 대사를 상황에 맞게 다시 쓰는 데 씁니다. LLM은 점수와 상태를 절대 바꾸지 않습니다.</p>
+<div class="grid2">
+  <div>
+    <h3 style="margin-top: 0">LLM에 넣는 것</h3>
+    <ul class="small" style="padding-left: 18px; margin: 0">
+      <li>Agent 캐릭터 시트(성격·말투·강하게 주장·역할)</li>
+      <li>사건 제목·설명, 현재 지표 4개, 이전 사건의 선택</li>
+      <li>이번 사건의 선택지 ID 목록과 이 Agent의 추천 선택지(시나리오에 정해 둔 값)</li>
+    </ul>
+    <h3>LLM이 내는 것</h3>
+<pre><code>{ "agent": "equipment",
+  "say": "속도를 낮추고 롤 냉각부터 확인하죠.",
+  "why": "이대로 오르면 롤이 상해 더 오래 멈춥니다.",
+  "rec": "reduce_speed" }</code></pre>
+  </div>
+  <div>
+    <h3 style="margin-top: 0">지켜야 할 규칙 (형식 검사)</h3>
+    <ul class="small" style="padding-left: 18px; margin: 0">
+      <li><code>rec</code>는 시나리오에 정해 둔 추천과 같아야 합니다. 다르면 버립니다(구도가 깨지지 않게).</li>
+      <li><code>say</code> 40자, <code>why</code> 50자 이내. 말풍선 한두 줄에 들어가야 합니다.</li>
+      <li>입력에 없는 숫자(온도, 코일 수 등)를 지어내지 않습니다.</li>
+      <li>다른 Agent를 비난하거나 플레이어에게 정답을 알려 주지 않습니다.</li>
+      <li>응답이 3초 안에 오지 않거나 형식이 틀리면 시안 대사를 그대로 씁니다.</li>
+      <li>사건이 시작되기 전에 미리 생성해 두어 20초 타이머를 잡아먹지 않게 합니다.</li>
+    </ul>
+  </div>
+</div>
+<h3>페르소나 프롬프트 예시 (설비 Agent)</h3>
+<pre><code>너는 열연 공장의 설비 Agent다. 지키는 것은 설비 수명과 정비 비용이다.
+성격: 신중하고 멀리 본다. "지금 10분 vs 나중 하루"로 생각한다.
+말투: 원인과 결과를 이어 짧게 말한다. 존댓말. 느낌표 금지.
+이번 사건: {title} — {desc}
+현재 지표: 생산량 {production}, 품질 {quality}, 안전 {safety}, 비용 효율 {cost}
+이전 선택: {history}
+너의 추천은 "{rec}"({rec_label})로 정해져 있다. 이 추천을 설비 관점의 이유로 설득하라.
+다른 Agent를 비난하지 말고, 입력에 없는 숫자를 만들지 마라.
+JSON 한 개만 출력: {"agent":"equipment","say":"40자 이내","why":"50자 이내","rec":"{rec}"}</code></pre>
+
+<!-- 08 -->
+<h2><span class="n">08</span>누가 무엇을 이어받나</h2>
+<div class="tbl"><table>
+  <tr><th style="width: 120px">담당</th><th>이 문서에서 가져가는 것</th><th style="width: 120px">기한</th></tr>
+  <tr><td>신원민</td><td>05 밸런스 제안 검토와 수치 확정, 06 형식으로 사건 데이터 작성, 점검표 마지막 항목(9가지 재계산)</td><td>22:00 수치 고정</td></tr>
+  <tr><td>김다영</td><td>03 캐릭터 시트와 07 프롬프트·형식 검사 규칙으로 Agent 응답 모듈 구현, 실패 시 시안 대사 사용</td><td>18:00 통합 전</td></tr>
+  <tr><td>양수빈</td><td>Agent 4색(생산 파랑 · 품질 보라 · 설비 주황 · 안전 초록)과 캐릭터 색 바꾸기, 말풍선 2줄(의견·이유) 배치</td><td>18:00 통합 전</td></tr>
+  <tr><td>박소영</td><td>04 다듬을 점 반영한 대사 수정, 확장 Agent(에너지·물류·환경) 캐릭터 시트, 통합 후 재미 점검</td><td>22:00</td></tr>
+</table></div>
+
+<footer>STEEL MIND · Agent 시나리오 설계서 · 박소영 · 2026-11-09 · 모든 수치는 게임 밸런스용 가상 값이며 실제 제철소 기준이 아닙니다. 대사와 수치는 팀 시안(steel-mind-prototype.html)을 기준으로 했습니다.</footer>
+</main>
+</body>
+</html>
