@@ -11,6 +11,7 @@ namespace SteelMind.Scenario
         public Color gridColor = new Color(1, 1, 1, 0.12f), fillColor = new Color(0.42f, 0.76f, 0.69f, 0.35f), lineColor = new Color(0.42f, 0.76f, 0.69f, 1f);
         public int rings = 3;
         public float lineWidth = 2f;
+        public bool drawGrid = true, drawFill = true, drawLine = true;   // 겹쳐 그릴 때 (불확실 범위·이전 프로필)
 
         Vector2 Point(int i, float r)
         {
@@ -25,14 +26,18 @@ namespace SteelMind.Scenario
             int n = values.Length;
             if (n < 3) return;
             float R = Mathf.Min(rectTransform.rect.width, rectTransform.rect.height) / 2f;
+            if (drawGrid)
             for (int k = 1; k <= rings; k++)
                 for (int i = 0; i < n; i++) Line(vh, Point(i, R * k / rings), Point((i + 1) % n, R * k / rings), 1f, gridColor);
-            for (int i = 0; i < n; i++) Line(vh, Vector2.zero, Point(i, R), 1f, gridColor);
+            if (drawGrid) for (int i = 0; i < n; i++) Line(vh, Vector2.zero, Point(i, R), 1f, gridColor);
+            if (drawFill)
+            {
             int c0 = vh.currentVertCount;
             vh.AddVert(Vector3.zero, fillColor, Vector2.zero);
             for (int i = 0; i < n; i++) vh.AddVert(Point(i, R * Mathf.Clamp01(values[i])), fillColor, Vector2.zero);
             for (int i = 0; i < n; i++) vh.AddTriangle(c0, c0 + 1 + i, c0 + 1 + (i + 1) % n);
-            for (int i = 0; i < n; i++) Line(vh, Point(i, R * Mathf.Clamp01(values[i])), Point((i + 1) % n, R * Mathf.Clamp01(values[(i + 1) % n])), lineWidth, lineColor);
+            }
+            if (drawLine) for (int i = 0; i < n; i++) Line(vh, Point(i, R * Mathf.Clamp01(values[i])), Point((i + 1) % n, R * Mathf.Clamp01(values[(i + 1) % n])), lineWidth, lineColor);
         }
 
         static void Line(VertexHelper vh, Vector2 a, Vector2 b, float w, Color c)
