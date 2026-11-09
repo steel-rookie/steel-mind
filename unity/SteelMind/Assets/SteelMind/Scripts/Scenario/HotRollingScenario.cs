@@ -591,14 +591,8 @@ namespace SteelMind.Scenario
             var ni = vnNext.gameObject.AddComponent<Image>(); ni.sprite = triangle; ni.color = Color.white; vnNext.localRotation = Quaternion.Euler(0, 0, 180);
 
             // 로그·스킵
-            CircleButton("☰\n로그", new Vector2(0, 1), new Vector2(46, -46), ToggleLog);
+            // 게임 중 대화 기록(로그) 버튼은 두지 않는다
             CircleButton("▶▶\n스킵", new Vector2(1, 1), new Vector2(-46, -46), () => { fastAll = true; skip = true; });
-            vnLog = NewRect("Log", vn); vnLog.anchorMin = new Vector2(0.12f, 0.08f); vnLog.anchorMax = new Vector2(0.88f, 0.92f); vnLog.offsetMin = vnLog.offsetMax = Vector2.zero;
-            Round(vnLog.gameObject, Hex("#0E0F13", 0.97f), 1.0f);
-            VLayout(vnLog.gameObject, 26, 22, 10);
-            AddText(vnLog, "<b>대화 기록</b>   <color=#8A8F99>(로그 버튼으로 닫기)</color>", 22, Body);
-            vnLogText = AddText(vnLog, "", 19, Body);
-            vnLog.gameObject.SetActive(false);
             vnHistory.Clear();
         }
 
