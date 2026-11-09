@@ -13,7 +13,7 @@ namespace SteelMind.Scenario
     /// </summary>
     public static class GeminiClient
     {
-        static string key, model;
+        static string key, model, found;
         static bool loaded;
 
         public static bool Available { get { Load(); return !string.IsNullOrEmpty(key); } }
@@ -21,8 +21,10 @@ namespace SteelMind.Scenario
 
         static void Load()
         {
-            if (loaded) return;
+            // 키를 못 찾았으면 매번 다시 읽는다 (.env를 나중에 저장해도 다시 Play하면 바로 연결)
+            if (loaded && !string.IsNullOrEmpty(key)) return;
             loaded = true;
+            key = null; model = null;
             key = Environment.GetEnvironmentVariable("GEMINI_API_KEY");
             model = Environment.GetEnvironmentVariable("GEMINI_MODEL");
             foreach (var rel in new[] { "../.env", "../../../.env", "../../.env" })
@@ -31,6 +33,7 @@ namespace SteelMind.Scenario
                 {
                     var p = Path.GetFullPath(Path.Combine(Application.dataPath, rel));
                     if (!File.Exists(p)) continue;
+                    found = p;
                     foreach (var raw in File.ReadAllLines(p))
                     {
                         var line = raw.Trim();
@@ -44,6 +47,9 @@ namespace SteelMind.Scenario
                 catch { }
             }
             if (string.IsNullOrEmpty(model)) model = "gemini-2.5-flash";
+            Debug.Log(string.IsNullOrEmpty(key)
+                ? $"[Gemini] 키 없음 → 규칙 기반으로 진행 (.env 위치: {found ?? "못 찾음"}, GEMINI_API_KEY=값 이 있어야 함)"
+                : $"[Gemini] 연결 준비됨 · 모델 {model}");
         }
 
         [Serializable] class Part { public string text; }
