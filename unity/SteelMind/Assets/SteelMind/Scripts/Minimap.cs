@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace SteelMind
 {
-    /// <summary>화면 구석 미니맵에 플레이어 위치(노란 점)를 표시한다. M 키로 켜고 끈다.</summary>
+    /// <summary>화면 구석 미니맵에 플레이어 위치(노란 점)를 표시한다. (M 키는 전체 지도로 바뀜, 숨기기는 H)</summary>
     public class Minimap : MonoBehaviour
     {
         public Transform player;
@@ -14,7 +14,6 @@ namespace SteelMind
         {
 #if ENABLE_INPUT_SYSTEM
             var k = UnityEngine.InputSystem.Keyboard.current;
-            if (k != null && k.mKey.wasPressedThisFrame) map.gameObject.SetActive(!map.gameObject.activeSelf);
 #endif
             if (!player || !map || !marker) return;
             float u = Mathf.Clamp01(player.position.x * PPU / mapSizePx.x);

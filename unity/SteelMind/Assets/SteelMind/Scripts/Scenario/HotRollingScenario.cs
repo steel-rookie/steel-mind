@@ -663,6 +663,9 @@ namespace SteelMind.Scenario
             vnPlate.gameObject.SetActive(!narr);
             if (!narr)
             {
+                // 이름표를 말하는 캐릭터 바로 아래에
+                float ax = whoR == agent ? 0.8f : 0.2f;
+                vnPlate.anchorMin = vnPlate.anchorMax = new Vector2(ax, 1); vnPlate.pivot = new Vector2(0.5f, 0.5f); vnPlate.anchoredPosition = Vector2.zero;
                 var (name, color, persona) = Agents.TryGetValue(agent, out var v) ? v : (agent, "#EEF0F3", "");
                 vnName.text = name; vnPersona.text = persona;
                 bool hasBadge = stance != null && StanceBadge.TryGetValue(stance, out var bc);
