@@ -11,19 +11,18 @@ namespace SteelMind.Scenario
 {
     /// <summary>
     /// 열간압연 테스트 시나리오. Rolling 장면이 열리면 스스로 생긴다(장면 파일은 건드리지 않음).
-    /// 사건 → 에이전트 의견과 선택지 3개 → 결정 → Agent 회의 → (다음 사건) → 결과·AI 진단. 끄려면 Enabled = false.
+    /// 사건이 터지면 오른쪽에 운영실 회의방(채팅)이 열려 Agent들이 차례로 말하고, 플레이어가 고르면
+    /// Agent 회의가 이어진다. 사건이 다 끝나면 결과 화면(게임 결과 연출 + AI 진단). 끄려면 Enabled = false.
     /// </summary>
     public class HotRollingScenario : MonoBehaviour
     {
         public static bool Enabled = true;   // 설정값(플레이 상태 아님)
         const string SceneName = "Rolling";
         const string DataPath = "Scenarios/hot_rolling";
-        const float MeetingLineDelay = 0.7f, MeetingAutoClose = 4f;
+        const float TypingTime = 0.45f, AfterMessage = 0.25f, MeetingAutoClose = 4f;
 
-        // 화면 색 (참고 화면: 어두운 남색 판, 얇은 테두리, 노란 강조)
-        static readonly Color Bg = Hex("#0E1320", 0.97f), Panel = Hex("#151C2B"), Panel2 = Hex("#1B2436"), Border = Hex("#2C3850"),
-            Body = Hex("#E6E9F0"), Dim = Hex("#8D97AD"), Yellow = Hex("#F0C040"), Cyan = Hex("#5FC3E4"),
-            Accent = Hex("#6CC3B0"), LevelCol = Hex("#F0A04B"), Red = Hex("#FF6B6B");
+        static readonly Color Room = Hex("#1E1E1E", 0.97f), BubbleBg = Hex("#303030"), Body = Hex("#F2F2F2"), Dim = Hex("#A8A8B0"),
+            Yellow = Hex("#F0C040"), Cyan = Hex("#5FC3E4"), Accent = Hex("#6CC3B0"), LevelCol = Hex("#F0A04B"), Red = Hex("#FF6B6B");
         static readonly Dictionary<string, (string name, string color)> Agents = new Dictionary<string, (string, string)>
         {
             { "production", ("생산", "#7AA7FF") }, { "quality", ("품질", "#C99BFF") },
@@ -55,7 +54,7 @@ namespace SteelMind.Scenario
         readonly List<int> picks = new List<int>();
         readonly HashSet<string> flags = new HashSet<string>();
         int current = -1;
-        bool deciding, meeting, meetingSkip, showingResult;
+        bool deciding, chatting, fastForward, showingResult;
         Coroutine resume;
 
         RollingLine line;
@@ -66,9 +65,12 @@ namespace SteelMind.Scenario
         readonly Dictionary<string, Sprite> portraits = new Dictionary<string, Sprite>();
 
         Font font;
+        Sprite round;
         Canvas canvas;
         Text status;
-        RectTransform window;
+        RectTransform chat, chatContent, chatFooter, overlay;
+        ScrollRect chatScroll;
+        Text chatTitle;
 
         void Start()
         {
@@ -80,6 +82,7 @@ namespace SteelMind.Scenario
             player = FindFirstObjectByType<PlayerMove>();
             if (player) body = player.GetComponent<Rigidbody2D>();
             font = Font.CreateDynamicFontFromOSFont(new[] { "Malgun Gothic", "Apple SD Gothic Neo", "AppleGothic", "Noto Sans CJK KR", "Arial" }, 20);
+            round = MakeRoundSprite(64, 18);
             BuildCanvas();
             Restart();
         }
@@ -92,8 +95,9 @@ namespace SteelMind.Scenario
             StopAllCoroutines();
             resume = null;
             picks.Clear(); flags.Clear();
-            current = -1; deciding = meeting = showingResult = false;
-            ClearWindow();
+            current = -1; deciding = chatting = showingResult = false;
+            CloseChat();
+            if (overlay) Destroy(overlay.gameObject);
             if (line) { line.ClearWarnings(); line.SetRunning(true); }
             if (process) process.speed = 1f;
             SetPlayerFrozen(false);
@@ -107,25 +111,76 @@ namespace SteelMind.Scenario
             for (int i = 0; i < n; i++)
             {
                 yield return new WaitForSeconds(def.events[i].delay);
-                ShowEvent(i);
-                while (deciding) yield return null;
-                yield return Meeting(def.events[i], def.events[i].choices[picks[i]]);
-                SetPlayerFrozen(false);
+                yield return EventChat(i);
                 var chosen = def.events[i].choices[picks[i]];
                 if (i + 1 < n) SetStatus($"조치 진행 중: {chosen.label} · 사건 {i + 2}/{n} 대기 중");
             }
             SetStatus("교대 근무를 마무리하는 중입니다");
             yield return new WaitForSeconds(def.resultDelay);
-            ShowResult();
+            yield return ResultScreen();
         }
 
-        void ShowEvent(int i)
+        // 사건 하나: 경보 → Agent 의견 → 선택 → 내 메시지 → Agent 회의
+        IEnumerator EventChat(int i)
         {
-            current = i; deciding = true;
+            current = i;
+            chatting = true; fastForward = false;
             var ev = def.events[i];
+            int n = def.events.Length;
             if (line && !string.IsNullOrEmpty(ev.warn)) line.SetWarning(ev.warn, true);
             SetPlayerFrozen(true);
-            BuildEventWindow(ev, i);
+            OpenChat($"운영실 회의방   {C(ColorHex(LevelCol), ev.level)} · 사건 {i + 1}/{n}");
+
+            AlertCard(ev);
+            yield return Pause(AfterMessage * 2);
+            foreach (var a in ev.agents)
+            {
+                yield return Typing(a.agent);
+                var (name, col) = Agents.TryGetValue(a.agent, out var v) ? v : (a.agent, "#F2F2F2");
+                AgentMsg(a.agent, $"{C(col, $"<b>{name}</b>")} {C(ColorHex(Dim), "· 의견")}", a.say, a.why);
+                yield return Pause(AfterMessage);
+            }
+            yield return Typing("chief");
+            AgentMsg("chief", C(ColorHex(Yellow), "<b>공장장 · 쟁점</b>"), ev.chief, "어떻게 할까요? 아래에서 고르세요.");
+            ShowChoices(ev);
+            deciding = true;
+            while (deciding) yield return null;
+
+            var c = ev.choices[picks[i]];
+            PlayerMsg($"{c.label} — 이렇게 진행합니다.", c.detail);
+            yield return Pause(AfterMessage * 2);
+            if (c.reactions != null && c.reactions.Length > 0)
+            {
+                Divider("Agent 회의");
+                foreach (var r in c.reactions)
+                {
+                    yield return Typing(r.agent);
+                    var (name, col) = Agents.TryGetValue(r.agent, out var v) ? v : (r.agent, "#F2F2F2");
+                    var sc = StanceColor.TryGetValue(r.stance, out var s) ? s : "#F2F2F2";
+                    AgentMsg(r.agent, $"{C(col, $"<b>{name}</b>")} · {C(sc, $"<b>{r.stance}</b>")}", r.line, null);
+                    yield return Pause(AfterMessage);
+                }
+            }
+            SetFooterHint("Enter·Space로 닫기 · 잠시 뒤 자동으로 닫힙니다");
+            fastForward = false;
+            float t = 0;
+            while (t < MeetingAutoClose && !fastForward) { t += Time.deltaTime; yield return null; }
+            CloseChat();
+            chatting = false;
+            SetPlayerFrozen(false);
+        }
+
+        IEnumerator Pause(float sec)
+        {
+            float t = 0;
+            while (t < sec && !fastForward) { t += Time.deltaTime; yield return null; }
+        }
+
+        IEnumerator Typing(string agent)
+        {
+            var row = AgentMsg(agent, null, "···", null);
+            yield return Pause(TypingTime);
+            Destroy(row.gameObject);
         }
 
         void Choose(int k)
@@ -137,7 +192,8 @@ namespace SteelMind.Scenario
             picks.Add(k);
             if (!string.IsNullOrEmpty(c.flag)) flags.Add(c.flag);
             deciding = false;
-            ClearWindow();
+            fastForward = false;
+            ClearFooter();
             if (line && !c.keepWarning && !string.IsNullOrEmpty(ev.warn)) line.SetWarning(ev.warn, false);
             if (resume != null) { StopCoroutine(resume); resume = null; }
             if (line)
@@ -156,35 +212,6 @@ namespace SteelMind.Scenario
             resume = null;
         }
 
-        // 결정 뒤 Agent 회의: 말풍선이 하나씩 뜬다. Enter·Space로 넘기거나 잠시 뒤 자동으로 닫힌다.
-        IEnumerator Meeting(ScenarioEvent ev, Choice c)
-        {
-            if (c.reactions == null || c.reactions.Length == 0) yield break;
-            meeting = true; meetingSkip = false;
-            var w = NewWindow();
-            var head = Row(w, 10);
-            Tag(head, "Agent 회의", Cyan);
-            AddText(head, $"내 결정: {C(ColorHex(Yellow), c.label)}", 20, Body, FontStyle.Bold).gameObject.AddComponent<LayoutElement>().flexibleWidth = 1;
-            AddText(w, "결정이 나자 Agent들이 각자의 입장으로 반응합니다.", 15, Dim);
-            Relayout();
-            foreach (var r in c.reactions)
-            {
-                var (name, col) = Agents.TryGetValue(r.agent, out var v) ? v : (r.agent, "#E6E9F0");
-                var sc = StanceColor.TryGetValue(r.stance, out var s) ? s : "#E6E9F0";
-                Speech(w, r.agent, $"{C(col, $"<b>{name}</b>")} · {C(sc, $"<b>{r.stance}</b>")}", r.line, null);
-                Relayout();
-                float t = 0;
-                while (t < MeetingLineDelay && !meetingSkip) { t += Time.deltaTime; yield return null; }
-            }
-            AddText(w, "Enter·Space로 계속 · 잠시 뒤 자동으로 넘어갑니다", 14, Dim);
-            Relayout();
-            meetingSkip = false;
-            float wait = 0;
-            while (wait < MeetingAutoClose && !meetingSkip) { wait += Time.deltaTime; yield return null; }
-            ClearWindow();
-            meeting = false;
-        }
-
         void SetPlayerFrozen(bool frozen)
         {
             if (player)
@@ -192,7 +219,7 @@ namespace SteelMind.Scenario
                 player.enabled = !frozen;
                 if (body) body.linearVelocity = Vector2.zero;
             }
-            // 결정 중에는 숫자키 공정 이동·Tab 전체 보기를 막는다(1·2·3 선택과 겹침)
+            // 대화 중에는 숫자키 공정 이동·Tab 전체 보기를 막는다(1·2·3 선택과 겹침)
             if (frozen)
             {
                 if (pausedDuringDecision.Count > 0) return;
@@ -216,9 +243,9 @@ namespace SteelMind.Scenario
                 else if (k.digit2Key.wasPressedThisFrame || k.numpad2Key.wasPressedThisFrame) Choose(1);
                 else if (k.digit3Key.wasPressedThisFrame || k.numpad3Key.wasPressedThisFrame) Choose(2);
             }
-            else if (meeting)
+            else if (chatting)
             {
-                if (k.enterKey.wasPressedThisFrame || k.spaceKey.wasPressedThisFrame || k.numpadEnterKey.wasPressedThisFrame) meetingSkip = true;
+                if (k.enterKey.wasPressedThisFrame || k.spaceKey.wasPressedThisFrame || k.numpadEnterKey.wasPressedThisFrame) fastForward = true;
             }
             else if (showingResult && k.rKey.wasPressedThisFrame) Restart();
         }
@@ -241,13 +268,12 @@ namespace SteelMind.Scenario
                 es.AddComponent<EventSystem>();
                 es.AddComponent<InputSystemUIInputModule>();
             }
-            var bar = new GameObject("Status", typeof(RectTransform)).GetComponent<RectTransform>();
-            bar.SetParent(go.transform, false);
+            var bar = NewRect("Status", go.transform);
             bar.anchorMin = bar.anchorMax = bar.pivot = new Vector2(0.5f, 1);
             bar.anchoredPosition = new Vector2(0, -12);
-            Box(bar.gameObject, Bg, Border);
+            Round(bar.gameObject, Room);
             var h = bar.gameObject.AddComponent<HorizontalLayoutGroup>();
-            h.padding = new RectOffset(18, 18, 8, 8); h.childControlWidth = h.childControlHeight = true;
+            h.padding = new RectOffset(20, 20, 8, 8); h.childControlWidth = h.childControlHeight = true;
             var f = bar.gameObject.AddComponent<ContentSizeFitter>();
             f.horizontalFit = f.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
             status = AddText(bar, "", 17, Body);
@@ -256,44 +282,34 @@ namespace SteelMind.Scenario
 
         void SetStatus(string s) { if (status) status.text = s; }
 
-        void ClearWindow()
+        static RectTransform NewRect(string name, Transform parent)
         {
-            if (window) Destroy(window.gameObject);
-            window = null;
-            showingResult = false;
-        }
-
-        RectTransform NewWindow()
-        {
-            ClearWindow();
-            var rt = new GameObject("Window", typeof(RectTransform)).GetComponent<RectTransform>();
-            rt.SetParent(canvas.transform, false);
-            rt.anchorMin = new Vector2(0, 0.5f); rt.anchorMax = new Vector2(1, 0.5f); rt.pivot = new Vector2(0.5f, 0.5f);
-            rt.offsetMin = new Vector2(80, 0); rt.offsetMax = new Vector2(-80, 0);
-            Box(rt.gameObject, Bg, Border);
-            var v = rt.gameObject.AddComponent<VerticalLayoutGroup>();
-            v.padding = new RectOffset(22, 22, 18, 18); v.spacing = 8;
-            v.childControlWidth = v.childControlHeight = true; v.childForceExpandWidth = true; v.childForceExpandHeight = false;
-            rt.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-            window = rt;
-            return rt;
-        }
-
-        static void Box(GameObject go, Color fill, Color border)
-        {
-            go.AddComponent<Image>().color = fill;
-            var o = go.AddComponent<Outline>(); o.effectColor = border; o.effectDistance = new Vector2(2, -2);
-        }
-
-        RectTransform Panel_(Transform parent, Color fill, Color border, int pad = 12, float spacing = 4)
-        {
-            var rt = new GameObject("Panel", typeof(RectTransform)).GetComponent<RectTransform>();
+            var rt = new GameObject(name, typeof(RectTransform)).GetComponent<RectTransform>();
             rt.SetParent(parent, false);
-            Box(rt.gameObject, fill, border);
-            var v = rt.gameObject.AddComponent<VerticalLayoutGroup>();
-            v.padding = new RectOffset(pad, pad, pad - 2, pad - 2); v.spacing = spacing;
-            v.childControlWidth = v.childControlHeight = true; v.childForceExpandWidth = true; v.childForceExpandHeight = false;
             return rt;
+        }
+
+        Image Round(GameObject go, Color c)
+        {
+            var img = go.AddComponent<Image>();
+            img.sprite = round; img.type = Image.Type.Sliced; img.pixelsPerUnitMultiplier = 1.4f; img.color = c;
+            return img;
+        }
+
+        static Sprite MakeRoundSprite(int size, int radius)
+        {
+            var tex = new Texture2D(size, size, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp, filterMode = FilterMode.Bilinear };
+            var px = new Color32[size * size];
+            for (int y = 0; y < size; y++)
+                for (int x = 0; x < size; x++)
+                {
+                    float cx = Mathf.Clamp(x + 0.5f, radius, size - radius), cy = Mathf.Clamp(y + 0.5f, radius, size - radius);
+                    float d = Vector2.Distance(new Vector2(x + 0.5f, y + 0.5f), new Vector2(cx, cy));
+                    byte a = (byte)(Mathf.Clamp01(radius - d + 0.5f) * 255);
+                    px[y * size + x] = new Color32(255, 255, 255, a);
+                }
+            tex.SetPixels32(px); tex.Apply();
+            return Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 100, 0, SpriteMeshType.FullRect, new Vector4(radius, radius, radius, radius));
         }
 
         Text AddText(Transform parent, string s, int size, Color c, FontStyle style = FontStyle.Normal, TextAnchor anchor = TextAnchor.UpperLeft)
@@ -308,23 +324,30 @@ namespace SteelMind.Scenario
             return t;
         }
 
-        RectTransform Row(Transform parent, float spacing = 12, bool expand = true)
+        static VerticalLayoutGroup VLayout(GameObject go, int padX, int padY, float spacing)
         {
-            var rt = new GameObject("Row", typeof(RectTransform)).GetComponent<RectTransform>();
-            rt.SetParent(parent, false);
-            var h = rt.gameObject.AddComponent<HorizontalLayoutGroup>();
-            h.spacing = spacing; h.childControlWidth = h.childControlHeight = true; h.childForceExpandWidth = expand; h.childForceExpandHeight = false;
-            h.childAlignment = TextAnchor.UpperLeft;
-            return rt;
+            var v = go.AddComponent<VerticalLayoutGroup>();
+            v.padding = new RectOffset(padX, padX, padY, padY); v.spacing = spacing;
+            v.childControlWidth = v.childControlHeight = true; v.childForceExpandWidth = true; v.childForceExpandHeight = false;
+            return v;
         }
 
-        void Tag(Transform parent, string s, Color c)
+        static HorizontalLayoutGroup HLayout(GameObject go, float spacing, TextAnchor align = TextAnchor.UpperLeft)
         {
-            var p = Panel_(parent, Panel2, c, 6, 0);
-            p.GetComponent<VerticalLayoutGroup>().padding = new RectOffset(10, 10, 3, 3);
-            var t = AddText(p, s, 15, c, FontStyle.Bold);
-            t.horizontalOverflow = HorizontalWrapMode.Overflow;
-            var le = p.gameObject.AddComponent<LayoutElement>(); le.flexibleWidth = 0;
+            var h = go.AddComponent<HorizontalLayoutGroup>();
+            h.spacing = spacing; h.childControlWidth = h.childControlHeight = true; h.childForceExpandWidth = false; h.childForceExpandHeight = false;
+            h.childAlignment = align;
+            return h;
+        }
+
+        static LayoutElement LE(GameObject go, float prefW = -1, float prefH = -1, float flexW = -1)
+        {
+            var le = go.GetComponent<LayoutElement>();
+            if (!le) le = go.AddComponent<LayoutElement>();
+            if (prefW >= 0) { le.preferredWidth = prefW; le.minWidth = prefW; }
+            if (prefH >= 0) { le.preferredHeight = prefH; le.minHeight = prefH; }
+            if (flexW >= 0) le.flexibleWidth = flexW;
+            return le;
         }
 
         Sprite Portrait(string agent)
@@ -332,7 +355,7 @@ namespace SteelMind.Scenario
             if (portraits.TryGetValue(agent, out var sp)) return sp;
             var bytes = Resources.Load<TextAsset>($"Portraits/{agent}");
             if (!bytes) return null;
-            var tex = new Texture2D(2, 2, TextureFormat.RGBA32, false) { filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp };
+            var tex = new Texture2D(2, 2, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp };
             tex.LoadImage(bytes.bytes);
             tex.filterMode = FilterMode.Point;
             sp = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), 100);
@@ -340,121 +363,295 @@ namespace SteelMind.Scenario
             return sp;
         }
 
-        // 초상화 + 말풍선 한 줄
-        void Speech(Transform parent, string agent, string title, string line1, string line2)
-        {
-            var row = Row(parent, 10, false);
-            var pic = new GameObject("Portrait", typeof(RectTransform));
-            pic.transform.SetParent(row, false);
-            var img = pic.AddComponent<Image>(); img.sprite = Portrait(agent); img.preserveAspect = true;
-            var frame = pic.AddComponent<Outline>(); frame.effectColor = Border; frame.effectDistance = new Vector2(2, -2);
-            var le = pic.AddComponent<LayoutElement>(); le.preferredWidth = le.minWidth = 58; le.preferredHeight = le.minHeight = 48;
-            var bubble = Panel_(row, Panel, Border, 10, 2);
-            bubble.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1;
-            AddText(bubble, title, 15, Body);
-            AddText(bubble, line1, 18, Body);
-            if (!string.IsNullOrEmpty(line2)) AddText(bubble, line2, 15, Dim);
-        }
-
         static string C(string hex, string s) => $"<color={hex}>{s}</color>";
         static string ColorHex(Color c) => "#" + ColorUtility.ToHtmlStringRGB(c);
 
-        // ── 사건 창 ────────────────────────────────────────────
-        void BuildEventWindow(ScenarioEvent ev, int index)
+        // ── 운영실 회의방 (채팅) ───────────────────────────────
+        void OpenChat(string title)
         {
-            var w = NewWindow();
-            int n = def.events.Length;
-            var head = Row(w, 10, false);
-            Tag(head, ev.level, LevelCol);
-            Tag(head, $"사건 {index + 1}/{n}", Dim);
-            var title = AddText(head, $"경보: {ev.title}", 22, Red, FontStyle.Bold);
-            title.gameObject.AddComponent<LayoutElement>().flexibleWidth = 1;
-            var demo = AddText(head, "모든 값은 데모용 가상 데이터", 13, Dim, FontStyle.Normal, TextAnchor.MiddleRight);
+            CloseChat();
+            chat = NewRect("Chat", canvas.transform);
+            chat.anchorMin = new Vector2(1, 0); chat.anchorMax = new Vector2(1, 1); chat.pivot = new Vector2(1, 0.5f);
+            chat.offsetMin = new Vector2(-16 - 580, 16); chat.offsetMax = new Vector2(-16, -64);
+            Round(chat.gameObject, Room);
+            VLayout(chat.gameObject, 0, 0, 0).childForceExpandHeight = false;
+
+            var head = NewRect("Header", chat);
+            HLayout(head.gameObject, 8, TextAnchor.MiddleLeft).padding = new RectOffset(18, 18, 12, 10);
+            LE(head.gameObject, -1, 46);
+            chatTitle = AddText(head, title, 18, Body, FontStyle.Bold, TextAnchor.MiddleLeft);
+            LE(chatTitle.gameObject, -1, -1, 1);
+            var demo = AddText(head, "데모용 가상 데이터", 13, Dim, FontStyle.Normal, TextAnchor.MiddleRight);
             demo.horizontalOverflow = HorizontalWrapMode.Overflow;
-            AddText(w, ev.desc, 18, Body);
-            if (EfficiencyCalc.CarryApplies(ev, flags)) AddText(w, ev.carry.note, 16, Red);
-            AddText(w, "AI 에이전트 의견", 14, Cyan, FontStyle.Bold);
-            foreach (var a in ev.agents)
-            {
-                var (name, col) = Agents.TryGetValue(a.agent, out var v) ? v : (a.agent, "#E6E9F0");
-                Speech(w, a.agent, C(col, $"<b>{name}</b>"), a.say, a.why);
-            }
-            Speech(w, "chief", C(ColorHex(Yellow), "<b>공장장 · 쟁점</b>"), ev.chief, null);
-            AddText(w, "선택지", 14, Cyan, FontStyle.Bold);
-            var row = Row(w);
-            row.GetComponent<HorizontalLayoutGroup>().childForceExpandHeight = true;
+
+            var view = NewRect("Viewport", chat);
+            view.gameObject.AddComponent<RectMask2D>();
+            var vle = LE(view.gameObject); vle.flexibleHeight = 1; vle.minHeight = 100;
+            chatContent = NewRect("Content", view);
+            chatContent.anchorMin = new Vector2(0, 1); chatContent.anchorMax = new Vector2(1, 1); chatContent.pivot = new Vector2(0.5f, 1);
+            chatContent.offsetMin = chatContent.offsetMax = Vector2.zero;
+            VLayout(chatContent.gameObject, 16, 10, 12);
+            chatContent.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            chatScroll = view.gameObject.AddComponent<ScrollRect>();
+            chatScroll.content = chatContent; chatScroll.viewport = view; chatScroll.horizontal = false;
+            chatScroll.movementType = ScrollRect.MovementType.Clamped; chatScroll.scrollSensitivity = 30;
+
+            chatFooter = NewRect("Footer", chat);
+            VLayout(chatFooter.gameObject, 16, 10, 8);
+        }
+
+        void CloseChat()
+        {
+            if (chat) Destroy(chat.gameObject);
+            chat = chatContent = chatFooter = null;
+        }
+
+        void ScrollToBottom()
+        {
+            if (!chatContent) return;
+            Canvas.ForceUpdateCanvases();
+            LayoutRebuilder.ForceRebuildLayoutImmediate(chatContent);
+            LayoutRebuilder.ForceRebuildLayoutImmediate(chat);
+            if (chatScroll) chatScroll.verticalNormalizedPosition = 0;
+        }
+
+        void AlertCard(ScenarioEvent ev)
+        {
+            var card = NewRect("Alert", chatContent);
+            Round(card.gameObject, Hex("#3A2424"));
+            VLayout(card.gameObject, 16, 12, 4);
+            AddText(card, $"⚠ 경보 · {ev.title}", 20, Red, FontStyle.Bold);
+            AddText(card, ev.desc, 16, Body);
+            if (EfficiencyCalc.CarryApplies(ev, flags)) AddText(card, ev.carry.note, 15, Red);
+            ScrollToBottom();
+        }
+
+        // 왼쪽: 캐릭터 + 말풍선. header가 null이면 말풍선만(입력 중 표시용)
+        RectTransform AgentMsg(string agent, string header, string text, string sub)
+        {
+            var row = NewRect("Msg", chatContent);
+            HLayout(row.gameObject, 12);
+            var pic = NewRect("Portrait", row);
+            var img = pic.gameObject.AddComponent<Image>(); img.sprite = Portrait(agent); img.preserveAspect = true;
+            LE(pic.gameObject, 48, 64);
+            var bubble = NewRect("Bubble", row);
+            Round(bubble.gameObject, BubbleBg);
+            VLayout(bubble.gameObject, 16, 10, 2);
+            LE(bubble.gameObject, -1, -1, 1);
+            if (header != null) AddText(bubble, header, 16, Body);
+            AddText(bubble, text, 18, header == null ? Dim : Body, header == null ? FontStyle.Bold : FontStyle.Normal);
+            if (!string.IsNullOrEmpty(sub)) AddText(bubble, sub, 14, Dim);
+            ScrollToBottom();
+            return row;
+        }
+
+        // 오른쪽: 내 메시지(노란 말풍선) + 내 캐릭터
+        void PlayerMsg(string text, string sub)
+        {
+            var row = NewRect("Me", chatContent);
+            HLayout(row.gameObject, 12, TextAnchor.UpperRight);
+            var spacer = NewRect("Space", row); LE(spacer.gameObject, 60, -1, 0);
+            var bubble = NewRect("Bubble", row);
+            Round(bubble.gameObject, Yellow);
+            VLayout(bubble.gameObject, 16, 10, 2);
+            LE(bubble.gameObject, -1, -1, 1);
+            AddText(bubble, "<b>나 · 운영 책임자</b>", 15, Hex("#4A3A10"));
+            AddText(bubble, text, 18, Hex("#1A1408"), FontStyle.Bold);
+            if (!string.IsNullOrEmpty(sub)) AddText(bubble, sub, 14, Hex("#4A3A10"));
+            var pic = NewRect("Portrait", row);
+            var img = pic.gameObject.AddComponent<Image>(); img.sprite = Portrait("player"); img.preserveAspect = true;
+            LE(pic.gameObject, 48, 64);
+            ScrollToBottom();
+        }
+
+        void Divider(string label)
+        {
+            var row = NewRect("Divider", chatContent);
+            AddText(row, $"─────  {label}  ─────", 14, Cyan, FontStyle.Bold, TextAnchor.MiddleCenter);
+            VLayout(row.gameObject, 0, 4, 0);
+            ScrollToBottom();
+        }
+
+        void ShowChoices(ScenarioEvent ev)
+        {
+            ClearFooter();
+            AddText(chatFooter, "선택지 · 버튼을 누르거나 키보드 1·2·3", 14, Cyan, FontStyle.Bold);
             for (int k = 0; k < ev.choices.Length; k++)
             {
                 var c = ev.choices[k];
                 var recs = new List<string>();
                 foreach (var a in ev.agents) if (a.rec == c.id && Agents.TryGetValue(a.agent, out var v)) recs.Add(v.name);
-                var btn = Panel_(row, Panel, Border, 12, 3);
-                var le = btn.gameObject.AddComponent<LayoutElement>(); le.minWidth = 0; le.preferredWidth = 10; le.flexibleWidth = 1;
-                var b = btn.gameObject.AddComponent<Button>();
-                b.targetGraphic = btn.GetComponent<Image>();
-                var colors = b.colors; colors.highlightedColor = Hex("#2A3A55"); colors.pressedColor = Hex("#34507A"); b.colors = colors;
-                AddText(btn, $"{C(ColorHex(Yellow), $"{k + 1}.")} {c.label}", 19, Body, FontStyle.Bold);
-                AddText(btn, c.detail, 15, Dim);
-                AddText(btn, recs.Count > 0 ? "추천: " + string.Join("·", recs) : "추천한 에이전트 없음", 14, Accent);
+                var btnRt = NewRect("Choice", chatFooter);
+                var bg = Round(btnRt.gameObject, Hex("#2B2B2B"));
+                HLayout(btnRt.gameObject, 12, TextAnchor.MiddleLeft).padding = new RectOffset(12, 14, 8, 8);
+                var b = btnRt.gameObject.AddComponent<Button>();
+                b.targetGraphic = bg;
+                var colors = b.colors; colors.highlightedColor = Hex("#4A4A4A"); colors.pressedColor = Hex("#5A5A5A"); b.colors = colors;
+                var num = NewRect("Num", btnRt);
+                Round(num.gameObject, Yellow);
+                LE(num.gameObject, 34, 34);
+                var nt = AddText(num, (k + 1).ToString(), 18, Hex("#1A1408"), FontStyle.Bold, TextAnchor.MiddleCenter);
+                var ntr = nt.rectTransform; ntr.anchorMin = Vector2.zero; ntr.anchorMax = Vector2.one; ntr.offsetMin = ntr.offsetMax = Vector2.zero;
+                var col = NewRect("Text", btnRt);
+                VLayout(col.gameObject, 0, 0, 1);
+                LE(col.gameObject, -1, -1, 1);
+                AddText(col, $"<b>{c.label}</b>  {C(ColorHex(Dim), c.detail)}", 17, Body);
+                AddText(col, recs.Count > 0 ? "추천: " + string.Join("·", recs) : "추천한 에이전트 없음", 13, Accent);
                 int captured = k;
                 b.onClick.AddListener(() => Choose(captured));
             }
-            AddText(w, "버튼을 누르거나 키보드 1·2·3으로 고르세요.", 14, Dim);
-            Relayout();
+            ScrollToBottom();
         }
 
-        // ── 결과 창 ────────────────────────────────────────────
-        void ShowResult()
+        void SetFooterHint(string s)
+        {
+            ClearFooter();
+            if (chatFooter) AddText(chatFooter, s, 14, Dim, FontStyle.Normal, TextAnchor.MiddleCenter);
+            ScrollToBottom();
+        }
+
+        void ClearFooter()
+        {
+            if (!chatFooter) return;
+            for (int i = chatFooter.childCount - 1; i >= 0; i--) Destroy(chatFooter.GetChild(i).gameObject);
+        }
+
+        // ── 결과 화면 (게임 결과 연출) ─────────────────────────
+        IEnumerator ResultScreen()
         {
             var r = EfficiencyCalc.Compute(def, picks);
-            var w = NewWindow();
             showingResult = true;
-            var head = Row(w, 10, false);
-            Tag(head, "결과", Cyan);
-            AddText(head, $"교대 근무 종료 · {def.title} 결과", 20, Body, FontStyle.Bold).gameObject.AddComponent<LayoutElement>().flexibleWidth = 1;
-            var demo = AddText(head, "모든 값은 데모용 가상 데이터", 13, Dim, FontStyle.Normal, TextAnchor.MiddleRight);
-            demo.horizontalOverflow = HorizontalWrapMode.Overflow;
+            overlay = NewRect("Result", canvas.transform);
+            overlay.anchorMin = Vector2.zero; overlay.anchorMax = Vector2.one; overlay.offsetMin = overlay.offsetMax = Vector2.zero;
+            overlay.gameObject.AddComponent<Image>().color = new Color(0, 0, 0, 0.78f);
 
-            var cols = Row(w, 14);
-            var left = Panel_(cols, Panel, Border, 14, 8);
-            var right = Panel_(cols, Panel, Border, 14, 8);
-            foreach (var p in new[] { left, right }) { var le = p.gameObject.AddComponent<LayoutElement>(); le.preferredWidth = 10; le.flexibleWidth = 1; }
+            var card = NewRect("Card", overlay);
+            card.anchorMin = card.anchorMax = card.pivot = new Vector2(0.5f, 0.5f);
+            card.sizeDelta = new Vector2(1040, 0);
+            Round(card.gameObject, Room);
+            VLayout(card.gameObject, 28, 22, 12);
+            card.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
 
-            // 왼쪽: 효율, 게이지, 항목별 손실, AI 진단
-            AddText(left, $"운영 효율  100%  →  {C(ColorHex(LossColor(r.drop)), r.finalEfficiency + "%")}", 32, Body, FontStyle.Bold);
-            AddText(left, r.drop == 0 ? "모든 사건에서 최선의 선택을 해 효율을 100% 지켰습니다." : $"최선의 대응과 비교해 효율이 {r.drop}% 떨어졌습니다.", 16, Body);
-            Gauge(left, r.finalEfficiency / 100f, Accent, 14);
-            AddText(left, $"항목별 손실   생산 −{r.totals.production}   품질 −{r.totals.quality}   안전 −{r.totals.safety}   비용 −{r.totals.cost}", 15, Dim);
-            MetricBar(left, "생산", r.totals.production); MetricBar(left, "품질", r.totals.quality);
-            MetricBar(left, "안전", r.totals.safety); MetricBar(left, "비용", r.totals.cost);
-            AddText(left, "AI 진단", 14, Cyan, FontStyle.Bold);
-            Speech(left, "chief", C(ColorHex(Yellow), "<b>공장장 AI</b>") + "  " + C(ColorHex(Dim), "기본 진단 · LLM 연결 전"), Diagnose(r), null);
+            var banner = AddText(card, "교대 근무 종료", 40, Yellow, FontStyle.Bold, TextAnchor.MiddleCenter);
+            AddText(card, $"{def.title} 결과 · 모든 값은 데모용 가상 데이터", 15, Dim, FontStyle.Normal, TextAnchor.MiddleCenter);
+            StartCoroutine(Pop(banner.transform, 1.6f));
 
-            // 오른쪽: 사건별 카드, 다시 하기
-            AddText(right, "사건별 기록", 14, Cyan, FontStyle.Bold);
+            var cols = NewRect("Cols", card);
+            var ch = HLayout(cols.gameObject, 20); ch.childForceExpandWidth = true;
+            var left = NewRect("Left", cols); VLayout(left.gameObject, 0, 0, 8); LE(left.gameObject, 10, -1, 1);
+            var right = NewRect("Right", cols); VLayout(right.gameObject, 0, 0, 10); LE(right.gameObject, 10, -1, 1);
+
+            // 왼쪽: 효율 카운트다운, 게이지, 항목 막대
+            AddText(left, "운영 효율", 16, Dim, FontStyle.Bold);
+            var big = AddText(left, "100%", 72, LossColor(0), FontStyle.Bold);
+            var arrow = AddText(left, "100%  →  …", 16, Dim);
+            var gauge = Gauge(left, 1f, Accent, 16);
+            var sentence = AddText(left, "", 16, Body);
+            var bars = new List<(Image fill, Text val, int loss)>();
+            foreach (var (label, loss) in new[] { ("생산", r.totals.production), ("품질", r.totals.quality), ("안전", r.totals.safety), ("비용", r.totals.cost) })
+                bars.Add(MetricBar(left, label, loss));
+
+            // 오른쪽: 사건 스탬프, AI 진단
+            AddText(right, "사건 기록", 16, Dim, FontStyle.Bold);
+            var stamps = new List<RectTransform>();
             for (int i = 0; i < r.events.Count; i++)
             {
                 var e = r.events[i];
-                var card = Panel_(right, Panel2, Border, 12, 3);
-                var ch = Row(card, 8);
-                AddText(ch, $"{i + 1}. {e.ev.title}", 18, Body, FontStyle.Bold);
-                AddText(ch, e.Total > 0 ? $"효율 −{e.Total}%" : "손실 없음", 18, LossColor(e.Total), FontStyle.Bold, TextAnchor.UpperRight);
-                AddText(card, $"내 선택: {e.chosen.label}   {(e.chosen.best ? C(ColorHex(Accent), "최선의 선택") : C(ColorHex(Dim), $"최선: {e.best.label}"))}", 16, Body);
-                AddText(card, e.chosen.outcome, 15, Dim);
-                if (e.carried) AddText(card, $"{e.ev.carry.note} (효율 −{e.carryLoss}%)", 15, Red);
-                var parts = new List<string>();
-                if (e.loss.production != 0) parts.Add($"생산 −{e.loss.production}");
-                if (e.loss.quality != 0) parts.Add($"품질 −{e.loss.quality}");
-                if (e.loss.safety != 0) parts.Add($"안전 −{e.loss.safety}");
-                if (e.loss.cost != 0) parts.Add($"비용 −{e.loss.cost}");
-                if (parts.Count > 0) AddText(card, string.Join(" · ", parts), 15, LossColor(e.Total));
+                var sc = NewRect("Stamp", right);
+                Round(sc.gameObject, BubbleBg);
+                var h = HLayout(sc.gameObject, 12, TextAnchor.MiddleLeft); h.padding = new RectOffset(16, 16, 10, 10);
+                var txt = NewRect("Txt", sc); VLayout(txt.gameObject, 0, 0, 2); LE(txt.gameObject, -1, -1, 1);
+                AddText(txt, $"<b>{i + 1}. {e.ev.title}</b>", 17, Body);
+                AddText(txt, $"내 선택: {e.chosen.label}" + (e.chosen.best ? "" : C(ColorHex(Dim), $"  ·  최선: {e.best.label}")), 15, Body);
+                AddText(txt, e.chosen.outcome, 13, Dim);
+                if (e.carried) AddText(txt, $"{e.ev.carry.note} (효율 −{e.carryLoss}%)", 13, Red);
+                var stamp = NewRect("Mark", sc);
+                Round(stamp.gameObject, e.chosen.best ? Hex("#24402F") : Hex("#402424"));
+                LE(stamp.gameObject, 108, 56);
+                var st = AddText(stamp, e.chosen.best ? "최선!" : $"−{e.Total}%", e.chosen.best ? 24 : 22, e.Total == 0 ? LossColor(0) : LossColor(e.Total), FontStyle.Bold, TextAnchor.MiddleCenter);
+                var str = st.rectTransform; str.anchorMin = Vector2.zero; str.anchorMax = Vector2.one; str.offsetMin = str.offsetMax = Vector2.zero;
+                sc.gameObject.SetActive(false);
+                stamps.Add(sc);
             }
-            var btn = Panel_(right, Yellow, Yellow, 10, 0);
-            var b = btn.gameObject.AddComponent<Button>();
-            b.targetGraphic = btn.GetComponent<Image>();
-            AddText(btn, "다시 하기 (R)", 19, Hex("#1A1408"), FontStyle.Bold, TextAnchor.MiddleCenter);
+            AddText(right, "AI 진단", 16, Cyan, FontStyle.Bold);
+            var diagRow = NewRect("Diag", right);
+            HLayout(diagRow.gameObject, 12);
+            var pic = NewRect("Portrait", diagRow);
+            var pimg = pic.gameObject.AddComponent<Image>(); pimg.sprite = Portrait("chief"); pimg.preserveAspect = true;
+            LE(pic.gameObject, 48, 64);
+            var bubble = NewRect("Bubble", diagRow);
+            Round(bubble.gameObject, BubbleBg);
+            VLayout(bubble.gameObject, 16, 10, 2);
+            LE(bubble.gameObject, -1, -1, 1);
+            AddText(bubble, $"{C(ColorHex(Yellow), "<b>공장장 AI</b>")} {C(ColorHex(Dim), "· 기본 진단 (LLM 연결 전)")}", 15, Body);
+            var diag = AddText(bubble, "", 16, Body);
+            diagRow.gameObject.SetActive(false);
+
+            var btnRt = NewRect("Restart", card);
+            var bimg = Round(btnRt.gameObject, Yellow);
+            LE(btnRt.gameObject, -1, 50);
+            var b = btnRt.gameObject.AddComponent<Button>(); b.targetGraphic = bimg;
+            var bt = AddText(btnRt, "다시 하기 (R)", 20, Hex("#1A1408"), FontStyle.Bold, TextAnchor.MiddleCenter);
+            var btr = bt.rectTransform; btr.anchorMin = Vector2.zero; btr.anchorMax = Vector2.one; btr.offsetMin = btr.offsetMax = Vector2.zero;
             b.onClick.AddListener(Restart);
-            Relayout();
+            btnRt.gameObject.SetActive(false);
+            LayoutRebuilder.ForceRebuildLayoutImmediate(card);
+
+            // 연출: 숫자가 100에서 최종값으로 내려가고 막대가 줄어든다
+            yield return new WaitForSeconds(0.6f);
+            float dur = 1.4f, t = 0;
+            var gfill = gauge.GetChild(0).GetComponent<RectTransform>();
+            while (t < dur)
+            {
+                t += Time.deltaTime;
+                float k = Mathf.SmoothStep(0, 1, t / dur);
+                int shown = Mathf.RoundToInt(Mathf.Lerp(100, r.finalEfficiency, k));
+                big.text = shown + "%";
+                big.color = LossColor(100 - shown);
+                gfill.anchorMax = new Vector2(shown / 100f, 1);
+                foreach (var (fill, val, loss) in bars)
+                {
+                    float rem = Mathf.Lerp(100, 100 - loss, k);
+                    fill.rectTransform.anchorMax = new Vector2(rem / 100f, 1);
+                    val.text = loss > 0 ? $"−{Mathf.RoundToInt(loss * k)}" : "0";
+                }
+                yield return null;
+            }
+            big.text = r.finalEfficiency + "%";
+            arrow.text = $"운영 효율  100%  →  {r.finalEfficiency}%";
+            sentence.text = r.drop == 0 ? "모든 사건에서 최선의 선택을 해 효율을 100% 지켰습니다." : $"최선의 대응과 비교해 효율이 {r.drop}% 떨어졌습니다.";
+            StartCoroutine(Pop(big.transform, 1.25f));
+            yield return new WaitForSeconds(0.4f);
+            foreach (var s in stamps)
+            {
+                s.gameObject.SetActive(true);
+                LayoutRebuilder.ForceRebuildLayoutImmediate(card);
+                StartCoroutine(Pop(s.GetChild(1), 1.8f));
+                yield return new WaitForSeconds(0.45f);
+            }
+            diagRow.gameObject.SetActive(true);
+            var full = Diagnose(r);
+            for (int i = 1; i <= full.Length; i++)
+            {
+                diag.text = full.Substring(0, i);
+                if (i % 3 == 0) LayoutRebuilder.ForceRebuildLayoutImmediate(card);
+                yield return new WaitForSeconds(0.015f);
+            }
+            btnRt.gameObject.SetActive(true);
+            LayoutRebuilder.ForceRebuildLayoutImmediate(card);
+        }
+
+        IEnumerator Pop(Transform tr, float from)
+        {
+            float t = 0, dur = 0.25f;
+            while (t < dur && tr)
+            {
+                t += Time.deltaTime;
+                float s = Mathf.Lerp(from, 1f, Mathf.SmoothStep(0, 1, t / dur));
+                tr.localScale = new Vector3(s, s, 1);
+                yield return null;
+            }
+            if (tr) tr.localScale = Vector3.one;
         }
 
         // 결과로 만든 기본 진단 문장 (나중에 LLM 진단 로그로 바꾼다)
@@ -476,35 +673,29 @@ namespace SteelMind.Scenario
             return sb.ToString().Trim();
         }
 
-        void MetricBar(Transform parent, string label, int loss)
+        (Image, Text, int) MetricBar(Transform parent, string label, int loss)
         {
-            var row = Row(parent, 10, false);
-            var t = AddText(row, label, 15, Body);
-            var tl = t.gameObject.AddComponent<LayoutElement>(); tl.preferredWidth = tl.minWidth = 44;
-            var bar = Gauge(row, Mathf.Clamp01((100 - loss) / 100f), LossColor(loss), 10);
-            var bl = bar.gameObject.GetComponent<LayoutElement>(); bl.flexibleWidth = 1; bl.preferredWidth = 10;
-            var v = AddText(row, loss > 0 ? $"−{loss}" : "0", 15, LossColor(loss), FontStyle.Bold, TextAnchor.UpperRight);
-            var vl = v.gameObject.AddComponent<LayoutElement>(); vl.preferredWidth = vl.minWidth = 44;
+            var row = NewRect("Metric", parent);
+            HLayout(row.gameObject, 10, TextAnchor.MiddleLeft);
+            var t = AddText(row, label, 16, Body, FontStyle.Bold);
+            LE(t.gameObject, 44);
+            var bar = Gauge(row, 1f, LossColor(loss), 12);
+            LE(bar.gameObject, 10, 12, 1);
+            var v = AddText(row, "0", 16, LossColor(loss), FontStyle.Bold, TextAnchor.MiddleRight);
+            LE(v.gameObject, 48);
+            return (bar.GetChild(0).GetComponent<Image>(), v, loss);
         }
 
         RectTransform Gauge(Transform parent, float ratio, Color color, float height)
         {
-            var bg = new GameObject("Gauge", typeof(RectTransform)).GetComponent<RectTransform>();
-            bg.SetParent(parent, false);
-            bg.gameObject.AddComponent<Image>().color = Hex("#2A3346");
-            var le = bg.gameObject.AddComponent<LayoutElement>(); le.preferredHeight = le.minHeight = height;
-            var fill = new GameObject("Fill", typeof(RectTransform)).GetComponent<RectTransform>();
-            fill.SetParent(bg, false);
+            var bg = NewRect("Gauge", parent);
+            Round(bg.gameObject, Hex("#3A3A3A")).pixelsPerUnitMultiplier = 4f;
+            LE(bg.gameObject, -1, height);
+            var fill = NewRect("Fill", bg);
             fill.anchorMin = Vector2.zero; fill.anchorMax = new Vector2(Mathf.Clamp01(ratio), 1);
             fill.offsetMin = fill.offsetMax = Vector2.zero;
-            fill.gameObject.AddComponent<Image>().color = color;
+            Round(fill.gameObject, color).pixelsPerUnitMultiplier = 4f;
             return bg;
-        }
-
-        void Relayout()
-        {
-            Canvas.ForceUpdateCanvases();
-            if (window) LayoutRebuilder.ForceRebuildLayoutImmediate(window);
         }
 
         static Color LossColor(int loss) => loss == 0 ? Hex("#6FCF97") : loss <= 15 ? Hex("#E8C25A") : Hex("#FF6B6B");
