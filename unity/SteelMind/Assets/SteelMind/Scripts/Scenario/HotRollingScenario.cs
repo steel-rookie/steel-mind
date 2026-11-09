@@ -213,7 +213,7 @@ namespace SteelMind.Scenario
             yield return ResultScreen();
         }
 
-        // 사건 발생: 경보 + 붉은 깜빡임 → 암전 후 해당 설비 앞으로 이동 → 회의
+        // 사건 발생: 경보 + 붉은 깜빡임 → 화살표 따라 설비까지 걸어감 → 회의
         IEnumerator GoToSite(int i)
         {
             var ev = def.events[i];
@@ -231,22 +231,22 @@ namespace SteelMind.Scenario
                 img.color = new Color(0.9f, 0.1f, 0.08f, 0.38f * k * k);
                 yield return null;
             }
-            // 화면을 잠깐 어둡게 했다가 문제가 난 설비 바로 앞에 플레이어를 세운다
-            var eq = line ? line.equipment.Find(e => e.id == ev.warn) : null;
-            if (eq != null && eq.renderer && player)
-            {
-                img.color = new Color(0, 0, 0, 0);
-                for (float t = 0; t < 0.35f; t += Time.deltaTime) { img.color = new Color(0, 0, 0, Mathf.SmoothStep(0, 1, t / 0.35f)); yield return null; }
-                img.color = Color.black;
-                var bb = eq.renderer.bounds;
-                Vector2 spot = new Vector2(bb.center.x, bb.min.y - 0.8f);
-                if (body) { body.linearVelocity = Vector2.zero; body.position = spot; }
-                player.transform.position = new Vector3(spot.x, spot.y, player.transform.position.z);
-                yield return new WaitForSeconds(0.45f);   // 카메라가 따라올 시간
-                for (float t = 0; t < 0.5f; t += Time.deltaTime) { img.color = new Color(0, 0, 0, 1f - Mathf.SmoothStep(0, 1, t / 0.5f)); yield return null; }
-            }
             Destroy(go);
-            yield return new WaitForSeconds(0.15f);
+            SetFrozen(false);
+            // 문제가 난 설비까지 화살표를 따라 걸어간다. 가까이 가면 회의가 열린다.
+            var eq = line ? line.equipment.Find(e => e.id == ev.warn) : null;
+            if (eq == null || !eq.renderer || !player) yield break;
+            guideTarget = eq.renderer.bounds;
+            guideName = eq.label;
+            SetStatus($"⚠ {ev.title} · {eq.label}(으)로 가세요");
+            ShowGuide();
+            while (true)
+            {
+                var bb = guideTarget; bb.Expand(new Vector3(ArriveRange * 2, ArriveRange * 2, 10));
+                if (bb.Contains(new Vector3(player.transform.position.x, player.transform.position.y, bb.center.z))) break;
+                yield return null;
+            }
+            HideGuide();
         }
 
         // 미연시 회의: 경보 → Agent가 한 명씩 나와 말함(클릭·Space로 넘김) → 선택 → 내 말 → 반응
