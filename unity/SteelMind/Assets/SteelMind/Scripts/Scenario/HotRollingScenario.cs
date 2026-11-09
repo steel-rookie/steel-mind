@@ -212,25 +212,26 @@ namespace SteelMind.Scenario
             yield return ResultScreen();
         }
 
-        // 사건 발생: 경보를 켜고 설비까지 길을 안내한다. 가까이 가면 회의가 열린다.
+        // 사건 발생: 경보를 켜고 화면을 붉게 몇 번 깜빡인 뒤 바로 회의를 연다 (설비까지 걸어갈 필요 없음)
         IEnumerator GoToSite(int i)
         {
             var ev = def.events[i];
             Music(true);
             if (line && !string.IsNullOrEmpty(ev.warn)) line.SetWarning(ev.warn, true);
-            var eq = line ? line.equipment.Find(e => e.id == ev.warn) : null;
-            if (eq == null || !eq.renderer || !player) yield break;
-            guideTarget = eq.renderer.bounds;
-            guideName = eq.label;
-            SetStatus($"⚠ {ev.title} · {eq.label}(으)로 가세요");
-            ShowGuide();
-            while (true)
+            SetFrozen(true);
+            var go = new GameObject("AlarmFlash", typeof(RectTransform));
+            go.transform.SetParent(canvas.transform, false);
+            var rt = (RectTransform)go.transform; rt.anchorMin = Vector2.zero; rt.anchorMax = Vector2.one; rt.offsetMin = rt.offsetMax = Vector2.zero;
+            var img = go.AddComponent<Image>(); img.raycastTarget = false;
+            const int blinks = 3; const float period = 0.5f;
+            for (float t = 0; t < blinks * period; t += Time.deltaTime)
             {
-                var b = guideTarget; b.Expand(new Vector3(ArriveRange * 2, ArriveRange * 2, 10));
-                if (b.Contains(new Vector3(player.transform.position.x, player.transform.position.y, b.center.z))) break;
+                float k = Mathf.Sin(t / period * Mathf.PI); // 0→1→0 한 번 깜빡임마다
+                img.color = new Color(0.9f, 0.1f, 0.08f, 0.38f * k * k);
                 yield return null;
             }
-            HideGuide();
+            Destroy(go);
+            yield return new WaitForSeconds(0.15f);
         }
 
         // 미연시 회의: 경보 → Agent가 한 명씩 나와 말함(클릭·Space로 넘김) → 선택 → 내 말 → 반응
