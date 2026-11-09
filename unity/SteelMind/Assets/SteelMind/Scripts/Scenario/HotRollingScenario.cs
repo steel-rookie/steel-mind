@@ -478,24 +478,40 @@ namespace SteelMind.Scenario
         void OpenChat(ScenarioEvent ev, int index, int n)
         {
             CloseChat();
-            const float sideW = 340, chatW = 520, gap = 12, top = 64, bottom = 16, right = 16;
-            // 왼쪽: 대화
+            // 가운데 채팅방 + 오른쪽에 붙은 선택 패널 (둘을 합친 폭을 화면 가운데에)
+            const float chatW = 760, sideW = 330, gap = 12, top = 36, bottom = 36;
+            float left = -(chatW + gap + sideW) / 2f;
             chat = NewRect("Chat", canvas.transform);
-            chat.anchorMin = new Vector2(1, 0); chat.anchorMax = new Vector2(1, 1); chat.pivot = new Vector2(1, 0.5f);
-            chat.offsetMin = new Vector2(-right - sideW - gap - chatW, bottom); chat.offsetMax = new Vector2(-right - sideW - gap, -top);
-            Round(chat.gameObject, Room);
+            chat.anchorMin = new Vector2(0.5f, 0); chat.anchorMax = new Vector2(0.5f, 1); chat.pivot = new Vector2(0, 0.5f);
+            chat.offsetMin = new Vector2(left, bottom); chat.offsetMax = new Vector2(left + chatW, -top);
+            Round(chat.gameObject, Hex("#262626", 0.98f));
             VLayout(chat.gameObject, 0, 0, 0);
 
-            // 고정된 제목: 사건 카드
-            var head = NewRect("Pinned", chat);
-            Round(head.gameObject, Hex("#3A2426"));
-            var hh = HLayout(head.gameObject, 12, TextAnchor.UpperLeft); hh.padding = new RectOffset(0, 16, 0, 0); hh.childForceExpandHeight = true; hh.childControlHeight = true;
-            var stripe = NewRect("Stripe", head); stripe.gameObject.AddComponent<Image>().color = Red; LE(stripe.gameObject, 5);
-            var hcol = NewRect("Col", head); VLayout(hcol.gameObject, 4, 12, 3); LE(hcol.gameObject, -1, -1, 1);
-            AddText(hcol, $"{C(ColorHex(Orange), ev.level)}  ·  사건 {index + 1}/{n}  ·  {C(ColorHex(Dim), "고정됨")}", 13, Dim, FontStyle.Bold);
-            AddText(hcol, $"⚠ {ev.title}", 21, Color.white, FontStyle.Bold);
-            AddText(hcol, ev.desc, 15, Hex("#F3DEDE"));
-            if (EfficiencyCalc.CarryApplies(ev, flags)) AddText(hcol, ev.carry.note, 14, Hex("#FF9A9A"));
+            // 머리: 공장장 + 방 이름 + 경보 표시
+            var head = NewRect("Header", chat);
+            var hh = HLayout(head.gameObject, 12, TextAnchor.MiddleLeft); hh.padding = new RectOffset(22, 22, 14, 14);
+            var hle = LE(head.gameObject); hle.flexibleHeight = 0;
+            var hav = NewRect("Avatar", head); var hai = hav.gameObject.AddComponent<Image>(); hai.sprite = LoadSprite("Portraits/chief"); hai.preserveAspect = true; LE(hav.gameObject, 34, 44);
+            var ht = AddText(head, $"<b>열연 2라인 긴급 회의 ({ev.agents.Length + 2})</b>", 20, Body, FontStyle.Normal, TextAnchor.MiddleLeft);
+            LE(ht.gameObject, -1, -1, 1);
+            var pill = NewRect("Pill", head);
+            Round(pill.gameObject, Hex("#3A2224"));
+            var ph = HLayout(pill.gameObject, 0, TextAnchor.MiddleCenter); ph.padding = new RectOffset(14, 14, 6, 6);
+            var po = pill.gameObject.AddComponent<Outline>(); po.effectColor = Red; po.effectDistance = new Vector2(1.5f, -1.5f);
+            var pt = AddText(pill, $"⚠ {ev.level} · 사건 {index + 1}/{n}", 15, Hex("#FFD6D6"), FontStyle.Bold, TextAnchor.MiddleCenter);
+            pt.horizontalOverflow = HorizontalWrapMode.Overflow;
+            var line1 = NewRect("Line", chat); line1.gameObject.AddComponent<Image>().color = Hex("#333333"); LE(line1.gameObject, -1, 1).flexibleHeight = 0;
+
+            // 고정된 사건 카드 (작게, 내용 높이만큼)
+            var pinWrap = NewRect("PinWrap", chat);
+            VLayout(pinWrap.gameObject, 22, 12, 0); LE(pinWrap.gameObject).flexibleHeight = 0;
+            var pin = NewRect("Pinned", pinWrap);
+            Round(pin.gameObject, Hex("#4A2426"));
+            var pino = pin.gameObject.AddComponent<Outline>(); pino.effectColor = Hex("#C8504E"); pino.effectDistance = new Vector2(1.5f, -1.5f);
+            VLayout(pin.gameObject, 18, 10, 2);
+            AddText(pin, $"<b>⚠ {ev.title}</b>", 19, Color.white, FontStyle.Normal, TextAnchor.UpperCenter);
+            AddText(pin, ev.desc, 15, Hex("#F3DEDE"), FontStyle.Normal, TextAnchor.UpperCenter);
+            if (EfficiencyCalc.CarryApplies(ev, flags)) AddText(pin, ev.carry.note, 14, Hex("#FF9A9A"), FontStyle.Normal, TextAnchor.UpperCenter);
 
             var view = NewRect("Viewport", chat);
             view.gameObject.AddComponent<RectMask2D>();
@@ -503,27 +519,25 @@ namespace SteelMind.Scenario
             msgs = NewRect("Messages", view);
             msgs.anchorMin = new Vector2(0, 1); msgs.anchorMax = new Vector2(1, 1); msgs.pivot = new Vector2(0.5f, 1);
             msgs.offsetMin = msgs.offsetMax = Vector2.zero;
-            VLayout(msgs.gameObject, 18, 14, 14);
+            VLayout(msgs.gameObject, 22, 6, 18);
             msgs.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
             scroll = view.gameObject.AddComponent<ScrollRect>();
             scroll.content = msgs; scroll.viewport = view; scroll.horizontal = false;
             scroll.movementType = ScrollRect.MovementType.Clamped; scroll.scrollSensitivity = 30;
 
-            // 오른쪽: 선택
-            side = NewRect("Decision", canvas.transform);
-            side.anchorMin = new Vector2(1, 0); side.anchorMax = new Vector2(1, 1); side.pivot = new Vector2(1, 0.5f);
-            side.offsetMin = new Vector2(-right - sideW, bottom); side.offsetMax = new Vector2(-right, -top);
-            Round(side.gameObject, Room);
+            // 오른쪽: 내 답장(선택지)
+            side = NewRect("Reply", canvas.transform);
+            side.anchorMin = new Vector2(0.5f, 0); side.anchorMax = new Vector2(0.5f, 1); side.pivot = new Vector2(0, 0.5f);
+            side.offsetMin = new Vector2(left + chatW + gap, bottom); side.offsetMax = new Vector2(left + chatW + gap + sideW, -top);
+            Round(side.gameObject, Hex("#262626", 0.98f));
             VLayout(side.gameObject, 18, 18, 12);
-            AddText(side, "내 결정", 13, Orange, FontStyle.Bold);
-            AddText(side, ev.title, 21, Color.white, FontStyle.Bold);
+            AddText(side, "내 답장", 18, Body, FontStyle.Bold);
             var prog = NewRect("Progress", side); HLayout(prog.gameObject, 10, TextAnchor.MiddleLeft);
             progressText = AddText(prog, $"의견 0/{ev.agents.Length + 1}", 13, Dim);
             LE(progressText.gameObject, 70);
-            var bar = NewRect("Bar", prog); Round(bar.gameObject, Hex("#2C2F35"), 6f); LE(bar.gameObject, 10, 6, 1);
+            var bar = NewRect("Bar", prog); Round(bar.gameObject, Hex("#3A3A3A"), 6f); LE(bar.gameObject, 10, 6, 1);
             progressFill = NewRect("Fill", bar); progressFill.anchorMin = Vector2.zero; progressFill.anchorMax = new Vector2(0, 1); progressFill.offsetMin = progressFill.offsetMax = Vector2.zero;
             Round(progressFill.gameObject, Teal, 6f);
-
             opts = NewRect("Options", side); VLayout(opts.gameObject, 0, 0, 10);
             for (int k = 0; k < ev.choices.Length; k++) OptionCard(ev, k);
             opts.gameObject.AddComponent<CanvasGroup>();
@@ -537,20 +551,20 @@ namespace SteelMind.Scenario
         {
             var c = ev.choices[k];
             var rt = NewRect("Option", opts);
-            var bg = Round(rt.gameObject, Card);
-            var h = HLayout(rt.gameObject, 14, TextAnchor.UpperLeft); h.padding = new RectOffset(14, 14, 12, 12);
+            var bg = Round(rt.gameObject, Hex("#2F3B39"));
+            var bo = rt.gameObject.AddComponent<Outline>(); bo.effectColor = Hex("#3F5551"); bo.effectDistance = new Vector2(1.5f, -1.5f);
+            var h = HLayout(rt.gameObject, 14, TextAnchor.MiddleLeft); h.padding = new RectOffset(16, 16, 14, 14);
             var b = rt.gameObject.AddComponent<Button>(); b.targetGraphic = bg;
-            var cs = b.colors; cs.highlightedColor = Hex("#2E3A3A"); cs.pressedColor = Hex("#355552"); cs.disabledColor = Color.white; b.colors = cs;
-            var badge = NewRect("Badge", rt); Round(badge.gameObject, Teal); LE(badge.gameObject, 38, 38);
+            var cs = b.colors; cs.highlightedColor = Hex("#E0FFF8"); cs.pressedColor = Hex("#C8EDE5"); cs.disabledColor = Color.white; b.colors = cs;
+            var badge = NewRect("Badge", rt); Round(badge.gameObject, Teal, 0.6f); LE(badge.gameObject, 36, 36);
             var bt = AddText(badge, Abc[k], 19, Hex("#0B221E"), FontStyle.Bold, TextAnchor.MiddleCenter);
             var btr = bt.rectTransform; btr.anchorMin = Vector2.zero; btr.anchorMax = Vector2.one; btr.offsetMin = btr.offsetMax = Vector2.zero;
             var col = NewRect("Col", rt); VLayout(col.gameObject, 0, 0, 3); LE(col.gameObject, -1, -1, 1);
-            AddText(col, c.label, 18, Color.white, FontStyle.Bold);
-            AddText(col, c.detail, 14, Dim);
+            AddText(col, c.label, 19, Color.white, FontStyle.Bold);
             var recs = new List<string>();
             foreach (var a in ev.agents)
-                if (a.rec == c.id && Agents.TryGetValue(a.agent, out var v)) recs.Add($"{C(v.color, "●")} {v.name} 추천");
-            AddText(col, recs.Count > 0 ? string.Join("   ", recs) : C(ColorHex(Dim), "추천한 에이전트 없음"), 13, Hex("#D7DADE"));
+                if (a.rec == c.id && Agents.TryGetValue(a.agent, out var v)) recs.Add(v.name);
+            AddText(col, c.detail + (recs.Count > 0 ? $"  ·  {C(ColorHex(Teal), string.Join("·", recs) + " 추천")}" : ""), 14, Dim);
             int captured = k;
             b.onClick.AddListener(() => Choose(captured));
         }
@@ -616,20 +630,24 @@ namespace SteelMind.Scenario
             if (!msgs) yield break;
             var (name, color, persona) = Agents.TryGetValue(agent, out var v) ? v : (agent, "#EEF0F3", "");
             var row = NewRect("Msg", msgs);
-            HLayout(row.gameObject, 12, me ? TextAnchor.UpperRight : TextAnchor.UpperLeft).reverseArrangement = me;
+            var rh = HLayout(row.gameObject, 14, me ? TextAnchor.UpperRight : TextAnchor.UpperLeft);
+            rh.reverseArrangement = me;
             var ava = NewRect("Avatar", row);
-            var ai = ava.gameObject.AddComponent<Image>(); ai.sprite = Avatar(agent, stance); ai.preserveAspect = true;
-            LE(ava.gameObject, 52, 52);
-            var col = NewRect("Col", row); VLayout(col.gameObject, 0, 0, 4); LE(col.gameObject, -1, -1, 1);
-            var stanceTag = stance != null && Stance.TryGetValue(stance, out var st) ? $"   {C(st.color, $"<b>{stance}</b>")}" : "";
-            AddText(col, $"{C(color, $"<b>{name}</b>")}  {C(ColorHex(Dim), persona)}{stanceTag}", 14, Body, FontStyle.Normal, me ? TextAnchor.UpperRight : TextAnchor.UpperLeft);
-            var bub = NewRect("Bubble", col);
-            Round(bub.gameObject, me ? Teal : Bubble);
-            VLayout(bub.gameObject, 16, 11, 4);
-            var t = AddText(bub, "", 17, me ? Hex("#0B221E") : Body, me ? FontStyle.Bold : FontStyle.Normal);
+            var ai = ava.gameObject.AddComponent<Image>(); ai.sprite = LoadSprite($"Portraits/{agent}"); ai.preserveAspect = true;
+            LE(ava.gameObject, 58, 77);
+            var bub = NewRect("Bubble", row);
+            Round(bub.gameObject, me ? Teal : Hex("#333333"), 1.0f);
+            VLayout(bub.gameObject, 20, 14, 5);
+            LE(bub.gameObject, -1, -1, 1);
+            // 이름 · 페르소나 칩 · 감정 배지(색 동그라미 안에 흰 글씨)
+            var hr = NewRect("Head", bub); HLayout(hr.gameObject, 8, TextAnchor.MiddleLeft);
+            var nm = AddText(hr, $"<b>{name}</b>", 16, me ? Hex("#0B221E") : Hex(color), FontStyle.Normal, TextAnchor.MiddleLeft);
+            nm.horizontalOverflow = HorizontalWrapMode.Overflow;
+            Chip(hr, persona, me ? Hex("#0B221E", 0.12f) : Hex("#FFFFFF", 0.08f), me ? Hex("#1D4A42") : Dim, false);
+            if (stance != null && StanceBadge.TryGetValue(stance, out var badge)) Chip(hr, stance, badge, Color.white, true);
+            var t = AddText(bub, "", 19, me ? Hex("#0B221E") : Body, me ? FontStyle.Bold : FontStyle.Normal);
             ScrollToBottom();
 
-            // 입력 중 …
             float w = 0; skip = false;
             while (w < (me ? 0.25f : TypingDots) && !skip)
             {
@@ -637,19 +655,32 @@ namespace SteelMind.Scenario
                 t.text = C(me ? "#0B221E" : "#8A8F99", new string('●', d));
                 w += Time.deltaTime; yield return null;
             }
-            // 한 글자씩
             for (int i = 1; i <= text.Length && !skip; i++)
             {
-                t.text = text.Substring(0, i) + C(ColorHex(Teal), "▍");
+                t.text = text.Substring(0, i) + C(me ? "#0B221E" : ColorHex(Teal), "▍");
                 if (i % 4 == 0) ScrollToBottom();
                 float c = 0; while (c < CharDelay && !skip) { c += Time.deltaTime; yield return null; }
             }
             t.text = text;
-            if (!string.IsNullOrEmpty(sub)) AddText(bub, sub, 14, me ? Hex("#1D4A42") : Dim);
+            if (!string.IsNullOrEmpty(sub)) AddText(bub, sub, 15, me ? Hex("#1D4A42") : Dim);
             ScrollToBottom();
             skip = false;
             yield return Wait(NextSpeaker);
             skip = false;
+        }
+
+        static readonly Dictionary<string, Color> StanceBadge = new Dictionary<string, Color>
+        {
+            { "불만", Hex("#E5533D") }, { "찬성", Hex("#3BAA6E") }, { "경고", Hex("#E0A020") },
+        };
+
+        void Chip(Transform parent, string label, Color bg, Color fg, bool bold)
+        {
+            var c = NewRect("Chip", parent);
+            Round(c.gameObject, bg, 0.6f);
+            var h = HLayout(c.gameObject, 0, TextAnchor.MiddleCenter); h.padding = new RectOffset(10, 10, 3, 3);
+            var t = AddText(c, label, 13, fg, bold ? FontStyle.Bold : FontStyle.Normal, TextAnchor.MiddleCenter);
+            t.horizontalOverflow = HorizontalWrapMode.Overflow;
         }
 
         // ── 결과 화면 (게임 결과 연출) ─────────────────────────
