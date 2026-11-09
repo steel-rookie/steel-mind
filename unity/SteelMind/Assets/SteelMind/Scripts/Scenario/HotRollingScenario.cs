@@ -1261,7 +1261,7 @@ namespace SteelMind.Scenario
             view.gameObject.AddComponent<RectMask2D>();
             var sr = view.gameObject.AddComponent<ScrollRect>(); sr.viewport = view; sr.horizontal = false; sr.scrollSensitivity = 40; sr.movementType = ScrollRect.MovementType.Clamped;
             reportPages.Clear(); reportScroll = sr; tabTexts.Clear(); tabBars.Clear();
-            string[] titles = { "진단 결과", "AI 판단 로그", "검증 계획", "회차 기록" };
+            string[] titles = { "진단 결과", "재훈련 전후", "AI 판단 로그", "검증 계획", "회차 기록" };
             for (int t = 0; t < titles.Length; t++)
             {
                 var pg = NewRect("Page", view); pg.anchorMin = pg.anchorMax = new Vector2(0.5f, 1); pg.pivot = new Vector2(0.5f, 1); pg.sizeDelta = new Vector2(1180, 0);
@@ -1284,7 +1284,7 @@ namespace SteelMind.Scenario
 
             // ── 1. 진단 결과 ──
             if (retrainTarget != null && retrainBefore != null && retrainFrom >= 0 && eventDeltas.Count > retrainFrom)
-                RetrainCard(P(0), r);
+                RetrainBanner(P(0));
             var row = NewRect("Row", P(0)); var rh = HLayout(row.gameObject, 24, TextAnchor.UpperLeft); rh.childForceExpandHeight = false;
             // 왼쪽: 레이더
             var left = NewRect("Left", row); VLayout(left.gameObject, 0, 0, 6); LE(left.gameObject, 380);
@@ -1408,9 +1408,12 @@ namespace SteelMind.Scenario
             var dl = Button_(btns, "진단 기록 파일로 저장", RCard, RText, 44); LE(dl.gameObject, 190, 44); dl.onClick.AddListener(() => SaveDiagnosisJson(record, r));
             var close = Button_(btns, "닫기 (Esc)", RCard, RText, 44); LE(close.gameObject, 120, 44); close.onClick.AddListener(CloseReport);
 
-            // ── 2. AI 판단 로그 ──
-            AddText(P(1), $"AI가 매 상황 전에 무엇을 보고 다음 상황을 골랐는지, 각 상황 뒤 역량 점수가 어떻게 바뀌었는지입니다.  <color=#8B96A8>운영 효율 {r.finalEfficiency}% · 최선의 선택 {rep.bestCount}/{def.events.Length}</color>", 14, RMute);
-            var logBox = RBox(P(1), null, 14);
+            // ── 2. 재훈련 전후 (가운데를 기준으로 왼쪽 BEFORE · 오른쪽 AFTER 막대 그래프) ──
+            BeforeAfterTab(P(1), r, weak);
+
+            // ── 3. AI 판단 로그 ──
+            AddText(P(2), $"AI가 매 상황 전에 무엇을 보고 다음 상황을 골랐는지, 각 상황 뒤 역량 점수가 어떻게 바뀌었는지입니다.  <color=#8B96A8>운영 효율 {r.finalEfficiency}% · 최선의 선택 {rep.bestCount}/{def.events.Length}</color>", 14, RMute);
+            var logBox = RBox(P(2), null, 14);
             LogRow(logBox, "#", "상황", "AI가 고른 이유", "판단", "점수 변화", true);
             for (int i = 0; i < r.events.Count; i++)
             {
@@ -1422,8 +1425,8 @@ namespace SteelMind.Scenario
             }
 
             // ── 3. 검증 계획 ──
-            AddText(P(2), "\"매뉴얼을 그냥 주면 더 빠르지 않나?\"는 실험으로 답해야 합니다. 아래는 <b>검증 계획</b>이며, 아직 실제 사람으로 검증한 결과가 아닙니다.", 16, RText);
-            var vb = RBox(P(2), null, 14);
+            AddText(P(3), "\"매뉴얼을 그냥 주면 더 빠르지 않나?\"는 실험으로 답해야 합니다. 아래는 <b>검증 계획</b>이며, 아직 실제 사람으로 검증한 결과가 아닙니다.", 16, RText);
+            var vb = RBox(P(3), null, 14);
             LogRow(vb, null, "비교 항목", "기존 방식", "STEEL MIND", "", true);
             foreach (var (a, b, c) in new[] {
                 ("교육", "동일한 매뉴얼", "취약 역량별 상황"),
@@ -1432,11 +1435,11 @@ namespace SteelMind.Scenario
                 ("재평가", "같은 문제 반복", "조건이 다른 처음 보는 상황"),
                 ("성과 측정", "정답률", "역량 점수 변화, 위험한 오판 수, 교육 시간") })
                 LogRow(vb, null, a, b, c, "", false);
-            AddText(P(2), "검증 목표: ① 같은 시간 안에 취약 역량을 얼마나 정확히 찾는가 ② 재훈련 뒤 처음 보는 상황에서 수행이 나아지는가.", 14, RMute);
-            AddText(P(2), "근거: 상황판단검사(SJT)의 직무 성과 예측 타당도 ρ=.34 (McDaniel 외, 2001) · 적응형 검사의 최대 정보량 문항 선택 (Han, 2018) · NCS 1601020010 열간압연 안전관리 외.", 13, RMute);
+            AddText(P(3), "검증 목표: ① 같은 시간 안에 취약 역량을 얼마나 정확히 찾는가 ② 재훈련 뒤 처음 보는 상황에서 수행이 나아지는가.", 14, RMute);
+            AddText(P(3), "근거: 상황판단검사(SJT)의 직무 성과 예측 타당도 ρ=.34 (McDaniel 외, 2001) · 적응형 검사의 최대 정보량 문항 선택 (Han, 2018) · NCS 1601020010 열간압연 안전관리 외.", 13, RMute);
 
             // ── 4. 회차 기록 ──
-            var runsCard = RBox(P(3), null, 16);
+            var runsCard = RBox(P(4), null, 16);
             var rhd = NewRect("Head", runsCard); HLayout(rhd.gameObject, 8, TextAnchor.MiddleLeft);
             var rtt = AddText(rhd, "<b>회차 기록</b>  <color=#8B96A8>끝낸 판은 자동으로 저장됩니다 (최근 순)</color>", 16, RText, FontStyle.Normal, TextAnchor.MiddleLeft); LE(rtt.gameObject, -1, -1, 1);
             var clearBtn = SmallButton(rhd, "기록 지우기");
@@ -1448,7 +1451,7 @@ namespace SteelMind.Scenario
             ApplyReportFont(overlay);
             LayoutRebuilder.ForceRebuildLayoutImmediate(page);
             foreach (var pg in reportPages) LayoutRebuilder.ForceRebuildLayoutImmediate(pg.rt);
-            ShowPage(0, 0);
+            ShowPage(retraining && retrainTarget != null ? 1 : 0, 0);
             StartCoroutine(AskDiagnosis(r, null, analysisText, chip, path));
             yield break;
         }
@@ -1481,6 +1484,135 @@ namespace SteelMind.Scenario
             string path = System.IO.Path.Combine(Application.persistentDataPath, $"steelmind_진단기록_{record.no}회차.json");
             try { System.IO.File.WriteAllText(path, JsonUtility.ToJson(j, true)); StartCoroutine(AiToast("진단 기록을 파일로 저장했습니다", path, 4f, false)); }
             catch (System.Exception e) { StartCoroutine(AiToast("저장 실패", e.Message, 4f, false)); }
+        }
+
+        // 재훈련 뒤 각 역량 점수: 재훈련 상황에서 확인한 역량은 그 상황들로만 계산, 확인하지 않은 역량은 그대로
+        (int score, bool checkedInRetrain) AfterScore(string id)
+        {
+            var vals = new List<int>();
+            for (int i = Mathf.Max(0, retrainFrom); i < eventDeltas.Count; i++)
+                if (eventDeltas[i].TryGetValue(id, out var v)) vals.Add(v);
+            return vals.Count > 0 ? (ScoreOfMean((float)vals.Average()), true) : (retrainBefore[id], false);
+        }
+
+        void RetrainBanner(Transform parent)
+        {
+            var (before, after, _, _) = RetrainResult();
+            int d = after - before;
+            var bn = NewRect("Banner", parent); Round(bn.gameObject, Hex("#2A2412"), 1.2f);
+            var bo = bn.gameObject.AddComponent<Outline>(); bo.effectColor = RWarn; bo.effectDistance = new Vector2(1, -1);
+            VLayout(bn.gameObject, 14, 10, 0);
+            AddText(bn, $"<b>재훈련 결과 · {model.Name(retrainTarget)}: {before} → {after} ({(d >= 0 ? "+" : "")}{d})</b>   <color=#AAB4C5>'재훈련 전후' 탭에서 막대 그래프로 비교합니다 ›</color>", 15, RText);
+            var b = bn.gameObject.AddComponent<Button>(); b.transition = Selectable.Transition.None; b.onClick.AddListener(() => ShowPage(1, 1));
+        }
+
+        void BeforeAfterTab(Transform page, RunResult r, List<CompetencyState> weak)
+        {
+            bool has = retrainTarget != null && retrainBefore != null && retrainFrom >= 0 && eventDeltas.Count > retrainFrom;
+            if (!has)
+            {
+                var empty = RBox(page, null, 24);
+                AddText(empty, "<b>아직 맞춤 재훈련을 하지 않았습니다</b>", 20, RText);
+                AddText(empty, "맞춤 재훈련을 하면 진단 때 점수(BEFORE)와 재훈련 상황에서의 점수(AFTER)를 이 탭에서 막대 그래프로 나란히 비교합니다. 재훈련은 가장 약한 역량을, 조건이 다른 처음 보는 상황 2개로 다시 확인합니다.", 15, RMute);
+                if (weak.Count > 0)
+                {
+                    string k0 = weak[0].id;
+                    var go = Button_(empty, $"맞춤 재훈련 시작 · {model.Name(k0)}", RBlue, Hex("#0D1117"), 44); LE(go.gameObject, 280, 44);
+                    go.onClick.AddListener(() => StartRetrain(k0));
+                }
+                return;
+            }
+            string k = retrainTarget;
+            var (before, after, cum, n) = RetrainResult();
+            int diff = after - before;
+            Color vc = diff >= 15 ? ROk : diff > -10 ? RWarn : RNo;
+            string verdict = diff >= 15 ? "향상" : diff > -10 ? "유지" : "하락";
+
+            // 요약 줄
+            var sum = NewRect("Summary", page); HLayout(sum.gameObject, 12, TextAnchor.MiddleLeft);
+            AddText(sum, $"<b>{model.Name(k)}</b>  <color=#AAB4C5>재훈련 목표 역량</color>", 18, RText, FontStyle.Normal, TextAnchor.MiddleLeft).horizontalOverflow = HorizontalWrapMode.Overflow;
+            AddText(sum, $"<b>{before} → {after}</b>", 26, RText, FontStyle.Normal, TextAnchor.MiddleLeft).horizontalOverflow = HorizontalWrapMode.Overflow;
+            AddText(sum, $"<b>{(diff >= 0 ? "+" : "")}{diff}</b>", 26, vc, FontStyle.Normal, TextAnchor.MiddleLeft).horizontalOverflow = HorizontalWrapMode.Overflow;
+            Chip(sum, verdict, new Color(vc.r, vc.g, vc.b, 0.18f), vc);
+
+            // 가운데 기준 2분할
+            var split = NewRect("Split", page); var sh = HLayout(split.gameObject, 0, TextAnchor.UpperLeft); sh.childForceExpandHeight = true;
+            var ids = CompetencyModel.Ids;
+            var beforeVals = ids.Select(id => retrainBefore[id]).ToArray();
+            var afterVals = ids.Select(id => AfterScore(id).score).ToArray();
+            var leftBars = BarPanel(split, "BEFORE", "진단 · 처음 6개 상황", beforeVals, ids, k, RMute, null);
+            var mid = NewRect("Divider", split); LE(mid.gameObject, 56, -1);
+            var line = NewRect("Line", mid); line.anchorMin = new Vector2(0.5f, 0.06f); line.anchorMax = new Vector2(0.5f, 0.94f); line.sizeDelta = new Vector2(2, 0);
+            line.gameObject.AddComponent<Image>().color = RLine;
+            var arrowBg = NewRect("Arrow", mid); arrowBg.anchorMin = arrowBg.anchorMax = new Vector2(0.5f, 0.5f); arrowBg.sizeDelta = new Vector2(40, 40);
+            Round(arrowBg.gameObject, RCard, 0.6f);
+            var at = AddText(arrowBg, "→", 20, RText, FontStyle.Bold, TextAnchor.MiddleCenter);
+            var atr = at.rectTransform; atr.anchorMin = Vector2.zero; atr.anchorMax = Vector2.one; atr.offsetMin = atr.offsetMax = Vector2.zero;
+            var deltas = ids.Select((id, i) => AfterScore(id).checkedInRetrain ? afterVals[i] - beforeVals[i] : int.MinValue).ToArray();
+            var rightBars = BarPanel(split, "AFTER", $"재훈련 · 처음 보는 상황 {n}개", afterVals, ids, k, RBlue, deltas);
+            StartCoroutine(GrowBars(leftBars, beforeVals, 0f));
+            StartCoroutine(GrowBars(rightBars, afterVals, 0.45f));
+
+            // 재훈련 상황별 판단
+            var list = RBox(page, "재훈련에서 고른 행동", 16);
+            for (int i = retrainFrom; i < r.events.Count && i < eventDeltas.Count; i++)
+            {
+                var e = r.events[i];
+                eventDeltas[i].TryGetValue(k, out var v);
+                string mark = v > 0 ? $"<color=#6FCF97>▲{v}</color>" : v < 0 ? $"<color=#FF8A80>▼{-v}</color>" : "<color=#AAB4C5>–</color>";
+                AddText(list, $"{i - retrainFrom + 1}. <b>{e.ev.title}</b>  ·  '{e.chosen.label}'  ·  {model.Name(k)} {mark}", 14, RText);
+            }
+            AddText(page, $"BEFORE = 처음 6개 상황으로 낸 진단 점수 · AFTER = 재훈련 상황에서만 계산한 점수(재훈련에서 확인하지 않은 역량은 그대로, 흐리게 표시). 모든 상황을 합친 누적 점수는 {model.Name(k)} {cum}점입니다.", 12, RMute);
+        }
+
+        // 세로 막대 그래프 패널 (0~100). 목표 역량은 진하게, 나머지는 흐리게
+        List<LayoutElement> BarPanel(Transform parent, string head, string sub, int[] vals, string[] ids, string target, Color col, int[] deltas)
+        {
+            const float ChartH = 200f;
+            var box = RBox(parent, null, 18); LE(box.gameObject, 10, -1, 1);
+            var hd = NewRect("Head", box); HLayout(hd.gameObject, 10, TextAnchor.LowerLeft);
+            AddText(hd, $"<b>{head}</b>", 22, col == RMute ? RText : RBlue, FontStyle.Normal, TextAnchor.LowerLeft).horizontalOverflow = HorizontalWrapMode.Overflow;
+            AddText(hd, sub, 13, RMute, FontStyle.Normal, TextAnchor.LowerLeft).horizontalOverflow = HorizontalWrapMode.Overflow;
+            var chart = NewRect("Chart", box); LE(chart.gameObject, -1, ChartH + 70);
+            // 눈금선 0 · 50 · 100
+            foreach (var g in new[] { 0f, 0.5f, 1f })
+            {
+                var gl = NewRect("Grid", chart); gl.anchorMin = new Vector2(0, 0); gl.anchorMax = new Vector2(1, 0); gl.pivot = new Vector2(0.5f, 0.5f);
+                gl.sizeDelta = new Vector2(0, 1); gl.anchoredPosition = new Vector2(0, 44 + g * ChartH);
+                gl.gameObject.AddComponent<Image>().color = new Color(RLine.r, RLine.g, RLine.b, g == 0 ? 1f : 0.5f);
+            }
+            var cols = NewRect("Cols", chart); cols.anchorMin = Vector2.zero; cols.anchorMax = Vector2.one; cols.offsetMin = cols.offsetMax = Vector2.zero;
+            var ch = cols.gameObject.AddComponent<HorizontalLayoutGroup>(); ch.childControlWidth = ch.childControlHeight = true; ch.childForceExpandWidth = true; ch.childForceExpandHeight = true; ch.spacing = 10;
+            var bars = new List<LayoutElement>();
+            for (int i = 0; i < ids.Length; i++)
+            {
+                bool isT = ids[i] == target;
+                bool dim = deltas != null && deltas[i] == int.MinValue;
+                var c = NewRect("Col", cols);
+                var cv = c.gameObject.AddComponent<VerticalLayoutGroup>(); cv.childAlignment = TextAnchor.LowerCenter; cv.childControlWidth = cv.childControlHeight = true; cv.childForceExpandWidth = false; cv.childForceExpandHeight = false; cv.spacing = 4;
+                string dv = deltas != null && !dim && deltas[i] != 0 ? (deltas[i] > 0 ? $" <color=#6FCF97>+{deltas[i]}</color>" : $" <color=#FF8A80>{deltas[i]}</color>") : "";
+                var vt = AddText(c, $"<b>{vals[i]}</b>{dv}", isT ? 16 : 13, dim ? RMute : RText, FontStyle.Normal, TextAnchor.LowerCenter); vt.horizontalOverflow = HorizontalWrapMode.Overflow;
+                var bar = NewRect("Bar", c); var bi = Round(bar.gameObject, col, 0.4f);
+                float alpha = isT ? 1f : dim ? 0.25f : 0.55f;
+                bi.color = new Color(col.r, col.g, col.b, alpha);
+                if (isT && col == RMute) bi.color = RWarn;
+                var le = LE(bar.gameObject, isT ? 46 : 34, 0); bars.Add(le);
+                var nt = AddText(c, model.Name(ids[i]), 12, isT ? RText : RMute, isT ? FontStyle.Bold : FontStyle.Normal, TextAnchor.UpperCenter);
+                LE(nt.gameObject, 90, 38);
+            }
+            return bars;
+        }
+
+        IEnumerator GrowBars(List<LayoutElement> bars, int[] vals, float delay)
+        {
+            yield return new WaitForSeconds(delay);
+            float t = 0, dur = 0.7f;
+            while (t < dur)
+            {
+                t += Time.unscaledDeltaTime; float k = Mathf.SmoothStep(0, 1, t / dur);
+                for (int i = 0; i < bars.Count; i++) if (bars[i]) bars[i].preferredHeight = Mathf.Max(2f, vals[i] / 100f * 200f * k);
+                yield return null;
+            }
         }
 
         // 재훈련 전후 비교 카드: 목표 역량 점수(진단 → 재훈련 상황), 상황별 판단, 5개 역량 전/후 막대
