@@ -15,8 +15,7 @@ namespace SteelMind
         void OnTriggerEnter2D(Collider2D other)
         {
             if (!other.GetComponent<PlayerMove>() || string.IsNullOrEmpty(scene)) return;
-            Travel.from = SceneManager.GetActiveScene().name;
-            SceneManager.LoadScene(scene);
+            SceneFade.Go(scene, 0.4f, 0.6f);
         }
     }
 

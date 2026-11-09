@@ -67,8 +67,8 @@ namespace SteelMind
         {
             var target = Maps[i].scene;
             if (SceneManager.GetActiveScene().name == target) { Close(); return; }
-            Travel.from = SceneManager.GetActiveScene().name;
-            SceneManager.LoadScene(target);
+            Close();
+            SceneFade.Go(target, 0.4f, 0.7f);
         }
 
         void Close()
@@ -78,6 +78,9 @@ namespace SteelMind
             if (player) player.enabled = true;
             foreach (var s in FindObjectsByType<SceneSwitcher>(FindObjectsSortMode.None)) s.enabled = true;
         }
+
+        [System.Serializable] class Zone { public string label; public int[] rect; public int[] anchor; }
+        RectTransform pin;
 
         void Open()
         {
@@ -94,60 +97,88 @@ namespace SteelMind
                 es.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
             }
             var root = go.GetComponent<RectTransform>();
-            var dim = R("Dim", root, Vector2.zero, Vector2.one); dim.gameObject.AddComponent<Image>().color = new Color(0, 0, 0, 0.6f);
+            var dim = R("Dim", root, Vector2.zero, Vector2.one); dim.gameObject.AddComponent<Image>().color = new Color(0, 0, 0, 0.65f);
             dim.gameObject.AddComponent<Button>().onClick.AddListener(Close);
 
-            panel = R("Panel", root, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f)); panel.sizeDelta = new Vector2(1140, 520);
-            panel.gameObject.AddComponent<Image>().color = new Color32(28, 26, 33, 250);
-            var o = panel.gameObject.AddComponent<Outline>(); o.effectColor = new Color32(240, 192, 64, 255); o.effectDistance = new Vector2(3, -3);
-            // 제목 띠
-            var bar = R("Bar", panel, new Vector2(0, 1), new Vector2(1, 1)); bar.pivot = new Vector2(0.5f, 1); bar.sizeDelta = new Vector2(0, 56);
-            bar.gameObject.AddComponent<Image>().color = new Color32(46, 40, 56, 255);
-            var title = T(bar, "제철소 전체 지도", 26, Color.white, bold); Stretch(title.rectTransform, 24, 0); title.alignment = TextAnchor.MiddleLeft;
-            var sub = T(bar, "가고 싶은 공정을 누르세요 · 닫기 M", 15, new Color32(170, 166, 182, 255), font); Stretch(sub.rectTransform, 24, 0); sub.alignment = TextAnchor.MiddleRight;
+            // 지도 그림 (640x400 도트를 1.6배)
+            const float MW = 640, MH = 400, K = 1.6f;
+            panel = R("Map", root, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f)); panel.sizeDelta = new Vector2(MW * K, MH * K);
+            var frame = panel.gameObject.AddComponent<Outline>();
+            var raw = panel.gameObject.AddComponent<RawImage>();
+            frame.effectColor = new Color32(90, 70, 48, 255); frame.effectDistance = new Vector2(5, -5);
+            var bytes = Resources.Load<TextAsset>("WorldMap/world");
+            if (bytes) { var tex = new Texture2D(2, 2); tex.LoadImage(bytes.bytes); tex.filterMode = FilterMode.Point; raw.texture = tex; }
 
+            // 두루마리 제목
+            var scroll = Ribbon(panel, "STEEL MIND 제철소", 30, new Vector2(1, 1), new Vector2(-24, -20), new Vector2(1, 1), true);
+
+            // 공정 띠 이름표 + 누를 수 있는 건물 자리
             string here = SceneManager.GetActiveScene().name;
-            float cardW = 240, gap = 40, x0 = -(cardW * 4 + gap * 3) / 2f + cardW / 2f;
+            var lay = Resources.Load<TextAsset>("WorldMap/world_layout");
+            var zones = new Dictionary<string, Zone>();
+            if (lay)
+            {
+                foreach (var (scene, _, _) in Maps)
+                {
+                    int i = lay.text.IndexOf("\"" + scene + "\"");
+                    if (i < 0) continue;
+                    int a2 = lay.text.IndexOf('{', i), b2 = lay.text.IndexOf('}', a2);
+                    zones[scene] = JsonUtility.FromJson<Zone>(lay.text.Substring(a2, b2 - a2 + 1));
+                }
+            }
             for (int i = 0; i < Maps.Length; i++)
             {
                 var (scene, name, desc) = Maps[i];
+                if (!zones.TryGetValue(scene, out var z)) continue;
+                int idx = i;
+                var hit = R("Hit", panel, new Vector2(0, 1), new Vector2(0, 1)); hit.pivot = new Vector2(0, 1);
+                hit.anchoredPosition = new Vector2(z.rect[0] * K, -z.rect[1] * K); hit.sizeDelta = new Vector2(z.rect[2] * K, z.rect[3] * K);
+                var hi = hit.gameObject.AddComponent<Image>(); hi.color = new Color(1, 1, 1, 0);
+                var hb = hit.gameObject.AddComponent<Button>(); hb.targetGraphic = hi;
+                var hc = hb.colors; hc.highlightedColor = new Color(1, 1, 1, 0.12f); hb.colors = hc;
+                hb.onClick.AddListener(() => Go(idx));
                 bool cur = scene == here;
-                var card = R("Card", panel, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f));
-                card.sizeDelta = new Vector2(cardW, 360); card.anchoredPosition = new Vector2(x0 + i * (cardW + gap), -24);
-                var img = card.gameObject.AddComponent<Image>(); img.color = cur ? new Color32(44, 64, 58, 255) : new Color32(40, 37, 48, 255);
-                var co = card.gameObject.AddComponent<Outline>(); co.effectColor = cur ? new Color32(108, 195, 176, 255) : new Color32(70, 64, 82, 255); co.effectDistance = new Vector2(2, -2);
-                var btn = card.gameObject.AddComponent<Button>(); btn.targetGraphic = img;
-                var cs = btn.colors; cs.highlightedColor = new Color(1.25f, 1.25f, 1.25f); btn.colors = cs;
-                int idx = i; btn.onClick.AddListener(() => Go(idx));
-
-                var num = T(card, $"{i + 1}", 16, new Color32(240, 192, 64, 255), bold); Place(num.rectTransform, new Vector2(0, 1), new Vector2(16, -12), new Vector2(40, 24)); num.alignment = TextAnchor.UpperLeft;
-                var thumb = R("Thumb", card, new Vector2(0.5f, 1), new Vector2(0.5f, 1)); thumb.pivot = new Vector2(0.5f, 1);
-                thumb.anchoredPosition = new Vector2(0, -44); thumb.sizeDelta = new Vector2(cardW - 24, 150);
-                var ti = thumb.gameObject.AddComponent<RawImage>();
-                var bytes = Resources.Load<TextAsset>($"WorldMap/{scene}");
-                if (bytes) { var tex = new Texture2D(2, 2); tex.LoadImage(bytes.bytes); tex.filterMode = FilterMode.Point; ti.texture = tex;
-                    var fit = thumb.gameObject.AddComponent<AspectRatioFitter>(); fit.aspectMode = AspectRatioFitter.AspectMode.FitInParent; fit.aspectRatio = (float)tex.width / tex.height; }
-                var nm = T(card, $"{name} 공장", 26, Color.white, bold); Place(nm.rectTransform, new Vector2(0.5f, 0), new Vector2(0, 116), new Vector2(cardW, 34));
-                var ds = T(card, desc, 14, new Color32(190, 186, 200, 255), font); Place(ds.rectTransform, new Vector2(0.5f, 0), new Vector2(0, 66), new Vector2(cardW - 24, 54));
-                ds.horizontalOverflow = HorizontalWrapMode.Wrap;
+                var rib = Ribbon(panel, $"{z.label}", 22, new Vector2(0, 1), new Vector2(z.anchor[0] * K, -(z.rect[1] + z.rect[3]) * K - 4), new Vector2(0.5f, 1), false, cur);
+                var rb = rib.gameObject.AddComponent<Button>(); rb.onClick.AddListener(() => Go(idx));
                 if (cur)
                 {
-                    var tag = R("Here", card, new Vector2(0.5f, 0), new Vector2(0.5f, 0)); tag.sizeDelta = new Vector2(120, 30); tag.anchoredPosition = new Vector2(0, 26);
-                    tag.gameObject.AddComponent<Image>().color = new Color32(108, 195, 176, 255);
-                    var tt = T(tag, "현재 위치", 15, new Color32(11, 34, 30, 255), bold); Stretch(tt.rectTransform, 0, 0);
-                }
-                else
-                {
-                    var go2 = T(card, "이동하기 ▶", 15, new Color32(240, 192, 64, 255), bold); Place(go2.rectTransform, new Vector2(0.5f, 0), new Vector2(0, 26), new Vector2(cardW, 26));
-                }
-                if (i < Maps.Length - 1)
-                {
-                    var arrow = T(panel, "▶", 26, new Color32(240, 160, 75, 255), bold);
-                    Place(arrow.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(x0 + i * (cardW + gap) + cardW / 2f + gap / 2f, -24), new Vector2(gap, 40));
+                    pin = R("Pin", panel, new Vector2(0, 1), new Vector2(0, 1)); pin.pivot = new Vector2(0.5f, 0);
+                    pin.anchoredPosition = new Vector2(z.anchor[0] * K, -z.anchor[1] * K + 6); pin.sizeDelta = new Vector2(150, 40);
+                    var pi = pin.gameObject.AddComponent<Image>(); pi.color = new Color32(229, 83, 61, 255);
+                    var pt = T(pin, "▼ 현재 위치", 18, Color.white, bold); Stretch(pt.rectTransform, 0, 0);
                 }
             }
-            var foot = T(panel, "쇳물부터 코일까지 · 제선 → 제강 → 연주 → 압연", 15, new Color32(170, 166, 182, 255), font);
-            Place(foot.rectTransform, new Vector2(0.5f, 0), new Vector2(0, 20), new Vector2(900, 24));
+            var foot = T(panel, "가고 싶은 공장을 누르세요 · 숫자 1~4 · 닫기 M", 16, new Color32(220, 228, 236, 255), font);
+            Place(foot.rectTransform, new Vector2(0.5f, 0), new Vector2(0, 18), new Vector2(900, 24));
+            var fs = foot.gameObject.AddComponent<Shadow>(); fs.effectColor = new Color(0, 0, 0, 0.8f);
+        }
+
+        // 띠 모양 이름표 (크림색 종이 + 진한 테두리). 현재 위치는 금색
+        RectTransform Ribbon(Transform parent, string text, int size, Vector2 anchor, Vector2 pos, Vector2 pivot, bool scroll, bool current = false)
+        {
+            var rt = R("Ribbon", parent, anchor, anchor); rt.pivot = pivot; rt.anchoredPosition = pos;
+            var img = rt.gameObject.AddComponent<Image>(); img.color = current ? new Color32(255, 214, 102, 255) : new Color32(239, 227, 194, 255);
+            var o = rt.gameObject.AddComponent<Outline>(); o.effectColor = new Color32(74, 54, 34, 255); o.effectDistance = new Vector2(3, -3);
+            var sh = rt.gameObject.AddComponent<Shadow>(); sh.effectColor = new Color(0, 0, 0, 0.45f); sh.effectDistance = new Vector2(4, -5);
+            var h = rt.gameObject.AddComponent<HorizontalLayoutGroup>(); h.padding = scroll ? new RectOffset(34, 34, 12, 12) : new RectOffset(18, 18, 6, 6);
+            h.childControlWidth = h.childControlHeight = true;
+            var fit = rt.gameObject.AddComponent<ContentSizeFitter>(); fit.horizontalFit = fit.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            var t = T(rt, text, size, new Color32(58, 40, 24, 255), bold);
+            if (scroll)
+            {
+                foreach (var side in new[] { 0f, 1f })
+                {
+                    var end = R("End", rt, new Vector2(side, 0), new Vector2(side, 1)); end.sizeDelta = new Vector2(14, 10); end.anchoredPosition = Vector2.zero;
+                    end.gameObject.AddComponent<LayoutElement>().ignoreLayout = true;
+                    end.gameObject.AddComponent<Image>().color = new Color32(150, 60, 40, 255);
+                }
+            }
+            return rt;
+        }
+
+        void LateUpdate()
+        {
+            if (pin) pin.localScale = Vector3.one * (1f + 0.06f * Mathf.Abs(Mathf.Sin(Time.unscaledTime * 4f)));
         }
 
         RectTransform R(string n, Transform p, Vector2 aMin, Vector2 aMax)

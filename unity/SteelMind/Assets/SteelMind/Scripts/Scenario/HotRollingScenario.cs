@@ -109,10 +109,55 @@ namespace SteelMind.Scenario
         {
             SetFrozen(true);
             if (line) { line.ClearWarnings(); line.SetRunning(true); }
-            yield return new WaitForSeconds(0.6f);
+            yield return CameraIntro();
             yield return Intro();
             session.titleShown = true;
             Restart();
+        }
+
+        // 공장 전체를 멀리서 보여 주다가 플레이어 쪽으로 천천히 다가가는 카메라 연출
+        IEnumerator CameraIntro()
+        {
+            var cam = Camera.main;
+            var follow = cam ? cam.GetComponent<CameraFollow>() : null;
+            if (!cam || !follow || !follow.target) { yield return new WaitForSeconds(0.6f); yield break; }
+            Behaviour ppc = null;
+            foreach (var b in cam.GetComponents<Behaviour>()) if (b && b.GetType().Name == "PixelPerfectCamera" && b.enabled) ppc = b;
+            if (ppc) ppc.enabled = false;
+            follow.enabled = false;
+
+            const float ppu = YSort.PixelsPerUnit;
+            float mapW = follow.mapSizePx.x / ppu, mapH = follow.mapSizePx.y / ppu;
+            float near = 270f / 2f / ppu;
+            float far = Mathf.Max(mapH / 2f, mapW / 2f / cam.aspect);
+            Vector3 wide = new Vector3(mapW / 2f, -mapH / 2f, -10f);
+            // 도착 위치는 CameraFollow가 잡을 자리와 똑같이 맞춘다
+            float halfH = near, halfW = near * cam.aspect;
+            Vector3 tp = follow.target.position;
+            Vector3 close = new Vector3(mapW <= halfW * 2 ? mapW / 2 : Mathf.Clamp(tp.x, halfW, mapW - halfW),
+                                        mapH <= halfH * 2 ? -mapH / 2 : Mathf.Clamp(tp.y, -mapH + halfH, -halfH), -10f);
+
+            cam.orthographicSize = far; cam.transform.position = wide;
+            var card = AddText(canvas.transform, "열연 2라인 · 야간 교대", 44, Color.white, FontStyle.Normal, TextAnchor.MiddleCenter);
+            card.font = Resources.Load<Font>("Fonts/Galmuri11-Bold") ?? font;
+            var crt = card.rectTransform; crt.anchorMin = new Vector2(0, 0.62f); crt.anchorMax = new Vector2(1, 0.78f); crt.offsetMin = crt.offsetMax = Vector2.zero;
+            var csh = card.gameObject.AddComponent<Outline>(); csh.effectColor = new Color(0, 0, 0, 0.8f); csh.effectDistance = new Vector2(3, -3);
+            for (float t = 0; t < 1f; t += Time.deltaTime) { card.color = new Color(1, 1, 1, Mathf.SmoothStep(0, 1, t / 0.7f)); yield return null; }
+            yield return new WaitForSeconds(0.9f);
+            const float dur = 2.2f;
+            for (float t = 0; t < dur; t += Time.deltaTime)
+            {
+                float k = Mathf.SmoothStep(0, 1, t / dur);
+                cam.orthographicSize = Mathf.Lerp(far, near, k);
+                cam.transform.position = Vector3.Lerp(wide, close, k);
+                card.color = new Color(1, 1, 1, 1f - Mathf.Clamp01(t / 0.8f));
+                yield return null;
+            }
+            Destroy(card.gameObject);
+            cam.orthographicSize = near; cam.transform.position = close;
+            follow.enabled = true;
+            if (ppc) ppc.enabled = true;
+            yield return new WaitForSeconds(0.3f);
         }
 
         IEnumerator Intro()
