@@ -17,6 +17,9 @@ namespace SteelMind.Scenario
 
     [Serializable] public class AgentLine { public string agent, say, why, rec; }
 
+    // 결정 뒤 Agent 회의 한 줄 (stance: 찬성·불만·경고)
+    [Serializable] public class Reaction { public string agent, stance, line; }
+
     [Serializable]
     public class Choice
     {
@@ -24,6 +27,7 @@ namespace SteelMind.Scenario
         public bool best, keepWarning;
         public float lineSpeed, resumeAfter;
         public Loss loss = new Loss();
+        public Reaction[] reactions;
     }
 
     [Serializable]
