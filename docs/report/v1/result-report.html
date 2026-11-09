@@ -1,0 +1,590 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>STEEL MIND 결과보고서 · 제철소 돌발상황 대처 진단 시뮬레이션</title>
+<style>
+@font-face { font-family: "NotoKR"; font-weight: 400; src: local("Noto Sans KR"), url("file:///C:/Windows/Fonts/NotoSansKR-Regular.ttf"); }
+@font-face { font-family: "NotoKR"; font-weight: 700; src: local("Noto Sans KR Bold"), url("file:///C:/Windows/Fonts/NotoSansKR-Bold.ttf"); }
+:root {
+  --ink: #0f1720; --muted: #55606c; --faint: #8a94a0; --line: #e3e6ea; --soft: #f4f6f8;
+  --blue: #2a78d6; --blue-soft: #e6f0fb; --orange: #eb6834; --orange-soft: #fdeee7;
+  --green: #1f9d6b; --green-soft: #e4f5ee; --navy: #13294b;
+  --p1: #2a78d6; --p2: #eb6834; --p3: #1f9d6b; --p4: #8a5cd6;
+}
+@page { size: A4; margin: 0; }
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: #fff; color: var(--ink);
+  font-family: "NotoKR", "Noto Sans KR", "Malgun Gothic", sans-serif; font-size: 10pt; line-height: 1.58;
+  -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+.page { width: 210mm; height: 297mm; padding: 15mm 15mm 14mm; position: relative; overflow: hidden; page-break-after: always; }
+.page:last-child { page-break-after: auto; }
+.page.full { padding: 0; }
+.page.full img.scan { width: 210mm; height: 297mm; object-fit: contain; display: block; }
+.scan-tag { position: absolute; right: 6mm; top: 5mm; font-size: 7pt; font-weight: 700; color: #fff; background: var(--navy); padding: .6mm 2.2mm; border-radius: 10mm; }
+.foot { position: absolute; left: 15mm; right: 15mm; bottom: 8mm; display: flex; justify-content: space-between;
+  font-size: 7.5pt; color: var(--faint); border-top: 1px solid var(--line); padding-top: 2mm; }
+.kicker { font-size: 8.5pt; font-weight: 700; letter-spacing: .12em; color: var(--blue); }
+h1 { font-size: 28pt; line-height: 1.22; margin: 0; font-weight: 700; letter-spacing: -.02em; }
+h2 { font-size: 18pt; margin: 1mm 0 2mm; font-weight: 700; letter-spacing: -.01em; }
+h3 { font-size: 11pt; margin: 0 0 1.6mm; font-weight: 700; }
+p { margin: 0 0 2.2mm; }
+.lead { font-size: 9.8pt; color: var(--muted); margin-bottom: 4mm; }
+.small { font-size: 9pt; } .xs { font-size: 8.2pt; } .muted { color: var(--muted); }
+code { font-family: "Consolas", "NotoKR", monospace; font-size: .9em; background: var(--soft); padding: 0 .8mm; border-radius: 1mm; }
+a { color: var(--blue); text-decoration: none; word-break: break-all; }
+.section-num { font-size: 38pt; font-weight: 700; color: var(--line); position: absolute; right: 15mm; top: 9mm; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 4mm; }
+.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3mm; }
+.grid4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3mm; }
+.card { background: var(--soft); border-radius: 3mm; padding: 3.6mm 4.2mm; }
+.card.info { background: var(--blue-soft); } .card.warn { background: var(--orange-soft); } .card.ok { background: var(--green-soft); }
+.card p:last-child { margin-bottom: 0; }
+.card .t { font-size: 9.4pt; font-weight: 700; display: block; margin-bottom: 1mm; }
+.pr { display: inline-block; font-size: 7.2pt; font-weight: 700; padding: .1mm 1.6mm; border-radius: 10mm; background: var(--blue-soft); color: var(--blue); white-space: nowrap; }
+.c { font-family: "Consolas", monospace; font-size: 7.6pt; color: var(--green); }
+table { width: 100%; border-collapse: collapse; font-size: 8.6pt; line-height: 1.5; margin-bottom: 3.5mm; }
+th { text-align: left; font-weight: 700; color: var(--muted); font-size: 7.8pt; border-bottom: 1.2px solid var(--ink); padding: 1.5mm 1.8mm; }
+td { border-bottom: 1px solid var(--line); padding: 1.7mm 1.8mm; vertical-align: top; }
+.st { display: inline-block; font-size: 7.2pt; font-weight: 700; padding: .1mm 1.6mm; border-radius: 10mm; white-space: nowrap; }
+.st.done { background: var(--green-soft); color: var(--green); }
+.st.chg { background: var(--orange-soft); color: var(--orange); }
+.st.add { background: var(--blue-soft); color: var(--blue); }
+.st.no { background: var(--soft); color: var(--faint); }
+.st.br { background: #efe8fb; color: var(--p4); }
+.tbc { background: #fff4cc; color: #7a5b00; font-weight: 700; padding: 0 1mm; border-radius: 1mm; }
+.quote { border-left: 1mm solid var(--blue); padding: 1mm 0 1mm 4mm; color: var(--muted); font-size: 9pt; margin: 2mm 0 3mm; }
+.src { font-size: 7.8pt; color: var(--muted); background: var(--blue-soft); border-radius: 3mm; padding: 3mm 4mm; }
+
+.cover { background: var(--navy); color: #fff; }
+.cover .kicker { color: #8fbaf0; } .cover .lead { color: #c3cfdf; }
+.cover .foot { color: #8193ad; border-color: #2a4268; }
+.cover .hero { width: 100%; height: 62mm; object-fit: cover; border-radius: 3mm; margin: 6mm 0 6mm; image-rendering: pixelated; }
+.meta { display: grid; grid-template-columns: 22mm 1fr; gap: 1.4mm 4mm; font-size: 9.6pt; margin: 0 0 7mm; }
+.meta b { color: #8fbaf0; font-weight: 700; }
+.kpi { border-radius: 3mm; padding: 3.6mm; background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.12); }
+.kpi .v { font-size: 18pt; font-weight: 700; line-height: 1.2; }
+.kpi .l { font-size: 8pt; color: #c3cfdf; margin-top: .8mm; }
+
+/* 역할 비교 */
+.rrow { display: grid; grid-template-columns: 26mm 1fr 6mm 1fr; gap: 2.5mm; align-items: stretch; margin-bottom: 3mm; }
+.rrow .who { font-weight: 700; font-size: 10pt; padding-top: 2.4mm; line-height: 1.3; }
+.rrow .who small { display: block; font-weight: 400; font-size: 7.6pt; color: var(--faint); }
+.rrow .plan { background: var(--soft); border-radius: 2.5mm; padding: 2.6mm 3.2mm; font-size: 8.4pt; line-height: 1.5; }
+.rrow .real { background: var(--green-soft); border-radius: 2.5mm; padding: 2.6mm 3.2mm; font-size: 8.4pt; line-height: 1.5; }
+.rrow .ar { align-self: center; text-align: center; color: var(--faint); font-weight: 700; }
+.rrow .lbl { display: block; font-size: 7pt; font-weight: 700; letter-spacing: .06em; color: var(--muted); margin-bottom: .6mm; }
+.rrow .real .lbl { color: var(--green); }
+.rhead { display: grid; grid-template-columns: 26mm 1fr 6mm 1fr; gap: 2.5mm; font-size: 7.6pt; font-weight: 700; color: var(--muted); margin-bottom: 1.5mm; }
+
+/* 플레이 시나리오 */
+.step { display: flex; align-items: center; gap: 3mm; margin-bottom: 2mm; }
+.step .no { width: 8mm; height: 8mm; border-radius: 50%; background: var(--orange); color: #fff; font-weight: 700; display: flex; align-items: center; justify-content: center; font-size: 8.8pt; flex: none; }
+.dots { display: flex; gap: 1.2mm; margin-left: auto; }
+.dots i { width: 6mm; height: 1.4mm; border-radius: 1mm; background: var(--line); display: block; }
+.dots i.on { background: var(--orange); }
+.shot { position: relative; width: 100%; height: 98mm; border: 1.2px dashed #b9c2cc; border-radius: 3mm; background: #0f1418; overflow: hidden; margin: 2mm 0 4mm; display: flex; align-items: center; justify-content: center; }
+.shot img + .ph, .shot .ph { color: #8a94a0; font-size: 8.6pt; text-align: center; line-height: 1.6; padding: 0 10mm; }
+.shot .ph b { color: #c3cfdf; display: block; font-size: 9.6pt; }
+.shot img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #0f1418; image-rendering: pixelated; }
+.shot.light, .shot.light img { background: #f4f6f8; }
+.cap { font-size: 7.6pt; color: var(--faint); margin: -2.5mm 0 3.5mm; }
+.feat { display: grid; grid-template-columns: 1fr 1fr; gap: 3.5mm; }
+.kv { font-size: 8.6pt; line-height: 1.55; }
+.kv b { display: inline-block; min-width: 18mm; color: var(--muted); font-size: 7.8pt; }
+
+/* 진행 기록 */
+.log td.t { font-weight: 700; color: var(--blue); white-space: nowrap; width: 12mm; }
+.log tr.plan td { color: var(--faint); }
+.log tr.plan td.t { color: var(--faint); }
+.log tr.key td { background: #fff8f4; }
+
+.rlist { display: flex; flex-direction: column; gap: 4mm; }
+.rrow { display: grid; grid-template-columns: 26mm 1fr 6mm 1.25fr; gap: 3mm; align-items: stretch; margin: 0; min-height: 38mm; }
+.rrow .who { display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; padding: 0; }
+.rrow .who .av { width: 13mm; height: 13mm; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; color: #fff; font-size: 13pt; margin-bottom: 1.5mm; }
+.rrow .who .n { font-weight: 700; font-size: 10pt; } .rrow .who .id { font-size: 7.2pt; color: var(--faint); }
+.rrow .plan, .rrow .real { display: flex; flex-direction: column; justify-content: center; padding: 3.5mm 4mm; }
+.rrow ul { margin: .8mm 0 0; padding-left: 4mm; } .rrow li { margin: .5mm 0; }
+.rhead { grid-template-columns: 26mm 1fr 6mm 1.25fr; gap: 3mm; }
+.rwhy { margin-top: 5mm; } .rwhy ul { margin: 1mm 0 0; padding-left: 4.5mm; } .rwhy li { margin-bottom: 1.2mm; }
+.shot { height: 128mm; }
+.sit { background: var(--orange-soft); border-radius: 3mm; padding: 3.2mm 4.2mm; font-size: 9.4pt; margin-bottom: 3.5mm; }
+.sit .lbl { display: inline-block; font-size: 7.4pt; font-weight: 700; color: #fff; background: var(--orange); border-radius: 10mm; padding: .2mm 2.2mm; margin-right: 2mm; }
+.flowcards ul { margin: 1mm 0 0; padding-left: 4.5mm; } .flowcards li { margin: .8mm 0; }
+.chips { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2.5mm; }
+.chip { border: 1px solid var(--line); border-radius: 2.5mm; padding: 2.4mm 3mm; display: flex; flex-direction: column; gap: .6mm; }
+.chip b { font-size: 8.8pt; }
+
+.loop { position: relative; display: grid; grid-template-columns: 1fr 5mm 1fr 5mm 1fr 5mm 1fr; align-items: stretch; margin: 2mm 0 9mm; }
+.loop .lp { background: var(--soft); border-radius: 3mm; padding: 3mm; display: flex; flex-direction: column; gap: .8mm; font-size: 9pt; }
+.loop .lp.hot { background: var(--orange-soft); }
+.loop .lp small { font-size: 7.6pt; color: var(--muted); line-height: 1.45; }
+.loop .ln { width: 6mm; height: 6mm; border-radius: 50%; background: var(--blue); color: #fff; font-size: 8pt; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+.loop .lp.hot .ln { background: var(--orange); }
+.loop .la { align-self: center; text-align: center; color: var(--faint); font-weight: 700; }
+.loop .lback { position: absolute; left: 0; right: 0; bottom: -6.5mm; text-align: center; font-size: 8pt; color: var(--orange); font-weight: 700; border-top: 1.2px dashed #f3b79c; padding-top: 1mm; }
+.vs { display: grid; grid-template-columns: 1fr 12mm 1fr; gap: 2mm; align-items: stretch; }
+.vcol { background: var(--soft); border-radius: 3mm; padding: 3.5mm 4mm; font-size: 8.8pt; }
+.vcol.on { background: var(--green-soft); }
+.vcol .vh { display: block; font-weight: 700; font-size: 9.4pt; margin-bottom: 1mm; }
+.vcol ul { margin: 0; padding-left: 4.5mm; } .vcol li { margin: .7mm 0; }
+.vmid { align-self: center; text-align: center; font-weight: 900; color: var(--faint); font-size: 12pt; }
+.stat { border: 1px solid var(--line); border-radius: 3mm; padding: 3mm 4mm; display: flex; gap: 3mm; align-items: center; }
+.stat .sv { font-size: 16pt; font-weight: 700; color: var(--blue); white-space: nowrap; }
+.stat .sl { font-size: 8pt; color: var(--muted); line-height: 1.5; }
+.cmp { display: flex; flex-direction: column; gap: 2mm; }
+.cmp .ch, .cmp .cr { display: grid; grid-template-columns: 20mm 1fr 7mm 1.35fr; gap: 2mm; align-items: stretch; }
+.cmp .ch span { font-size: 7.8pt; font-weight: 700; color: var(--muted); }
+.cmp .ck { background: var(--navy); color: #fff; border-radius: 2.5mm; font-size: 8.4pt; font-weight: 700; display: flex; align-items: center; justify-content: center; }
+.cmp .co { background: var(--soft); border-radius: 2.5mm; padding: 2.6mm 3.2mm; font-size: 8.8pt; color: var(--muted); }
+.cmp .cn { background: var(--green-soft); border-radius: 2.5mm; padding: 2.6mm 3.2mm; font-size: 8.8pt; font-weight: 700; }
+.cmp .ca { align-self: center; text-align: center; color: var(--green); font-weight: 700; }
+.rrow .who .kd { width: 11mm; height: 16mm; object-fit: contain; image-rendering: pixelated; margin-bottom: 1.2mm; }
+</style>
+</head>
+<body>
+
+<!-- 1. 표지 -->
+<section class="page cover">
+  <p class="kicker">POSCO K-뉴딜 아카데미 내부 해커톤 · 결과보고서</p>
+  <h1 style="margin-top:4mm">제철소 돌발상황<br>대처 진단 시뮬레이션</h1>
+  <p class="lead" style="margin-top:3mm;font-size:11pt;color:#fff">STEEL MIND · AI가 약점을 찾아 상황을 내고, 재훈련으로 나아진 것을 숫자로 보여 주는 게임 기반 시뮬레이션</p>
+  <img class="hero" src="img/title.png" alt="야간 제철소 타이틀 화면">
+  <div class="meta">
+    <b>기간</b><span>2026년 11월 9일(월) 09:00 ~ 11월 10일(화) 02:00</span>
+    <b>팀</b><span>LLM 1기 철든신입 · 박소영(팀장) 양수빈 신원민 김다영</span>
+    <b>결과물</b><span>Unity 6 게임 기반 시뮬레이션(열간압연 진단 시나리오, 4개 공정 맵), 경로 결과표, 기획서, 회의록</span>
+    <b>기준</b><span>GitHub <code style="background:rgba(255,255,255,.1);color:#fff">origin/main</code> · 2026-11-09 19:19 PR #17 병합 시점</span>
+  </div>
+  <div class="grid4">
+    <div class="kpi"><div class="v">12개</div><div class="l">열연 사건<br>(기본 6 + 돌발 6)</div></div>
+    <div class="kpi"><div class="v">5가지</div><div class="l">진단하는<br>돌발상황 대처 역량</div></div>
+    <div class="kpi"><div class="v">NCS 5개</div><div class="l">연결한 열간압연<br>능력단위 + 직업기초 3개</div></div>
+    <div class="kpi"><div class="v">11개</div><div class="l">main에 병합된 PR<br>(#5 ~ #17)</div></div>
+  </div>
+  <div class="foot"><span>STEEL MIND · 결과보고서</span><span>모든 설비 상황·수치는 교육용 가상 값입니다</span></div>
+</section>
+
+<!-- 2. 대주제와 프로젝트 주제 -->
+<section class="page">
+  <div class="section-num">01</div>
+  <p class="kicker">해커톤 대주제와 프로젝트 주제</p>
+  <h2>세 목표를 지키는 판단, 사람이 할 수 있는지 미리 본다</h2>
+  <div class="card" style="background:var(--navy);color:#fff;margin:3mm 0 5mm">
+    <span class="t" style="color:#8fbaf0">해커톤 대주제</span>
+    <p style="font-size:14pt;font-weight:700;margin:1mm 0 0">AI로 <span style="color:#ffb38f">더 안전하고</span>, <span style="color:#ffb38f">멈추지 않고</span>, <span style="color:#ffb38f">더 정확하게</span> 생산하는 제철소를 만들어라.</p>
+  </div>
+
+  <div class="card info" style="margin-bottom:5mm">
+    <span class="t">우리의 답</span>
+    <p style="font-size:15pt;font-weight:700;margin:1mm 0 1.5mm">“만약 그때 이렇게 했다면?”</p>
+    <p class="small" style="margin:0">신입 운영자의 돌발상황 대처 역량을 AI가 진단하고, 약한 역량만 맞춤 재훈련해 전후를 숫자로 확인하는 시뮬레이션. 결과는 맞춤 교육·사수 매칭·강점 직무로 이어진다.</p>
+  </div>
+
+  <h3>왜 AI인가 · 인사팀이 같은 문제를 내는 것과의 차이</h3>
+  <div class="loop">
+    <div class="lp"><span class="ln">1</span><b>선택</b><small>돌발상황에서 조치 하나를 고른다</small></div><span class="la">→</span>
+    <div class="lp"><span class="ln">2</span><b>역량 추정 갱신</b><small>선택마다 5가지 역량 점수를 더한다</small></div><span class="la">→</span>
+    <div class="lp"><span class="ln">3</span><b>약점 · 불확실성</b><small>평균이 낮거나 덜 확인된 역량을 찾는다</small></div><span class="la">→</span>
+    <div class="lp hot"><span class="ln">4</span><b>다음 상황 선택</b><small>AI가 그 역량을 노린 사건을 고른다</small></div>
+    <div class="lback">↺ 다시 1로 · 사람마다 다른 순서</div>
+  </div>
+  <div class="vs">
+    <div class="vcol"><span class="vh">인사팀이 같은 문제를 낼 때</span>
+      <ul><li>모두에게 같은 문제, 같은 순서</li><li>많이 풀어야 약점이 보인다</li><li>다시 풀면 외운 것인지 나아진 것인지 모른다</li></ul></div>
+    <div class="vmid">VS</div>
+    <div class="vcol on"><span class="vh">STEEL MIND · 적응형 출제</span>
+      <ul><li>답에 따라 다음 상황이 바뀐다</li><li>적은 상황으로 약점을 정확히 찾는다 [R1]</li><li>재훈련은 조건이 다른 처음 보는 상황으로 확인</li></ul></div>
+  </div>
+  <div class="grid2" style="margin-top:3mm">
+    <div class="stat"><span class="sv">ρ = .34</span><span class="sl">상황판단검사(SJT)의 직무 성과 예측 타당도. 직무 분석에 기반할수록 높았다 [R2] → 상황과 선택지를 NCS 열간압연 능력단위에 맞춤</span></div>
+    <div class="stat"><span class="sv" style="color:var(--green)">추천만</span><span class="sl">진단 결과는 교육·코칭 추천용이며 인사 배치나 업무 적합성 판단에 쓰지 않는다. 교육 효과(매뉴얼 대비)는 아직 사람 대상 검증 전</span></div>
+  </div>
+  <div class="foot"><span>STEEL MIND · 결과보고서</span><span>2</span></div>
+</section>
+
+<!-- 3. 해결하려는 문제 -->
+<section class="page">
+  <div class="section-num">02</div>
+  <p class="kicker">해결하려는 문제</p>
+  <h2>사고는 규칙을 몰라서보다 판단과 소통에서 난다</h2>
+  <p class="lead small">기획서의 “부서 간 충돌” 문제를, 신입 교육 현장의 문제로 좁혀 다시 정의했습니다.</p>
+
+  <div class="grid3" style="margin-bottom:5mm">
+    <div class="card"><span class="t">현장의 문제</span><p class="xs">이상 징후와 납기 압박이 겹치면 “조금만 더 돌리자”는 판단이 나온다. 압연설비 입측 가이드 끼임 사망 사례의 예방 대책도 운전 정지·전원 차단·기동장치 잠금이다 [S11]. NCS 「열간압연 안전관리」 학습모듈은 설비 불시 가동 등으로 매년 약 40여 명이 사망한다고 적는다 [N2].</p></div>
+    <div class="card"><span class="t">교육의 문제</span><p class="xs">신입은 부서 간 이해관계가 부딪히는 결정을 현장 전에 해 볼 기회가 거의 없다. 같은 매뉴얼·같은 문제로는 사람마다 다른 약점을 찾기 어렵고, 다시 평가해도 외운 것인지 나아진 것인지 모른다.</p></div>
+    <div class="card"><span class="t">AI 시대의 문제</span><p class="xs">AI가 늘수록 “AI가 사람을 어떻게 돕는가”가 중요하다. 정답을 대신 고르는 AI가 아니라, 사람의 약점을 찾아 연습할 상황을 골라 주는 AI가 필요하다.</p></div>
+  </div>
+
+  <h3>매뉴얼 교육과 무엇이 다른가</h3>
+  <div class="cmp">
+    <div class="ch"><span></span><span>기존 방식</span><span></span><span>STEEL MIND</span></div>
+    <div class="cr"><span class="ck">교육</span><span class="co">모두에게 같은 매뉴얼</span><span class="ca">→</span><span class="cn">약한 역량을 노리는 상황</span></div>
+    <div class="cr"><span class="ck">평가</span><span class="co">공통 문제 세트</span><span class="ca">→</span><span class="cn">공통 상황 3개 + AI가 고른 돌발상황 3개</span></div>
+    <div class="cr"><span class="ck">피드백</span><span class="co">정답과 해설</span><span class="ca">→</span><span class="cn">역량별 점수와 그 점수를 만든 선택(근거 사건)</span></div>
+    <div class="cr"><span class="ck">재평가</span><span class="co">같은 문제 반복</span><span class="ca">→</span><span class="cn">조건이 다른 처음 보는 상황 2개로 BEFORE/AFTER</span></div>
+    <div class="cr"><span class="ck">다음 단계</span><span class="co">교육 담당자가 판단</span><span class="ca">→</span><span class="cn">NCS 능력단위·추천 교육·사수·강점 직무 제안 (최종 결정은 사람)</span></div>
+  </div>
+
+  <div class="card warn" style="margin-top:5mm"><span class="t">안전을 사람의 시각으로 넓게</span>
+    <p class="small" style="margin:0">제철소는 위험한 곳이라 동료의 작은 보고를 듣고, 부서를 조율하고, 다음 조에 위험을 넘기는 협업과 소통이 곧 안전입니다. 그래서 진단 역량에 “소통·조율”을 넣었습니다(팀 회의, 11/9 저녁).</p></div>
+  <div class="foot"><span>STEEL MIND · 결과보고서</span><span>3</span></div>
+</section>
+
+<!-- 4. 역할 분담 -->
+<section class="page">
+  <div class="section-num">03</div>
+  <p class="kicker">역할 분담 · 기획안 대비 실제</p>
+  <h2>Unity로 정하면서 역할의 경계가 다시 그려졌다</h2>
+  <p class="lead small">왼쪽은 기획서(13:17 제출)의 역할, 오른쪽은 카카오톡 대화와 GitHub 커밋(모든 브랜치, 11/9)으로 확인한 실제 작업입니다.</p>
+  <div class="rhead"><span></span><span>기획서</span><span></span><span>실제 (회의록·커밋)</span></div>
+  <div class="rlist">
+  <div class="rrow">
+    <div class="who"><img class="kd" src="img/knewdeal.png" alt="" style="filter:hue-rotate(170deg) saturate(1.6)"><div class="n">박소영</div><div class="id">ssoyoum · 팀장</div></div>
+    <div class="plan"><span class="lbl">기획 · 통합</span><ul><li>기획서와 플레이 흐름</li><li>Agent 페르소나·회의 반응 설계</li><li>JSON 형식 정의와 통합</li></ul></div>
+    <div class="ar">→</div>
+    <div class="real"><span class="lbl">기획 · 문서 · AI 결과 보고서 시안</span><ul><li>기획 초안·압연 HTML 시안 (04:47~05:16)</li><li>기획서 v1·v2·v3, 에이전트 설계서 (10:50~13:17)</li><li>결과 화면 HTML 초안 (14:56), 15시 할 일 정리</li><li>규칙 기반 회의·선택 DB 웹 결과 보고서 <span class="c">72b6b95</span></li><li>보고서 문장 Gemini 실험 <span class="c">389d589</span> <span class="c">daa6b6c</span> (llm 브랜치)</li></ul></div>
+  </div>
+  <div class="rrow">
+    <div class="who"><img class="kd" src="img/knewdeal.png" alt="" style="filter:hue-rotate(55deg) saturate(1.3)"><div class="n">양수빈</div><div class="id">viiin2</div></div>
+    <div class="plan"><span class="lbl">게임 화면 · UI</span><ul><li>Unity 메인 화면</li><li>4개 공정 맵·설비·사건 화면 설계</li><li>지표·사건·선택 UI</li></ul></div>
+    <div class="ar">→</div>
+    <div class="real"><span class="lbl">Unity 전체 구현 · 통합 · AI 연동</span><ul><li>압연 맵 #6, 4개 공정 맵 #7</li><li>시나리오 연결, 비주얼 노벨 회의</li><li>보고서·회차 기록·타이틀 #11 #12</li><li>적응형 출제·역량 보고서·Gemini 연동 #15</li><li>재훈련 전후 비교 #17 · 이날 커밋 62개</li></ul></div>
+  </div>
+  <div class="rrow">
+    <div class="who"><img class="kd" src="img/knewdeal.png" alt="" style="filter:none"><div class="n">신원민</div><div class="id">won2912 · SHIN</div></div>
+    <div class="plan"><span class="lbl">시나리오 · 규칙 엔진</span><ul><li>사건과 행동 목록</li><li>지표 계산·등급·밸런스</li><li>공정별 사건 데이터</li></ul></div>
+    <div class="ar">→</div>
+    <div class="real"><span class="lbl">시나리오 수치 · 검증 · 리뷰</span><ul><li>Unity 버전 통일 제안 (09:59)</li><li>사건 6개 손실값·연결 규칙, 729개 경로 결과표 <span class="c">793e73a</span></li><li>결과 문서 충돌 해결, PR #6·#11·#12 승인</li><li>설비 24개 돌발 문제 48개, 상황 변형 <span class="c">8cc1ad7</span> (브랜치)</li></ul></div>
+  </div>
+  <div class="rrow">
+    <div class="who"><img class="kd" src="img/knewdeal.png" alt="" style="filter:hue-rotate(-80deg) saturate(1.3)"><div class="n">김다영</div><div class="id">cookieimda</div></div>
+    <div class="plan"><span class="lbl">AI 연동 · 결과 화면</span><ul><li>LLM 선택지 생성</li><li>AI 진단 로그</li><li>결과 화면</li></ul></div>
+    <div class="ar">→</div>
+    <div class="real"><span class="lbl">연출·시연 기획 · 월드맵 · 기수 보고서</span><ul><li>아트·기술 방향 제안 (10:23)</li><li>선택지 vs 탐색 모드 비교안, 시연 구성안 (14:16)</li><li>섬 월드맵 #13 #16, 비 오는 타이틀 <span class="c">c9f4990</span></li><li>공통 기록 형식·기수 진단 보고서 <span class="c">96d03db</span> (브랜치)</li></ul></div>
+  </div>
+  </div>
+  <div class="card info rwhy"><span class="t">바뀐 이유</span><ul class="small"><li><b>엔진이 Unity 하나로 모였다.</b> 기획은 웹 화면·규칙 엔진·LLM 서버를 사람별로 나눴지만, 11:16 Unity 맵이 먼저 동작하면서 규칙 계산(C#)과 Gemini 호출까지 Unity 안에서 처리하게 됐다. 코드 통합은 Unity 담당에게 모였다.</li><li><b>나머지는 설계와 검증으로 옮겨 갔다.</b> 시나리오 담당은 수치와 729개 경로 검증, AI 담당은 연출·시연 구성과 교육 담당자용 기록 형식, 팀장은 기획 문서와 AI 문장 실험을 맡았다.</li><li><b>확장을 빠르게 반영해야 했다.</b> 진단 시뮬레이션으로 넓히는 작업을 한 브랜치에 묶어 17:43~18:07, 24분 만에 병합했다.</li></ul></div>
+  <div class="foot"><span>STEEL MIND · 결과보고서</span><span>4</span></div>
+</section>
+
+<!-- 5. 추진현황 -->
+<section class="page">
+  <div class="section-num">04</div>
+  <p class="kicker">기획안 대비 추진현황</p>
+  <h2>기획안 위에 중간 피드백을 더해 진단 기능까지 구현했다</h2>
+  <p class="lead small">기획서의 MVP 핵심 기능 F1~F5와 “이번에 넣지 않는 것”을 기준으로 main의 상태를 비교했습니다. 5개 중 2개는 그대로, 3개는 오후 중간 점검의 피드백을 받아 진단 중심으로 바꿔 구현했습니다.</p>
+
+  <table>
+    <tr><th style="width:17%">기획서</th><th style="width:31%">계획</th><th style="width:11%">상태</th><th style="width:41%">실제 (main)</th></tr>
+    <tr><td><b>F1 공장 화면</b></td><td>공정 라인이 돌고, 사건 난 설비가 깜빡임</td><td><span class="st done">완료</span></td><td>열연 라인 6개 설비 연출, 경보 깜빡임 후 플레이어가 해당 설비로 이동. 제선·제강·연주 맵과 월드맵까지 만듦</td></tr>
+    <tr><td><b>F2 사건과 AI 선택지</b></td><td>LLM이 행동 목록에서 선택지 3개를 골라 문장으로. 제한 시간 초과 시 가장 위험한 행동</td><td><span class="st chg">변경</span></td><td>선택지 문장은 시나리오 데이터에 고정. <b>AI는 선택지 대신 “다음 사건”을 고름</b>. 20초 타이머는 HTML 시안에만 있고 Unity 버전에는 넣지 않음</td></tr>
+    <tr><td><b>F3 Agent 회의</b></td><td>결정 뒤 생산·품질·설비·안전 Agent가 찬성·불만·경고</td><td><span class="st chg">변경</span></td><td>결정 <b>전</b> 회의로 바꿈(비주얼 노벨식 대화). 결정 뒤 찬반 반응과 추천 표시는 빼고, 부서 이름은 성격 별명 뒤로 숨김</td></tr>
+    <tr><td><b>F4 지표 계산</b></td><td>지표 4개(생산·품질·안전·비용)에 변화값, 종합 점수와 S~C 등급</td><td><span class="st chg">변경</span></td><td>선택마다 손실값은 규칙대로 계산(729개 경로 결과표). 결과의 중심은 <b>5가지 대처 역량 점수</b>로 옮김</td></tr>
+    <tr><td><b>F5 결과 화면·AI 진단</b></td><td>등급, 지표 변화, 선택 기록, LLM 진단 로그</td><td><span class="st done">완료</span></td><td>진단 보고서(역량 레이더, 교육·사수·직무, AI가 고른 사건, 회차 기록, 재훈련 전후). Gemini가 진단과 코칭 작성</td></tr>
+    <tr><td>확장 · 이어지는 상태</td><td>앞 사건 선택이 다음 사건 출발 상태를 바꿈 (이번엔 제외)</td><td><span class="st add">추가 구현</span></td><td>4개 연결 규칙을 데이터(<code>carry</code>)와 계산에 넣음. 예: 사상압연기 속도 유지 → 작업자 사건 안전 −3</td></tr>
+    <tr><td>확장 · 학습 기록</td><td>“자주 희생한 지표” 돌아보기 (이번엔 제외)</td><td><span class="st add">추가 구현</span></td><td>끝난 판을 모두 저장해 회차별로 비교하고, 약한 역량만 다시 훈련한 뒤 전후를 막대그래프로 비교</td></tr>
+    <tr><td>확장 · 공정 캠페인</td><td>제선→제강→연주→압연을 이음 (이번엔 제외)</td><td><span class="st br">브랜치</span></td><td>4개 공정 맵과 공정 간 이동은 main. 설비 24개 돌발 문제 48개는 브랜치에서 작업 중</td></tr>
+  </table>
+
+  <div class="grid2">
+    <div class="card warn"><span class="t">중간 점검에서 받은 피드백</span>
+      <ul class="small" style="margin:1mm 0 0;padding-left:4.5mm">
+        <li>결과가 성향 유형에 가까워, 역량으로 보여 주면 좋겠다</li>
+        <li>AI가 문장을 넘어 판단 과정에 직접 참여하면 좋겠다</li>
+        <li>같은 선택이면 늘 같은 결과라 반복 학습이 어렵다</li>
+        <li>현장 교육·사수 배치와 이어지면 실무에 쓸 수 있겠다</li>
+      </ul></div>
+    <div class="card ok"><span class="t">이렇게 반영했다</span>
+      <ul class="small" style="margin:1mm 0 0;padding-left:4.5mm">
+        <li>5가지 대처 역량 점수와 근거 사건으로 진단 <span class="c">aa33475</span></li>
+        <li>AI가 약점을 노린 다음 사건을 고르고 이유를 밝힘 <span class="c">4df0967</span></li>
+        <li>앞선 답에 따라 뒤 사건이 바뀌는 적응형 출제</li>
+        <li>추천 교육·사수·NCS 연결, 재훈련 전후 비교 <span class="pr">#15</span> <span class="pr">#17</span></li>
+      </ul></div>
+  </div>
+  <p class="xs muted" style="margin-top:2.5mm">그대로 지킨 원칙: 점수는 규칙이 계산하고 AI는 점수를 바꾸지 않는다. AI가 응답하지 않아도 기본 문장으로 멈추지 않는다. 사건·선택지·점수는 JSON 한 파일로 분리한다.</p>
+
+  <div class="foot"><span>STEEL MIND · 결과보고서</span><span>5</span></div>
+</section>
+
+<!-- 6. 진단 시뮬레이션으로 넓힌 기능 -->
+<section class="page">
+  <div class="section-num">05</div>
+  <p class="kicker">진단 시뮬레이션으로 넓힌 기능</p>
+  <h2>체험에서 진단으로: 기획서에 없던 기능 8가지</h2>
+  <p class="lead small">오후 중간 점검에서 “결과를 성향이 아니라 역량으로, AI가 판단에 직접 참여하게, 현장 교육과 이어지게”라는 방향 제안을 받았습니다. 팀은 이를 확장 기회로 보고 아래 기능을 더했습니다.</p>
+
+  <table>
+    <tr><th style="width:20%">기능</th><th style="width:22%">무엇을 더 잘하게 됐나</th><th style="width:42%">내용</th><th style="width:16%">근거</th></tr>
+    <tr><td><b>5가지 대처 역량 진단</b></td><td>결과가 유형이 아니라 역량 점수와 근거 사건</td><td>상황 인식·안전 우선·위기 판단·설비 이해·소통. 선택지마다 역량 점수(−3~+2)를 붙이고 레이더로 보여 줌</td><td><span class="c">aa33475</span> <span class="pr">#15</span></td></tr>
+    <tr><td><b>적응형 사건 출제</b></td><td>사람마다 다른 사건 순서</td><td>기본 사건 3개 뒤, 후보 9개 중 “필요도 = 약점 + 불확실성”이 가장 큰 사건을 냄. 약점은 평균이 낮을수록, 불확실성은 1 ÷ (1 + 확인 횟수)</td><td><code>CompetencyModel.cs</code></td></tr>
+    <tr><td><b>AI가 다음 사건을 고름</b></td><td>AI가 판단 과정에 직접 참여</td><td>규칙이 추린 후보 3개 중 Gemini가 다음 돌발상황을 고르고 이유를 화면에 밝힘(“Gemini 선택”). 6초 안에 답이 없으면 규칙 선택</td><td><span class="c">4df0967</span></td></tr>
+    <tr><td><b>AI 진단과 코칭</b></td><td>사람이 읽는 진단 문장</td><td>판이 끝나면 기록만 근거로 진단 2~3문장과 훈련 2개를 씀. “숫자를 지어내지 마라” 조건, 실패 시 기본 문장</td><td><span class="c">4df0967</span> <span class="c">3ee5683</span></td></tr>
+    <tr><td><b>돌발상황 6개</b></td><td>역량을 골고루 확인</td><td>순간 정전, 냉각수 배관 파열, 두께 측정기 값 불일치, 긴급 주문과 정기 점검 충돌, 크레인 과부하, 신입의 “이상한 소리” 보고</td><td><code>hot_rolling.json</code></td></tr>
+    <tr><td><b>교육·사수·NCS 연결</b></td><td>진단 뒤 할 일이 보임</td><td>약한 역량마다 추천 교육, 매칭할 사수, NCS 열간압연 능력단위 (7장)</td><td><code>hot_rolling.json</code></td></tr>
+    <tr><td><b>재훈련 전후 비교</b></td><td>교육 효과를 숫자로 확인</td><td>약한 역량을 노린 사건으로 다시 훈련하고, 진단(BEFORE)과 재훈련(AFTER)을 막대그래프로 비교. 향상·유지·하락 표시</td><td><span class="c">fd46b05</span> <span class="c">aca93d3</span> <span class="pr">#17</span></td></tr>
+    <tr><td><b>편향 없는 회의</b></td><td>정답 힌트 없이 스스로 판단</td><td>부서 이름 대신 성격 별명으로 부르고, 추천 표시와 결정 뒤 찬반 반응을 뺌</td><td><span class="c">6be722e</span> <span class="c">1db6407</span></td></tr>
+  </table>
+
+  <div class="card info"><span class="t">AI와 규칙의 경계는 그대로</span>
+    <p class="small">규칙: 역량 점수 합산, 후보 3개 추리기, 레이더·강점·약점 계산, 기본 문장. AI: 후보 중 다음 사건 선택과 이유, 진단 문장과 코칭. AI 답은 JSON으로만 받고, 후보에 없는 id면 버린다. 17:43 첫 커밋에서 18:07 병합까지 24분, 재훈련 기능까지 19:19에 main에 들어갔다.</p></div>
+
+  <div class="foot"><span>STEEL MIND · 결과보고서</span><span>6</span></div>
+</section>
+
+<!-- 7. 공정 특성 분석 -->
+<section class="page">
+  <div class="section-num">06</div>
+  <p class="kicker">공정 특성 분석</p>
+  <h2>열연은 “판단이 늦으면 바로 손실이 되는” 공정이다</h2>
+  <p class="lead small">돌발상황 대처 역량을 재려면 ① 사건이 설비별로 또렷이 나뉘고 ② 판단을 미루면 바로 손실이 생기고 ③ 한 결정이 여러 부서 목표에 동시에 걸려야 합니다. 참고한 열연 자료의 원문 문장으로 열연이 이 조건을 갖추는지 확인했습니다. [ ]는 마지막 장 출처 번호입니다.</p>
+
+  <table>
+    <tr><th style="width:19%">공정 특성</th><th style="width:47%">자료가 말하는 것</th><th style="width:34%">진단 설계에서의 의미</th></tr>
+    <tr><td><b>설비 6개가 한 줄인 연속 공정</b></td><td>재가열 → 조압연 → 사상압연 → 냉각 → 권취를 거치는 연속 공정. 주요 설비는 가열로·조압연기·사상압연기·런아웃 테이블·권취기 [S5]</td><td>사건마다 “어느 설비에서” 났는지가 분명해 사건을 설비 단위로 나눠 낼 수 있다 (①)</td></tr>
+    <tr><td><b>온도 창이 좁다</b></td><td>재가열 1,100~1,300℃ [S7], 가열은 변형에 필요한 힘을 줄인다 [S3]. 사상압연은 정해진 마무리 온도에서 끝나도록 속도를 맞춘다 [S1]. 권취 온도(400~700℃ [S7])가 성질을 결정한다 [S1]</td><td>소재는 라인을 지나는 동안 계속 식는다. 판단을 미루면 온도가 창을 벗어나 품질 손실로 이어진다 (②)</td></tr>
+    <tr><td><b>한 대의 이상이 전체에 걸린다</b></td><td>사상압연은 탠덤 방식이라 바 하나가 모든 스탠드를 한꺼번에 지난다 [S1]. 보통 7개 스탠드가 연속 배치되어 30~60mm를 1.2~22mm로 만든다 [S6]</td><td>스탠드 하나의 과열·정지가 라인 전체를 세운다. “계속·감속·정지” 판단이 생산·설비·품질을 동시에 건드린다 (③)</td></tr>
+    <tr><td><b>앞 공정 문제가 뒤로 번진다</b></td><td>압연 표면 품질은 디스케일링에 크게 좌우된다 [S4]. 스케일은 조압연 중에도 다시 자라 도중에 다시 제거한다 [S1]</td><td>앞 사건의 선택이 뒤 사건 손실로 이어지는 연결 규칙의 근거 (③)</td></tr>
+    <tr><td><b>사람과 설비가 가깝다</b></td><td>압연설비 입측 가이드 구동부와 구조물 사이 끼임 사망 사례. 예방 대책은 운전 정지·전원 차단·기동장치 잠금, 조업·정비·협력업체 공동 차단 [S11]</td><td>“생산을 이어 갈지, 사람부터 지킬지”를 묻는 안전 우선·소통 역량 사건의 근거</td></tr>
+  </table>
+
+  <h3>공정 특성 → 사건 설계</h3>
+  <table>
+    <tr><th style="width:22%">설비</th><th style="width:42%">근거가 된 특성</th><th style="width:36%">사건</th></tr>
+    <tr><td>가열로</td><td>덜 가열하면 변형 저항이 커진다 [S3][S7]</td><td>슬라브 온도 미달</td></tr>
+    <tr><td>스케일 제거기</td><td>고압수(1,500psi [S1], 220bar [S3])로 산화층 제거, 표면 품질 좌우 [S4]</td><td>수압 저하</td></tr>
+    <tr><td>조압연기</td><td>고온에서 폭이 퍼지고 에저가 폭을 유지 [S1]</td><td>바 쏠림</td></tr>
+    <tr><td>사상압연기·두께계</td><td>탠덤 연속 압연, 마무리 온도 관리, X선 두께계로 롤 간격 조정 [S1][S6]</td><td>롤 온도 상승, 순간 정전, 두께 측정기 값 불일치</td></tr>
+    <tr><td>런아웃 테이블</td><td>수냉으로 권취 온도까지 냉각 [S1] · 입측 가이드 끼임 사례 [S11]</td><td>작업자 위험 구역 진입, 냉각수 배관 파열</td></tr>
+    <tr><td>권취기</td><td>권취 온도가 열연강 성질을 결정 [S1][S7]</td><td>코일 옆면 밀림</td></tr>
+  </table>
+  <p class="xs muted">제선·제강·연주는 같은 기준으로 비교할 자료를 아직 모으지 못해, 열연이 진단 조건을 충족한다는 것만 근거로 둡니다.</p>
+
+  <div class="foot"><span>STEEL MIND · 결과보고서</span><span>7</span></div>
+</section>
+
+<!-- 플레이 시나리오 1 -->
+<section class="page">
+  <p class="kicker">플레이 시나리오 · 시뮬레이션 화면</p>
+  <div class="step"><div class="no">1</div><h2 style="margin:0">교대 시작 · 타이틀과 인트로</h2><div class="dots"><i class="on"></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
+  <div class="shot"><div class="ph"><b>캡처 준비 중</b>img/shot-1.png</div><img src="img/shot-1.png" alt="야간 제철소 타이틀과 로고" onerror="this.remove()"></div><p class="cap">시연 영상 0:03 화면</p>
+  <div class="sit"><span class="lbl">상황</span>“열연 2라인, 야간 교대. 오늘 당신은 처음으로 이 라인의 운영 책임자를 맡았습니다.”</div>
+  <div class="grid2 flowcards">
+    <div class="card"><span class="t">플레이어가 하는 일</span><ul class="small"><li>Space로 시작</li><li>인트로 문장을 읽고 공장으로 들어감</li></ul></div>
+    <div class="card info"><span class="t">시뮬레이션이 하는 일</span><ul class="small"><li>타이틀 배경음 재생</li><li>시나리오 데이터와 역량 정의를 불러옴</li></ul></div>
+  </div>
+  <p class="kicker" style="margin:4mm 0 2mm">구현 기능 · 근거 커밋</p>
+  <div class="chips"><div class="chip"><b>타이틀 장면</b><span class="c">2248b3b</span></div><div class="chip"><b>인트로</b><span class="c">5bdb41e</span></div><div class="chip"><b>픽셀 로고</b><span class="c">3454581</span></div><div class="chip"><b>Galmuri 폰트</b><span class="c">86cf82c</span></div></div>
+  <div class="foot"><span>STEEL MIND · 결과보고서</span><span>8</span></div>
+</section>
+
+<!-- 플레이 시나리오 2 -->
+<section class="page">
+  <p class="kicker">플레이 시나리오 · 시뮬레이션 화면</p>
+  <div class="step"><div class="no">2</div><h2 style="margin:0">공정 가동 · 라인을 걷고 둘러보기</h2><div class="dots"><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i><i></i></div></div>
+  <div class="shot"><div class="ph"><b>캡처 준비 중</b>img/shot-2.png</div><img src="img/shot-2.png" alt="열간압연 라인 정상 가동" onerror="this.remove()"></div><p class="cap">시연 영상 1:01 화면</p>
+  <div class="sit"><span class="lbl">상황</span>슬라브가 가열로 → 스케일 제거기 → 조압연 → 사상압연 → 런아웃 테이블 → 권취기를 지나 코일로 감깁니다.</div>
+  <div class="grid2 flowcards">
+    <div class="card"><span class="t">플레이어가 하는 일</span><ul class="small"><li>WASD로 걷기 · Tab 전체 공정 · M 월드맵</li><li>보행로에서는 빨리 이동</li></ul></div>
+    <div class="card info"><span class="t">시뮬레이션이 하는 일</span><ul class="small"><li>라인 애니메이션과 설비 빛</li><li>월드맵에 현재 공정 주황 테두리</li></ul></div>
+  </div>
+  <p class="kicker" style="margin:4mm 0 2mm">구현 기능 · 근거 커밋</p>
+  <div class="chips"><div class="chip"><b>압연 맵</b><span class="c">4f6d658</span></div><div class="chip"><b>4개 공정 맵</b><span class="c">8408e35</span></div><div class="chip"><b>섬 월드맵</b><span class="c">d0a5b54</span></div><div class="chip"><b>현재 구역</b><span class="c">78ae7a0</span></div></div>
+  <div class="foot"><span>STEEL MIND · 결과보고서</span><span>9</span></div>
+</section>
+
+<!-- 플레이 시나리오 3 -->
+<section class="page">
+  <p class="kicker">플레이 시나리오 · 시뮬레이션 화면</p>
+  <div class="step"><div class="no">3</div><h2 style="margin:0">사건 발생 · 경보와 현장 이동</h2><div class="dots"><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i><i></i></div></div>
+  <div class="shot"><div class="ph"><b>캡처 준비 중</b>img/shot-3.png</div><img src="img/shot-3.png" alt="설비 경보와 현장 이동 안내" onerror="this.remove()"></div><p class="cap">시연 영상 0:36 화면</p>
+  <div class="sit"><span class="lbl">상황</span>LEVEL 2 · 사건 2/6 · 조압연기 바 쏠림 — 압연 중인 바가 한쪽으로 쏠립니다. 좌우 롤 간격이 조금 어긋난 것으로 보입니다.</div>
+  <div class="grid2 flowcards">
+    <div class="card"><span class="t">플레이어가 하는 일</span><ul class="small"><li>화살표를 따라 사건 설비 앞으로 이동</li><li>현장에 도착하면 회의 시작</li></ul></div>
+    <div class="card info"><span class="t">시뮬레이션이 하는 일</span><ul class="small"><li>설비가 빨갛게 깜빡이고 라인 감속</li><li>배경음이 경보음으로 바뀜</li></ul></div>
+  </div>
+  <p class="kicker" style="margin:4mm 0 2mm">구현 기능 · 근거 커밋</p>
+  <div class="chips"><div class="chip"><b>경보 후 사건</b><span class="c">dca4767</span></div><div class="chip"><b>현장 이동</b><span class="c">ca26c30</span></div><div class="chip"><b>위치 안내</b><span class="c">bd063f7</span></div><div class="chip"><b>경보음</b><span class="c">58b198b</span></div></div><p class="card xs" style="margin:3mm 0 0">기본 사건 6개: 가열로 온도 미달 · 스케일 제거기 수압 저하 · 조압연기 바 쏠림 · 사상압연기 온도 상승 · 작업자 위험 구역 진입 · 권취기 코일 옆면 밀림</p>
+  <div class="foot"><span>STEEL MIND · 결과보고서</span><span>10</span></div>
+</section>
+
+<!-- 플레이 시나리오 4 -->
+<section class="page">
+  <p class="kicker">플레이 시나리오 · 시뮬레이션 화면</p>
+  <div class="step"><div class="no">4</div><h2 style="margin:0">동료 회의 · 엇갈리는 네 목소리</h2><div class="dots"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i><i></i></div></div>
+  <div class="shot"><div class="ph"><b>캡처 준비 중</b>img/shot-4.png</div><img src="img/shot-4.png" alt="비주얼 노벨식 동료 회의" onerror="this.remove()"></div><p class="cap">시연 영상 0:41 화면</p>
+  <div class="sit"><span class="lbl">상황</span>재깍이 “가이드가 잡아 줄 테니 그대로 밀어요. 패스 순서가 밀리면 사상압연까지 줄줄이 늦어집니다.” — 다른 동료들은 롤 간격 보정, 바 회수를 말합니다.</div>
+  <div class="grid2 flowcards">
+    <div class="card"><span class="t">플레이어가 하는 일</span><ul class="small"><li>대사를 읽고 Space로 넘김</li><li>누구 말이 맞는지 스스로 판단</li></ul></div>
+    <div class="card info"><span class="t">시뮬레이션이 하는 일</span><ul class="small"><li>공장장이 쟁점을 한 줄로 정리</li><li>부서 이름·추천 표시 없이 성격 별명만</li></ul></div>
+  </div>
+  <p class="kicker" style="margin:4mm 0 2mm">구현 기능 · 근거 커밋</p>
+  <div class="chips"><div class="chip"><b>회의 장면</b><span class="c">bf8c5e2</span></div><div class="chip"><b>성격 별명</b><span class="c">1db6407</span></div><div class="chip"><b>추천 숨김</b><span class="c">6be722e</span></div><div class="chip"><b>캐릭터 목소리</b><span class="c">9746544</span></div></div>
+  <div class="foot"><span>STEEL MIND · 결과보고서</span><span>11</span></div>
+</section>
+
+<!-- 플레이 시나리오 5 -->
+<section class="page">
+  <p class="kicker">플레이 시나리오 · 시뮬레이션 화면</p>
+  <div class="step"><div class="no">5</div><h2 style="margin:0">결정 · 선택지 3개와 결과</h2><div class="dots"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i><i></i></div></div>
+  <div class="shot"><div class="ph"><b>캡처 준비 중</b>img/shot-5.png</div><img src="img/shot-5.png" alt="선택지 3개" onerror="this.remove()"></div><p class="cap">시연 영상 0:48 화면</p>
+  <div class="sit"><span class="lbl">상황</span>Ⓐ 그대로 압연 Ⓑ 롤 간격 보정 Ⓒ 바 회수 후 점검 — 쟁점: 지금 속도를 지킬지, 쏠림을 먼저 잡을지. 공짜 선택지는 없습니다.</div>
+  <div class="grid2 flowcards">
+    <div class="card"><span class="t">플레이어가 하는 일</span><ul class="small"><li>숫자키 1·2·3으로 선택</li><li>라인이 바뀌는 모습을 확인</li></ul></div>
+    <div class="card info"><span class="t">시뮬레이션이 하는 일</span><ul class="small"><li>생산·품질·안전·비용 손실을 규칙으로 계산</li><li>5가지 역량 점수 반영, 다음 사건에 영향</li></ul></div>
+  </div>
+  <p class="kicker" style="margin:4mm 0 2mm">구현 기능 · 근거 커밋</p>
+  <div class="chips"><div class="chip"><b>숫자키 선택</b><span class="c">7c3df15</span></div><div class="chip"><b>729개 경로</b><span class="c">793e73a</span></div><div class="chip"><b>역량 점수</b><span class="c">aa33475</span></div><div class="chip"><b>연결 규칙</b><span class="c">carry</span></div></div>
+  <div class="foot"><span>STEEL MIND · 결과보고서</span><span>12</span></div>
+</section>
+
+<!-- 플레이 시나리오 6 -->
+<section class="page">
+  <p class="kicker">플레이 시나리오 · 시뮬레이션 화면</p>
+  <div class="step"><div class="no">6</div><h2 style="margin:0">돌발상황 · AI가 약점을 노린 사건을 낸다</h2><div class="dots"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i></i></div></div>
+  <div class="shot"><div class="ph"><b>캡처 준비 중</b>img/shot-6.png</div><img src="img/shot-6.png" alt="AI 판단 · 다음 사건 선택 알림" onerror="this.remove()"></div><p class="cap">시연 영상 1:11 화면</p>
+  <div class="sit"><span class="lbl">상황</span>“노리는 역량 위기 판단 · 가장 취약한 위기 판단 역량을 심층 검증하기 위함 → 돌발상황을 준비합니다” (Gemini가 쓴 이유)</div>
+  <div class="grid2 flowcards">
+    <div class="card"><span class="t">플레이어가 하는 일</span><ul class="small"><li>AI가 고른 돌발상황에 대응</li><li>왜 이 사건인지 이유를 확인</li></ul></div>
+    <div class="card info"><span class="t">시뮬레이션이 하는 일</span><ul class="small"><li>필요도 = 약점 + 불확실성으로 후보 3개</li><li>Gemini가 1개를 고르고 이유 작성 (6초 안에 답 없으면 규칙 선택)</li></ul></div>
+  </div>
+  <p class="kicker" style="margin:4mm 0 2mm">구현 기능 · 근거 커밋</p>
+  <div class="chips"><div class="chip"><b>적응형 출제</b><span class="c">aa33475</span></div><div class="chip"><b>Gemini 선택</b><span class="c">4df0967</span></div><div class="chip"><b>키 재확인</b><span class="c">8fef403</span></div><div class="chip"><b>모델 대체</b><span class="c">3ee5683</span></div></div><p class="card xs" style="margin:3mm 0 0">돌발상황 6개: 순간 정전 · 냉각수 배관 파열 · 두께 측정기 값 불일치 · 긴급 주문과 정기 점검 충돌 · 크레인 과부하 · 신입의 “이상한 소리” 보고</p>
+  <div class="foot"><span>STEEL MIND · 결과보고서</span><span>13</span></div>
+</section>
+
+<!-- 플레이 시나리오 7 -->
+<section class="page">
+  <p class="kicker">플레이 시나리오 · 시뮬레이션 화면</p>
+  <div class="step"><div class="no">7</div><h2 style="margin:0">진단 보고서 · 약점에서 교육과 재훈련으로</h2><div class="dots"><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i><i class="on"></i></div></div>
+  <div class="grid2" style="margin:2mm 0 1mm"><div class="shot" style="height:64mm;margin:0"><img src="img/shot-7.png" alt="진단 보고서: 역량 레이더와 AI 분석"></div><div class="shot" style="height:64mm;margin:0"><img src="img/shot-7-1.png" alt="재훈련 전후 비교 막대그래프"></div></div><p class="cap" style="margin:1mm 0 3.5mm">왼쪽: 진단 결과(역량 레이더·Gemini 분석·추천 교육) · 오른쪽: 맞춤 재훈련 전후 비교(상황 인식 38 → 100) · 시연 영상 1:19, 1:29 화면</p>
+  <div class="sit"><span class="lbl">상황</span>진단 요약 → 대처 역량 5가지 → 교육·사수·직무 → AI가 고른 사건 → 사건 기록 → 회차 기록</div>
+  <div class="grid2 flowcards">
+    <div class="card"><span class="t">플레이어가 하는 일</span><ul class="small"><li>좌우로 장을 넘기며 결과 확인</li><li>약한 역량만 다시 훈련</li></ul></div>
+    <div class="card info"><span class="t">시뮬레이션이 하는 일</span><ul class="small"><li>Gemini가 진단 문장과 코칭 2개 작성</li><li>재훈련 전후를 막대그래프로 비교</li></ul></div>
+  </div>
+  <p class="kicker" style="margin:4mm 0 2mm">구현 기능 · 근거 커밋</p>
+  <div class="chips"><div class="chip"><b>보고서 장 넘김</b><span class="c">f9b2334</span></div><div class="chip"><b>레이더</b><span class="c">181bc9f</span></div><div class="chip"><b>회차 기록</b><span class="c">7b598a6</span></div><div class="chip"><b>재훈련 전후</b><span class="c">aca93d3</span></div></div>
+  <div class="foot"><span>STEEL MIND · 결과보고서</span><span>14</span></div>
+</section>
+
+<!-- 16. 기대 효과와 확장 -->
+<section class="page">
+  <div class="section-num">07</div>
+  <p class="kicker">기대 효과와 실무 적용</p>
+  <h2>신입 교육용 돌발상황 대처 역량 진단 도구로</h2>
+
+  <table>
+    <tr><th style="width:24%">기획서의 기대 효과</th><th style="width:76%">실제로 넣은 것</th></tr>
+    <tr><td>부서 간 시야</td><td>생산·품질·설비·안전 동료가 같은 사건에 다른 조치를 말하고, 선택마다 네 영역 손실을 규칙으로 계산</td></tr>
+    <tr><td>AI와 함께 결정하기</td><td>AI가 다음 사건을 고른 이유를 화면에 밝히고, 판단과 책임은 플레이어에게 둠. AI는 점수를 바꾸지 못함</td></tr>
+    <tr><td>안전 우선 습관</td><td>안전 우선을 독립 역량으로 측정. 작업자 사건은 실제 중대재해 사례[S11]의 예방 대책(운전 정지·기동장치 잠금)을 정답 조치로 반영</td></tr>
+    <tr><td>(없음 → 추가)</td><td><b>개인별 진단 → 맞춤 교육 → 재훈련 전후 비교</b>까지 한 번에 도는 교육 순환</td></tr>
+  </table>
+
+  <h3>역량 → NCS 능력단위 → 추천 교육</h3>
+  <table style="font-size:8pt">
+    <tr><th style="width:15%">역량</th><th style="width:37%">NCS 능력단위</th><th style="width:28%">추천 교육</th><th style="width:20%">매칭 직무·사수</th></tr>
+    <tr><td><b>상황 인식</b></td><td>1601020012_23v3 열간압연 설비유지보수 · 1601020013 계측기 운용</td><td>설비 일상점검 실습 · 계측값 교차 확인</td><td>설비 점검·계측 운용</td></tr>
+    <tr><td><b>안전 우선</b></td><td>1601020010_23v3 열간압연 안전관리</td><td>작업중지권(산안법 제52조) 사례 · LOTO 8단계</td><td>안전관리</td></tr>
+    <tr><td><b>위기 판단</b></td><td>1601020325_23v4 열연코일 사상압연 · 직업기초 문제해결능력</td><td>돌발상황 도상훈련 · 비상 대응 절차</td><td>압연 조업 운전</td></tr>
+    <tr><td><b>설비·공정 이해</b></td><td>1601020012_23v3 설비유지보수 · 1601020329_23v4 열연코일 품질관리</td><td>압연 설비 구조·원리 · 품질불량 원인 분석</td><td>설비 정비·품질관리</td></tr>
+    <tr><td><b>소통·조율</b></td><td>직업기초 대인관계능력(협업·갈등관리) · 의사소통능력</td><td>부서 간 협의 롤플레이 · 보고·전달 체계</td><td>교대 조장·공정 간 조율</td></tr>
+  </table>
+
+  <h3>실무 적용 방안</h3>
+  <div class="grid2">
+    <div class="card"><span class="t">① 입문 교육 1주차 · 진단</span><p class="xs">신입이 한 판(약 15분)을 플레이해 5가지 역량 기준선을 잡는다. 사건별 결정 시간과 신입/경력 구분도 함께 기록(브랜치 <span class="c">96d03db</span>).</p></div>
+    <div class="card"><span class="t">② 맞춤 교육 · 사수 매칭</span><p class="xs">약한 역량의 NCS 능력단위와 추천 교육을 기존 과정에 바로 연결하고, 같은 역량이 강한 사수를 붙인다.</p></div>
+    <div class="card"><span class="t">③ 재훈련 · 효과 확인</span><p class="xs">교육 뒤 약점을 노린 사건으로 다시 플레이해 BEFORE/AFTER를 비교한다. 교육 효과를 숫자로 남긴다(main #17).</p></div>
+    <div class="card"><span class="t">④ 기수 보고서 · 과정 개선</span><p class="xs">공통 기록 형식(steelmind-run-v2)으로 기수 전체를 모아, 교육 담당자가 많이 약한 역량을 보고 과정을 고친다(브랜치).</p></div>
+  </div>
+  <p class="xs muted" style="margin-top:3mm">확장: 사건 JSON만 더하면 제선·제강·연주로 넓힐 수 있고(설비 24개 돌발 문제 48개 작업 중), 사례집[S11]의 공정별 실제 사례로 안전 사건을 늘린다. 진단 결과는 교육·코칭 추천용이며 인사 배치나 업무 적합성 판단에 쓰지 않는다. 역량 점수는 현장 선배·교육 담당자 검토를 거쳐야 한다.</p>
+
+  <div class="foot"><span>STEEL MIND · 결과보고서</span><span>15</span></div>
+</section>
+
+<!-- 17. 진행 기록 -->
+<section class="page">
+  <div class="section-num">08</div>
+  <p class="kicker">진행 기록 · 09:00 – 01:00</p>
+  <h2>하루의 작업을 커밋으로 따라가기</h2>
+  <table class="log">
+    <tr><th>시각</th><th style="width:15%">누가</th><th>한 일 (회의록·커밋)</th><th style="width:14%">PR</th></tr>
+    <tr><td class="t">04:47</td><td>박소영</td><td>회의 전 기획 초안과 압연 HTML 시안(20초 타이머, 숫자키) <span class="c">c39142c</span> <span class="c">7c3df15</span></td><td><span class="pr">#4</span></td></tr>
+    <tr><td class="t">09:28</td><td>박소영</td><td>범위 결정: 기획은 여러 공정, 구현은 압연 하나 먼저</td><td></td></tr>
+    <tr><td class="t">09:55</td><td>전원</td><td>역할 확정 · 09:59 신원민 제안으로 Unity 6000.3.27f1 통일</td><td></td></tr>
+    <tr><td class="t">10:23</td><td>김다영</td><td>심사기준·아트·기술 방향 제안(에이전트 색, Galmuri, JSON 검증과 대체 대사)</td><td></td></tr>
+    <tr><td class="t">11:16</td><td>양수빈</td><td>걸어 다니는 Unity 압연 맵 <span class="c">4f6d658</span></td><td><span class="pr">#6</span></td></tr>
+    <tr><td class="t">12:59</td><td>양수빈</td><td>제선·제강·연주 맵, 공정 간 이동 <span class="c">8408e35</span></td><td><span class="pr">#7</span></td></tr>
+    <tr class="key"><td class="t">13:17</td><td>박소영</td><td>기획서 v3 커밋, 13:30 제출 <span class="c">89a9592</span></td><td><span class="pr">#8</span></td></tr>
+    <tr><td class="t">14:28</td><td>신원민</td><td>사건 6개 손실값과 729개 경로 결과표 <span class="c">793e73a</span></td><td><span class="pr">#9</span> <span class="pr">#10</span></td></tr>
+    <tr><td class="t">15:01</td><td>양수빈</td><td>비주얼 노벨식 회의 장면 <span class="c">bf8c5e2</span></td><td></td></tr>
+    <tr><td class="t">15:54</td><td>양수빈</td><td>운영 결과 보고서, 회차 기록, 타이틀·인트로 <span class="c">ad58618</span> <span class="c">279542a</span></td><td><span class="pr">#11</span> <span class="pr">#12</span></td></tr>
+    <tr><td class="t">16:31</td><td>박소영</td><td>보고서 문장을 Gemini로 채우는 실험 <span class="c">389d589</span> (llm 브랜치)</td><td></td></tr>
+    <tr><td class="t">18:03</td><td>김다영</td><td>섬 월드맵, 현재 구역 표시 <span class="c">d0a5b54</span> <span class="c">78ae7a0</span></td><td><span class="pr">#13</span> <span class="pr">#16</span></td></tr>
+    <tr class="key"><td class="t">18:07</td><td>양수빈</td><td>진단 시뮬레이션으로 확장: 역량 진단, 적응형 출제, Gemini 출제·진단 <span class="c">aa33475</span> <span class="c">4df0967</span></td><td><span class="pr">#15</span></td></tr>
+    <tr class="key"><td class="t">19:19</td><td>양수빈</td><td>재훈련 전후 비교, 성격 별명, Gemini 키 재확인 <span class="c">aca93d3</span> <span class="c">1db6407</span></td><td><span class="pr">#17</span></td></tr>
+    <tr><td class="t">19:09</td><td>신원민</td><td>설비 24개 돌발 문제 48개, 사건별 상황 변형 <span class="c">8cc1ad7</span></td><td>브랜치</td></tr>
+    <tr><td class="t">19:25</td><td>김다영</td><td>비 오는 압연 타이틀 그림 <span class="c">c9f4990</span></td><td>브랜치</td></tr>
+    <tr><td class="t">20:16</td><td>김다영</td><td>공통 기록 형식과 기수 진단 보고서 <span class="c">96d03db</span></td><td>브랜치</td></tr>
+    <tr class="plan"><td class="t">22:00</td><td>전원</td><td>(기획서 일정) 브랜치 병합, 밸런스 조정과 수치 고정, AI 연결·기본 문장 대체 확인</td><td>예정</td></tr>
+    <tr class="plan"><td class="t">00:00</td><td>전원</td><td>(기획서 일정) 소스 정리, 결과보고서·발표자료, 시연 영상 녹화 → 01:00 제출 준비 완료</td><td>예정</td></tr>
+  </table>
+  <p class="xs muted">시각은 커밋 작성 시각 또는 PR 병합 시각. 20:16 이후 줄은 기획서 v3 추진 일정이며, 실제 완료 시각은 작업 후 채웁니다.</p>
+  <div class="foot"><span>STEEL MIND · 결과보고서</span><span>16</span></div>
+</section>
+
+<!-- 18. 출처 -->
+<section class="page">
+  <div class="section-num">09</div>
+  <p class="kicker">출처</p>
+  <h2>참고한 열연 자료와 돌발상황 데이터 출처</h2>
+
+  <h3>열연 설비·공정 자료 [S1~S10]</h3>
+  <p class="xs muted">팀의 이전 프로젝트 ST-ROOKIE에서 공개 자료를 원문 문장과 함께 정리해 둔 목록(<code>backend/data/ironmaking-sources.json</code>, 68개) 중 열연 자료입니다. 사내 자료나 현장 운전 지침이 아닙니다.</p>
+  <table style="font-size:7.8pt">
+    <tr><th style="width:46%">자료</th><th style="width:20%">발행</th><th style="width:34%">주소</th></tr>
+    <tr><td><b>[S1]</b> Hot Strip Mill (Facilities – Hot Strip Rolling, 2022)</td><td>California Steel Industries</td><td><a href="https://californiasteel.com/s/Facilities-Hot-Strip-Rolling-Updated-2022.pdf">californiasteel.com/s/Facilities-Hot-Strip-Rolling-Updated-2022.pdf</a></td></tr>
+    <tr><td><b>[S2]</b> Hot Rolled Steel · Product &amp; Technology</td><td>현대제철</td><td><a href="https://hyundai-steel.com/en/product-tech/hot-rolled">hyundai-steel.com/en/product-tech/hot-rolled</a></td></tr>
+    <tr><td><b>[S3]</b> The Manufacturing Process Behind Hot Rolled Steel (2024)</td><td>AM/NS India</td><td><a href="https://amns.in/stallion/blogs/the-manufacturing-process-behind-hot-rolled-steel.php">amns.in/…/the-manufacturing-process-behind-hot-rolled-steel.php</a></td></tr>
+    <tr><td><b>[S4]</b> Descaling · Our applications</td><td>Lechler GmbH</td><td><a href="https://www.lechler.com/de-en/solutions/applications/descaling">lechler.com/de-en/solutions/applications/descaling</a></td></tr>
+    <tr><td><b>[S5]</b> 열간압연공정 에너지 사용 모델 기술개발 (2020)</td><td>RIST 저자 · 한국컴퓨터정보학회</td><td><a href="https://koreascience.kr/article/CFKO202015463051891.pdf">koreascience.kr/article/CFKO202015463051891.pdf</a></td></tr>
+    <tr><td><b>[S6]</b> 열연 슬라브 압연에서 워크롤 표면 원주방향 인장응력 감소를 위한 냉각 방법 (2012)</td><td>한국소성가공학회</td><td><a href="https://koreascience.or.kr/article/JAKO201208636391648.pdf">koreascience.or.kr/article/JAKO201208636391648.pdf</a></td></tr>
+    <tr><td><b>[S7]</b> [지식발전소] 열연·냉연강판이란? (2013)</td><td>뉴데일리</td><td><a href="https://biz.newdaily.co.kr/site/data/html/2013/10/18/2013101810037.html">biz.newdaily.co.kr/…/2013101810037.html</a></td></tr>
+    <tr><td><b>[S8]</b> 알아 두면 좋은 철강재와 철강 기술 용어들! (2016)</td><td>포스코그룹 뉴스룸</td><td><a href="https://newsroom.posco.com/kr/?p=26352">newsroom.posco.com/kr/?p=26352</a></td></tr>
+    <tr><td><b>[S9]</b> 제품 종류 및 용도: 강반제품</td><td>한국철강협회</td><td><a href="https://steelpr.kosa.or.kr/promote/sub/sub13.jsp">steelpr.kosa.or.kr/promote/sub/sub13.jsp</a></td></tr>
+    <tr><td><b>[S10]</b> Rolling (metalworking)</td><td>Wikipedia</td><td><a href="https://en.wikipedia.org/wiki/Rolling_(metalworking)">en.wikipedia.org/wiki/Rolling_(metalworking)</a></td></tr>
+  </table>
+
+  <h3>진단 방법과 교육 근거 [R1·R2·N2]</h3>
+  <table style="font-size:7.8pt">
+    <tr><th style="width:46%">자료</th><th style="width:20%">발행</th><th style="width:34%">주소</th></tr>
+    <tr><td><b>[R1]</b> Han (2018) Components of the item selection algorithm in computerized adaptive testing. JEEHP 15:7</td><td>한국보건의료인국가시험원</td><td>jeehp.org/journal/view.php?number=277</td></tr>
+    <tr><td><b>[R2]</b> McDaniel 외 (2001) Use of situational judgment tests to predict job performance. J. Applied Psychology 86(4)</td><td>APA</td><td>doi:10.1037/0021-9010.86.4.730</td></tr>
+    <tr><td><b>[N2]</b> NCS 학습모듈 「열간압연 안전관리」 LM1601020010_23v3 외</td><td>교육부·한국직업능력연구원</td><td>ncs.go.kr (학습모듈 내려받기)</td></tr>
+  </table>
+
+  <h3>돌발상황 데이터 [S11]</h3>
+  <p class="xs muted">ST-ROOKIE의 What-if 사고 사례를 실제 사례로 바꿀 때 쓴 자료입니다(ST-ROOKIE 커밋 <span class="c">8ac64ef</span>, 2026-10-20, <code>content/scenarios/incidents.json</code>). “다르게 했다면”의 결과와 안전 절차는 사례집의 재해 예방 대책에서만 가져왔습니다.</p>
+  <table style="font-size:7.8pt">
+    <tr><th style="width:46%">자료</th><th style="width:20%">발행</th><th style="width:34%">주소</th></tr>
+    <tr><td><b>[S11]</b> 2022년 철강산업 중대재해 사례집</td><td>한국철강협회 · 한국산업안전보건공단</td><td><a href="https://www.kosa.or.kr/statistics/fileBoard_view.jsp?index=9438">kosa.or.kr/statistics/fileBoard_view.jsp?index=9438</a></td></tr>
+  </table>
+  <table style="font-size:7.8pt">
+    <tr><th style="width:14%">공정</th><th style="width:46%">사례 (사례집 쪽)</th><th style="width:40%">예방 대책(안전 절차)</th></tr>
+    <tr><td><b>열연</b></td><td>끼임 사례 2: 압연설비 입측가이드 구동부와 기계 구조물 사이에 끼임 (8쪽)</td><td>운전 정지·전원 차단·기동장치 잠금, 조업·정비·협력업체 공동 차단·해제, 열쇠 개별 관리</td></tr>
+    <tr><td>제선</td><td>추락 사례 4: 야간 설비점검 중 추락 또는 말림 (22쪽)</td><td>추락 방지망·안전대, 통로 정리, 회전부 덮개, 점검 때 운전 정지</td></tr>
+    <tr><td>제강</td><td>기타 사례 2: 산소랜스파이프가 풀리며 근처 작업자 맞음 (28쪽)</td><td>체결 토크 기준, 위험 구역 출입 제한, 대기 위치 지정</td></tr>
+    <tr><td>연주</td><td>추락 사례 5: 턴디쉬 주변 작업 중 내부로 추락, 화상 (24쪽)</td><td>방열커버 고정, 개구부 출입 통제, 방염복 착용</td></tr>
+  </table>
+
+  <div class="src">저장소 근거 문서: 기획서 v1·v2·v3(<code>docs/proposal/</code>), 에이전트 설계서(<code>docs/agent-design/agent_scenario.html</code>), 회의록(<code>docs/meetings/2026-11-09-day1.html</code>), 시나리오(<code>Resources/Scenarios/hot_rolling.json</code>), 결과표(<code>scenarios/hot-rolling-results.md</code>). 모든 설비 상황과 수치는 교육용 가상 값이며 실제 제철소 기준이 아닙니다.</div>
+
+  <div class="foot"><span>STEEL MIND · 결과보고서</span><span>17</span></div>
+</section>
+
+</body>
+</html>
