@@ -101,6 +101,7 @@ namespace SteelMind.Scenario
             r.radar = new[] { Score(t.production, maxLoss[0]), Score(t.quality, maxLoss[1]), Score(t.safety, maxLoss[2]), Score(t.cost, maxLoss[3]), (float)r.bestCount / n };
 
             // Agent별: 추천을 따른 횟수, 기분
+            var t0 = r.run.totals;
             foreach (var ag in AgentOrder)
             {
                 var v = new AgentVerdict { agent = ag, name = AgentName[ag] };
@@ -114,8 +115,11 @@ namespace SteelMind.Scenario
                     foreach (var re in ReactionsFor(e.ev, e.chosen))
                         if (re.agent == ag) { if (re.stance == "찬성") agree++; else against++; }
                 }
-                v.mood = ag == "safety" && r.accident ? "불만" : agree > against ? "만족" : against > agree + 1 ? "불만" : "보통";
-                v.comment = ag == "safety" && v.mood == "불만" && !r.accident ? "통제 구역과 과열 설비를 몇 번 놓쳤습니다. 다음엔 사람부터 챙겨 주세요." : Comment(ag, v.mood);
+                // 기분은 자기 담당 항목의 손실로 정한다 (설비 = 정비·정지 비용)
+                int own = ag == "production" ? t0.production : ag == "quality" ? t0.quality : ag == "safety" ? t0.safety : t0.cost;
+                v.mood = ag == "safety" && r.accident ? "불만" : own == 0 ? "만족" : own <= 8 ? "보통" : "불만";
+                v.comment = Comment(ag + (ag == "safety" && r.accident ? "" : ""), v.mood);
+                if (ag == "safety" && r.accident) v.comment = "안전사고가 났습니다. 사람이 먼저라는 원칙을 잊지 마세요.";
                 r.agents.Add(v);
             }
 
@@ -166,8 +170,9 @@ namespace SteelMind.Scenario
                 case "equipment:불만": return "설비가 달아오르고 부담이 컸습니다. 정비와 점검에 더 신경 써 주세요.";
                 case "equipment:보통": return "급한 불은 껐지만 점검이 필요한 곳이 남았습니다.";
                 case "safety:만족": return "사람이 다칠 뻔한 순간을 모두 막았습니다.";
-                case "safety:불만": return "안전사고가 났습니다. 사람이 먼저라는 원칙을 잊지 마세요.";
-                default: return "사고는 막았지만 위험한 순간이 있었습니다.";
+                case "safety:불만:사고": return "안전사고가 났습니다. 사람이 먼저라는 원칙을 잊지 마세요.";
+                case "safety:보통": return "사고는 막았지만 위험한 순간이 있었습니다.";
+                default: return "통제 구역과 과열 설비를 몇 번 놓쳤습니다. 다음엔 사람부터 챙겨 주세요.";
             }
         }
     }
