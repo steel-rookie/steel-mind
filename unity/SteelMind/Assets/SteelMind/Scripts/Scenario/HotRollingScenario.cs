@@ -212,7 +212,7 @@ namespace SteelMind.Scenario
             yield return ResultScreen();
         }
 
-        // 사건 발생: 경보를 켜고 화면을 붉게 몇 번 깜빡인 뒤 바로 회의를 연다 (설비까지 걸어갈 필요 없음)
+        // 사건 발생: 경보 + 붉은 깜빡임 → 암전 후 해당 설비 앞으로 이동 → 회의
         IEnumerator GoToSite(int i)
         {
             var ev = def.events[i];
@@ -229,6 +229,20 @@ namespace SteelMind.Scenario
                 float k = Mathf.Sin(t / period * Mathf.PI); // 0→1→0 한 번 깜빡임마다
                 img.color = new Color(0.9f, 0.1f, 0.08f, 0.38f * k * k);
                 yield return null;
+            }
+            // 화면을 잠깐 어둡게 했다가 문제가 난 설비 바로 앞에 플레이어를 세운다
+            var eq = line ? line.equipment.Find(e => e.id == ev.warn) : null;
+            if (eq != null && eq.renderer && player)
+            {
+                img.color = new Color(0, 0, 0, 0);
+                for (float t = 0; t < 0.35f; t += Time.deltaTime) { img.color = new Color(0, 0, 0, Mathf.SmoothStep(0, 1, t / 0.35f)); yield return null; }
+                img.color = Color.black;
+                var bb = eq.renderer.bounds;
+                Vector2 spot = new Vector2(bb.center.x, bb.min.y - 0.8f);
+                if (body) { body.linearVelocity = Vector2.zero; body.position = spot; }
+                player.transform.position = new Vector3(spot.x, spot.y, player.transform.position.z);
+                yield return new WaitForSeconds(0.45f);   // 카메라가 따라올 시간
+                for (float t = 0; t < 0.5f; t += Time.deltaTime) { img.color = new Color(0, 0, 0, 1f - Mathf.SmoothStep(0, 1, t / 0.5f)); yield return null; }
             }
             Destroy(go);
             yield return new WaitForSeconds(0.15f);
