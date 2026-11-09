@@ -21,7 +21,7 @@ namespace SteelMind.EditorTools
         const string Common = ArtRoot + "/Common";
         const string BgmPath = "Assets/SteelMind/Audio/bgm_rolling_mill.wav";
         const float PPU = 16f;
-        const int ViewW = 320, ViewH = 180;
+        const int ViewW = 480, ViewH = 270;   // 카메라에 보이는 화면(px). 클수록 넓게 보인다
         static string dir;
 
         [Serializable] class MapInfo { public int width, height, wallHeight; public string title; }
