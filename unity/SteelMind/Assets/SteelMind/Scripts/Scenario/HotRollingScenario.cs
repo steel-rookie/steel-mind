@@ -172,8 +172,7 @@ namespace SteelMind.Scenario
 
             var c = ev.choices[picks[i]];
             yield return Say("player", null, $"{c.label}.", c.detail, true);
-            if (c.reactions != null)
-                foreach (var r in c.reactions) yield return Say(r.agent, r.stance, r.line, null, false);
+            foreach (var r in ReportBuilder.ReactionsFor(ev, c)) yield return Say(r.agent, r.stance, r.line, null, false);
             CloseChat();
             chatting = false;
             SetFrozen(false);
@@ -520,9 +519,9 @@ namespace SteelMind.Scenario
             var pill = NewRect("Pill", vn); pill.anchorMin = pill.anchorMax = pill.pivot = new Vector2(0.5f, 1); pill.anchoredPosition = new Vector2(0, -16);
             Round(pill.gameObject, Hex("#3C1616", 0.92f), 1.3f);
             var po = pill.gameObject.AddComponent<Outline>(); po.effectColor = Red; po.effectDistance = new Vector2(1, -1);
-            var ph = HLayout(pill.gameObject, 0, TextAnchor.MiddleCenter); ph.padding = new RectOffset(16, 16, 6, 6);
+            var ph = HLayout(pill.gameObject, 0, TextAnchor.MiddleCenter); ph.padding = new RectOffset(18, 18, 7, 7);
             var pf = pill.gameObject.AddComponent<ContentSizeFitter>(); pf.horizontalFit = pf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-            var pt = AddText(pill, $"<b>⚠ {ev.level} · 사건 {index + 1}/{n} · {ev.title}</b>", 14, Hex("#FFE2E2"), FontStyle.Normal, TextAnchor.MiddleCenter);
+            var pt = AddText(pill, $"<b>⚠ {ev.level} · 사건 {index + 1}/{n} · {ev.title}</b>", 17, Hex("#FFE2E2"), FontStyle.Normal, TextAnchor.MiddleCenter);
             pt.horizontalOverflow = HorizontalWrapMode.Overflow;
 
             // 캐릭터 자리 (왼쪽·오른쪽)
@@ -530,7 +529,7 @@ namespace SteelMind.Scenario
 
             // 대화창
             var box = NewRect("Dialog", vn); box.anchorMin = new Vector2(0, 0); box.anchorMax = new Vector2(1, 0); box.pivot = new Vector2(0.5f, 0);
-            box.sizeDelta = new Vector2(0, 186); box.anchoredPosition = Vector2.zero;
+            box.sizeDelta = new Vector2(0, 220); box.anchoredPosition = Vector2.zero;
             box.gameObject.AddComponent<Image>().color = Hex("#111216", 0.94f);
             var top = NewRect("TopLine", box); top.anchorMin = new Vector2(0, 1); top.anchorMax = new Vector2(1, 1); top.pivot = new Vector2(0.5f, 1); top.sizeDelta = new Vector2(0, 2);
             top.gameObject.AddComponent<Image>().color = new Color(1, 1, 1, 0.18f);
@@ -541,16 +540,16 @@ namespace SteelMind.Scenario
             Round(vnPlate.gameObject, Hex("#EEF0F3"), 2.4f);
             var nh = HLayout(vnPlate.gameObject, 10, TextAnchor.MiddleCenter); nh.padding = new RectOffset(28, 28, 6, 6);
             var nf = vnPlate.gameObject.AddComponent<ContentSizeFitter>(); nf.horizontalFit = nf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-            vnName = AddText(vnPlate, "", 19, Hex("#24272D"), FontStyle.Bold, TextAnchor.MiddleCenter); vnName.horizontalOverflow = HorizontalWrapMode.Overflow;
-            vnPersona = AddText(vnPlate, "", 13, Hex("#6B7280"), FontStyle.Bold, TextAnchor.MiddleCenter); vnPersona.horizontalOverflow = HorizontalWrapMode.Overflow;
+            vnName = AddText(vnPlate, "", 24, Hex("#24272D"), FontStyle.Bold, TextAnchor.MiddleCenter); vnName.horizontalOverflow = HorizontalWrapMode.Overflow;
+            vnPersona = AddText(vnPlate, "", 16, Hex("#6B7280"), FontStyle.Bold, TextAnchor.MiddleCenter); vnPersona.horizontalOverflow = HorizontalWrapMode.Overflow;
             var badge = NewRect("Badge", vnPlate); vnBadgeBg = Round(badge.gameObject, Red, 1.8f);
             var bh = HLayout(badge.gameObject, 0, TextAnchor.MiddleCenter); bh.padding = new RectOffset(10, 10, 2, 2);
-            vnBadge = AddText(badge, "", 13, Color.white, FontStyle.Bold, TextAnchor.MiddleCenter); vnBadge.horizontalOverflow = HorizontalWrapMode.Overflow;
+            vnBadge = AddText(badge, "", 16, Color.white, FontStyle.Bold, TextAnchor.MiddleCenter); vnBadge.horizontalOverflow = HorizontalWrapMode.Overflow;
 
-            var body = NewRect("Body", box); body.anchorMin = new Vector2(0.14f, 0); body.anchorMax = new Vector2(0.86f, 1); body.offsetMin = new Vector2(0, 20); body.offsetMax = new Vector2(0, -38);
+            var body = NewRect("Body", box); body.anchorMin = new Vector2(0.14f, 0); body.anchorMax = new Vector2(0.86f, 1); body.offsetMin = new Vector2(0, 20); body.offsetMax = new Vector2(0, -44);
             VLayout(body.gameObject, 0, 0, 6);
-            vnLine = AddText(body, "", 22, Hex("#F3F4F6"));
-            vnWhy = AddText(body, "", 16, Hex("#A6ABB6"));
+            vnLine = AddText(body, "", 30, Hex("#F3F4F6"));
+            vnWhy = AddText(body, "", 21, Hex("#A6ABB6"));
             vnNext = NewRect("Next", box); vnNext.anchorMin = vnNext.anchorMax = new Vector2(1, 0); vnNext.anchoredPosition = new Vector2(-80, 30); vnNext.sizeDelta = new Vector2(18, 14);
             var ni = vnNext.gameObject.AddComponent<Image>(); ni.sprite = triangle; ni.color = Color.white; vnNext.localRotation = Quaternion.Euler(0, 0, 180);
 
@@ -560,8 +559,8 @@ namespace SteelMind.Scenario
             vnLog = NewRect("Log", vn); vnLog.anchorMin = new Vector2(0.12f, 0.08f); vnLog.anchorMax = new Vector2(0.88f, 0.92f); vnLog.offsetMin = vnLog.offsetMax = Vector2.zero;
             Round(vnLog.gameObject, Hex("#0E0F13", 0.97f), 1.0f);
             VLayout(vnLog.gameObject, 26, 22, 10);
-            AddText(vnLog, "<b>대화 기록</b>   <color=#8A8F99>(로그 버튼으로 닫기)</color>", 18, Body);
-            vnLogText = AddText(vnLog, "", 16, Body);
+            AddText(vnLog, "<b>대화 기록</b>   <color=#8A8F99>(로그 버튼으로 닫기)</color>", 22, Body);
+            vnLogText = AddText(vnLog, "", 19, Body);
             vnLog.gameObject.SetActive(false);
             vnHistory.Clear();
         }
@@ -670,7 +669,7 @@ namespace SteelMind.Scenario
             fastAll = false;
             vnChoices = NewRect("Choices", vn); vnChoices.anchorMin = Vector2.zero; vnChoices.anchorMax = Vector2.one; vnChoices.offsetMin = vnChoices.offsetMax = Vector2.zero;
             vnChoices.gameObject.AddComponent<Image>().color = new Color(0, 0, 0, 0.4f);
-            var col = NewRect("Col", vnChoices); col.anchorMin = col.anchorMax = new Vector2(0.5f, 0.62f); col.pivot = new Vector2(0.5f, 0.5f); col.sizeDelta = new Vector2(760, 0);
+            var col = NewRect("Col", vnChoices); col.anchorMin = col.anchorMax = new Vector2(0.5f, 0.62f); col.pivot = new Vector2(0.5f, 0.5f); col.sizeDelta = new Vector2(820, 0);
             VLayout(col.gameObject, 0, 0, 14);
             col.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
             for (int k = 0; k < ev.choices.Length; k++)
@@ -683,12 +682,12 @@ namespace SteelMind.Scenario
                 var h = HLayout(rt.gameObject, 16, TextAnchor.MiddleLeft); h.padding = new RectOffset(20, 40, 12, 12);
                 var b = rt.gameObject.AddComponent<Button>(); b.targetGraphic = bg;
                 var cs = b.colors; cs.highlightedColor = Hex("#FFF4CC"); cs.pressedColor = Hex("#F2DE9A"); b.colors = cs;
-                var badge = NewRect("Key", rt); Round(badge.gameObject, Hex("#2A2D33"), 1.2f); LE(badge.gameObject, 34, 34);
-                var kt = AddText(badge, $"<b>{Abc[k]}</b>", 16, Color.white, FontStyle.Normal, TextAnchor.MiddleCenter);
+                var badge = NewRect("Key", rt); Round(badge.gameObject, Hex("#2A2D33"), 1.2f); LE(badge.gameObject, 40, 40);
+                var kt = AddText(badge, $"<b>{Abc[k]}</b>", 19, Color.white, FontStyle.Normal, TextAnchor.MiddleCenter);
                 var kr = kt.rectTransform; kr.anchorMin = Vector2.zero; kr.anchorMax = Vector2.one; kr.offsetMin = kr.offsetMax = Vector2.zero;
                 var tc = NewRect("Text", rt); VLayout(tc.gameObject, 0, 0, 2); LE(tc.gameObject, -1, -1, 1);
-                AddText(tc, $"<b>{c.label}</b>", 21, Hex("#262A31"), FontStyle.Normal, TextAnchor.MiddleCenter);
-                AddText(tc, c.detail + (recs.Count > 0 ? $"  ·  <color=#0F7A66><b>{string.Join("·", recs)} 추천</b></color>" : ""), 14, Hex("#5D636E"), FontStyle.Normal, TextAnchor.MiddleCenter);
+                AddText(tc, $"<b>{c.label}</b>", 26, Hex("#262A31"), FontStyle.Normal, TextAnchor.MiddleCenter);
+                AddText(tc, c.detail + (recs.Count > 0 ? $"  ·  <color=#0F7A66><b>{string.Join("·", recs)} 추천</b></color>" : ""), 17, Hex("#5D636E"), FontStyle.Normal, TextAnchor.MiddleCenter);
                 int captured = k;
                 b.onClick.AddListener(() => Choose(captured));
             }
@@ -712,117 +711,203 @@ namespace SteelMind.Scenario
             { "불만", Hex("#E5533D") }, { "찬성", Hex("#3BAA6E") }, { "경고", Hex("#E0A020") },
         };
 
-        // ── 결과 화면 (게임 결과 연출) ─────────────────────────
+        // ── 결과 보고서 ────────────────────────────────────────
+        const string HistoryKey = "steelmind.history";
+        static readonly Color CardBg = Hex("#221F1D"), CardLine = Hex("#3A3634"), Tile = Hex("#2C2826");
+
+        RectTransform ReportCard(Transform parent, int pad = 22, float spacing = 10)
+        {
+            var c = NewRect("Card", parent);
+            Round(c.gameObject, CardBg, 1.2f);
+            var o = c.gameObject.AddComponent<Outline>(); o.effectColor = CardLine; o.effectDistance = new Vector2(1, -1);
+            VLayout(c.gameObject, pad, pad - 4, spacing);
+            return c;
+        }
+
+        void AiTag(Transform parent, string label)
+        {
+            var row = NewRect("Label", parent); HLayout(row.gameObject, 8, TextAnchor.MiddleLeft);
+            AddText(row, label, 15, Dim, FontStyle.Bold, TextAnchor.MiddleLeft).horizontalOverflow = HorizontalWrapMode.Overflow;
+            var chip = NewRect("Chip", row); Round(chip.gameObject, Hex("#1F3A33"), 1.8f);
+            var h = HLayout(chip.gameObject, 0, TextAnchor.MiddleCenter); h.padding = new RectOffset(8, 8, 2, 2);
+            AddText(chip, "기본 문장", 12, Teal, FontStyle.Bold, TextAnchor.MiddleCenter).horizontalOverflow = HorizontalWrapMode.Overflow;
+        }
+
         IEnumerator ResultScreen()
         {
-            var r = EfficiencyCalc.Compute(def, picks);
+            var rep = ReportBuilder.Build(def, picks);
+            var r = rep.run;
             showingResult = true;
-            overlay = NewRect("Result", canvas.transform);
+            overlay = NewRect("Report", canvas.transform);
             overlay.anchorMin = Vector2.zero; overlay.anchorMax = Vector2.one; overlay.offsetMin = overlay.offsetMax = Vector2.zero;
-            overlay.gameObject.AddComponent<Image>().color = new Color(0, 0, 0, 0.78f);
+            overlay.gameObject.AddComponent<Image>().color = Hex("#141312", 0.97f);
+            var view = NewRect("Viewport", overlay); view.anchorMin = Vector2.zero; view.anchorMax = Vector2.one; view.offsetMin = view.offsetMax = Vector2.zero;
+            view.gameObject.AddComponent<RectMask2D>();
+            var page = NewRect("Page", view); page.anchorMin = page.anchorMax = new Vector2(0.5f, 1); page.pivot = new Vector2(0.5f, 1); page.sizeDelta = new Vector2(1040, 0);
+            VLayout(page.gameObject, 0, 28, 16);
+            page.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            var sr = view.gameObject.AddComponent<ScrollRect>(); sr.content = page; sr.viewport = view; sr.horizontal = false; sr.scrollSensitivity = 40; sr.movementType = ScrollRect.MovementType.Clamped;
 
-            var card = NewRect("Card", overlay);
-            card.anchorMin = card.anchorMax = card.pivot = new Vector2(0.5f, 0.5f);
-            card.sizeDelta = new Vector2(1040, 0);
-            Round(card.gameObject, Room);
-            VLayout(card.gameObject, 28, 22, 12);
-            card.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            // 머리
+            AddText(page, "<b>STEEL MIND · 결과 보고서</b>", 14, Orange);
+            AddText(page, "<b>운영 결과 보고서</b>", 34, Color.white);
+            AddText(page, "틀과 숫자는 규칙으로 바로 계산하고, 문장 칸은 기본 문장으로 먼저 보여 줍니다. 모든 값은 데모용 가상 데이터입니다.", 15, Dim);
 
-            var banner = AddText(card, "교대 근무 종료", 40, Yellow, FontStyle.Bold, TextAnchor.MiddleCenter);
-            AddText(card, $"{def.title} 결과 · 모든 값은 데모용 가상 데이터", 15, Dim, FontStyle.Normal, TextAnchor.MiddleCenter);
-            StartCoroutine(Pop(banner.transform, 1.6f));
-
-            var cols = NewRect("Cols", card);
-            var ch = HLayout(cols.gameObject, 20); ch.childForceExpandWidth = true;
-            var left = NewRect("Left", cols); VLayout(left.gameObject, 0, 0, 8); LE(left.gameObject, 10, -1, 1);
-            var right = NewRect("Right", cols); VLayout(right.gameObject, 0, 0, 10); LE(right.gameObject, 10, -1, 1);
-
-            AddText(left, "운영 효율", 16, Dim, FontStyle.Bold);
-            var big = AddText(left, "100%", 72, LossColor(0), FontStyle.Bold);
-            var arrow = AddText(left, "100%  →  …", 16, Dim);
-            var gauge = Gauge(left, 1f, Teal, 16);
-            var sentence = AddText(left, "", 16, Body);
-            var bars = new List<(Image fill, Text val, int loss)>();
-            foreach (var (label, loss) in new[] { ("생산", r.totals.production), ("품질", r.totals.quality), ("안전", r.totals.safety), ("비용", r.totals.cost) })
-                bars.Add(MetricBar(left, label, loss));
-
-            AddText(right, "사건 기록", 16, Dim, FontStyle.Bold);
-            var stamps = new List<RectTransform>();
-            for (int i = 0; i < r.events.Count; i++)
+            // 1줄: 운영 성향 | 운영 효율
+            var row1 = NewRect("Row1", page); var h1 = HLayout(row1.gameObject, 16); h1.childForceExpandWidth = true; h1.childForceExpandHeight = true;
+            var typeCard = ReportCard(row1); LE(typeCard.gameObject, 10, -1, 1);
+            AddText(typeCard, "운영 성향", 15, Dim, FontStyle.Bold);
+            AddText(typeCard, $"<b>{rep.type}</b>", 44, Color.white);
+            AddText(typeCard, rep.typeDesc, 17, Body);
+            AddText(typeCard, $"결과 ID  <b>{rep.resultId}</b>", 14, Dim);
+            var effCard = ReportCard(row1); LE(effCard.gameObject, 10, -1, 1);
+            AddText(effCard, "운영 효율", 15, Dim, FontStyle.Bold);
+            var big = AddText(effCard, "100%", 52, LossColor(0), FontStyle.Bold);
+            var gauge = Gauge(effCard, 1f, LossColor(r.drop), 10);
+            AddText(effCard, $"{rep.totalPaths}가지 경로 중 {rep.rank}위 · 상위 {rep.topPercent}% · 최선의 선택 {rep.bestCount}/{def.events.Length}", 14, Dim);
+            var tiles = NewRect("Tiles", effCard); var th = HLayout(tiles.gameObject, 8); th.childForceExpandWidth = true;
+            foreach (var (label, loss) in new[] { ("생산 손실", r.totals.production), ("품질 손실", r.totals.quality), ("안전 손실", r.totals.safety), ("비용 손실", r.totals.cost) })
             {
-                var e = r.events[i];
-                var sc = NewRect("Stamp", right);
-                Round(sc.gameObject, Bubble);
-                var h = HLayout(sc.gameObject, 12, TextAnchor.MiddleLeft); h.padding = new RectOffset(16, 16, 10, 10);
-                var txt = NewRect("Txt", sc); VLayout(txt.gameObject, 0, 0, 2); LE(txt.gameObject, -1, -1, 1);
-                AddText(txt, $"<b>{i + 1}. {e.ev.title}</b>", 17, Body);
-                AddText(txt, $"내 선택: {e.chosen.label}" + (e.chosen.best ? "" : C(ColorHex(Dim), $"  ·  최선: {e.best.label}")), 15, Body);
-                AddText(txt, e.chosen.outcome, 13, Dim);
-                if (e.carried) AddText(txt, $"{e.ev.carry.note} (효율 −{e.carryLoss}%)", 13, Red);
-                var stamp = NewRect("Mark", sc);
-                Round(stamp.gameObject, e.chosen.best ? Hex("#24402F") : Hex("#402424"));
-                LE(stamp.gameObject, 108, 56);
-                var stt = AddText(stamp, e.chosen.best ? "최선!" : $"−{e.Total}%", e.chosen.best ? 24 : 22, LossColor(e.Total), FontStyle.Bold, TextAnchor.MiddleCenter);
-                var str = stt.rectTransform; str.anchorMin = Vector2.zero; str.anchorMax = Vector2.one; str.offsetMin = str.offsetMax = Vector2.zero;
-                sc.gameObject.SetActive(false);
-                stamps.Add(sc);
+                var t = NewRect("Tile", tiles); Round(t.gameObject, Tile, 1.4f); VLayout(t.gameObject, 8, 8, 2); LE(t.gameObject, 10, -1, 1);
+                AddText(t, label, 13, Dim, FontStyle.Normal, TextAnchor.UpperCenter);
+                AddText(t, $"<b>{(loss > 0 ? "−" + loss : "0")}</b>", 20, LossColor(loss), FontStyle.Normal, TextAnchor.UpperCenter);
             }
-            AddText(right, "AI 진단", 16, Teal, FontStyle.Bold);
-            var diagRow = NewRect("Diag", right);
-            HLayout(diagRow.gameObject, 12);
-            var bubble = NewRect("Bubble", diagRow);
-            Round(bubble.gameObject, Bubble);
-            VLayout(bubble.gameObject, 16, 10, 2);
-            LE(bubble.gameObject, -1, -1, 1);
-            AddText(bubble, C(ColorHex(Dim), "기본 진단 (LLM 연결 전)"), 13, Body);
-            var diag = AddText(bubble, "", 16, Body);
-            diagRow.gameObject.SetActive(false);
 
-            var restart = Button_(card, "다시 하기 (R)", Yellow, Hex("#1A1408"), 50);
+            // 2줄: 레이더 + 한 줄 총평 + 결정적 순간
+            var c2 = ReportCard(page); var h2 = c2.gameObject.GetComponent<VerticalLayoutGroup>();
+            var row2 = NewRect("Row2", c2); var r2 = HLayout(row2.gameObject, 24, TextAnchor.MiddleLeft);
+            var radarBox = NewRect("Radar", row2); LE(radarBox.gameObject, 260, 240);
+            var chart = NewRect("Chart", radarBox); chart.anchorMin = chart.anchorMax = new Vector2(0.5f, 0.5f); chart.sizeDelta = new Vector2(150, 150);
+            var rc = chart.gameObject.AddComponent<RadarChart>(); rc.values = rep.radar;
+            string[] axes = { "생산", "품질", "안전", "비용", "최선 선택" };
+            for (int i = 0; i < axes.Length; i++)
+            {
+                float a = Mathf.PI / 2f - i * 2f * Mathf.PI / axes.Length;
+                var lab = NewRect("Axis", radarBox); lab.anchorMin = lab.anchorMax = new Vector2(0.5f, 0.5f); lab.sizeDelta = new Vector2(90, 22);
+                lab.anchoredPosition = new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * 100f;
+                var lt = AddText(lab, axes[i], 14, Dim, FontStyle.Normal, TextAnchor.MiddleCenter);
+                var ltr = lt.rectTransform; ltr.anchorMin = Vector2.zero; ltr.anchorMax = Vector2.one; ltr.offsetMin = ltr.offsetMax = Vector2.zero;
+            }
+            var col2 = NewRect("Col", row2); VLayout(col2.gameObject, 0, 0, 8); LE(col2.gameObject, -1, -1, 1);
+            AiTag(col2, "한 줄 총평");
+            AddText(col2, $"<b>{rep.headline}</b>", 23, Color.white);
+            AiTag(col2, "결정적 순간");
+            foreach (var m in rep.moments) AddText(col2, $"{C(ColorHex(Orange), "●")}  {m}", 15, Body);
+
+            // 3줄: Agent 회의
+            var c3 = ReportCard(page);
+            AiTag(c3, "Agent 회의");
+            var row3 = NewRect("Agents", c3); var h3 = HLayout(row3.gameObject, 12); h3.childForceExpandWidth = true; h3.childForceExpandHeight = true;
+            foreach (var v in rep.agents)
+            {
+                var (name, color, persona) = Agents[v.agent];
+                var card = NewRect("Agent", row3); Round(card.gameObject, Tile, 1.4f); LE(card.gameObject, 10, -1, 1);
+                var cv = VLayout(card.gameObject, 14, 0, 6); cv.padding = new RectOffset(14, 14, 0, 14);
+                var bar = NewRect("Top", card); bar.gameObject.AddComponent<Image>().color = Hex(color); LE(bar.gameObject, -1, 3);
+                var hd = NewRect("Head", card); HLayout(hd.gameObject, 6, TextAnchor.MiddleLeft);
+                var nt = AddText(hd, $"<b>{name} Agent</b>", 16, Hex(color), FontStyle.Normal, TextAnchor.MiddleLeft); LE(nt.gameObject, -1, -1, 1);
+                AddText(hd, $"추천을 따른 사건 {v.followed}/{v.present}", 12, Dim, FontStyle.Normal, TextAnchor.MiddleRight).horizontalOverflow = HorizontalWrapMode.Overflow;
+                var moodColor = v.mood == "만족" ? Hex("#6FCF97") : v.mood == "불만" ? Hex("#FF6B6B") : Dim;
+                AddText(card, $"<b>{v.mood}</b>", 16, moodColor);
+                AddText(card, v.comment, 15, Body);
+            }
+
+            // 4줄: 사건별 기록
+            var c4 = ReportCard(page, 22, 0);
+            AddText(c4, "<b>사건별 기록</b>", 17, Body);
+            Spacer(c4, 8);
+            TableRow(c4, "사건", "고른 행동", "최선의 행동", "효율 손실", Dim, Dim, Dim, Dim, true);
+            foreach (var e in r.events)
+            {
+                TableRow(c4, e.ev.title, e.chosen.label, e.chosen.best ? "같음" : e.best.label, e.Total > 0 ? $"−{e.Total}%" : "0%",
+                    Body, Body, e.chosen.best ? Hex("#6FCF97") : Body, LossColor(e.Total), false);
+                if (e.carried) AddText(c4, $"   ↳ {e.ev.carry.note} (−{e.carryLoss}%)", 14, Red);
+            }
+
+            // 5줄: 다음 판 제안 | 회차별 성향 분포
+            var row5 = NewRect("Row5", page); var h5 = HLayout(row5.gameObject, 16); h5.childForceExpandWidth = true; h5.childForceExpandHeight = true;
+            var sug = ReportCard(row5); LE(sug.gameObject, 10, -1, 1);
+            AiTag(sug, "다음 판 제안");
+            AddText(sug, $"<b>{rep.suggestion}</b>", 21, Color.white);
+            var hist = ReportCard(row5); LE(hist.gameObject, 10, -1, 1);
+            var hh = NewRect("Head", hist); HLayout(hh.gameObject, 8, TextAnchor.MiddleLeft);
+            var hTitle = AddText(hh, "회차별 성향 분포", 15, Dim, FontStyle.Bold, TextAnchor.MiddleLeft); LE(hTitle.gameObject, -1, -1, 1);
+            var saveBtn = SmallButton(hh, "이 판을 회차 기록에 저장");
+            var clearBtn = SmallButton(hh, "기록 지우기");
+            var bars = NewRect("Bars", hist); VLayout(bars.gameObject, 0, 4, 8);
+            var note = AddText(hist, "", 13, Dim);
+            System.Action draw = () => DrawHistory(bars, note, rep.type);
+            bool saved = false;
+            saveBtn.onClick.AddListener(() => { if (saved) return; saved = true; var list = LoadHistory(); list.Add(rep.type); SaveHistory(list); draw(); });
+            clearBtn.onClick.AddListener(() => { SaveHistory(new List<string>()); saved = false; draw(); });
+            draw();
+
+            var restart = Button_(page, "다시 하기 (R)", Yellow, Hex("#1A1408"), 52);
             restart.onClick.AddListener(Restart);
-            restart.gameObject.SetActive(false);
-            LayoutRebuilder.ForceRebuildLayoutImmediate(card);
+            LayoutRebuilder.ForceRebuildLayoutImmediate(page);
 
-            yield return new WaitForSeconds(0.6f);
-            float dur = 1.4f, tt = 0;
+            // 효율 숫자 내려가기
+            float dur = 1.2f, tt = 0;
             var gfill = gauge.GetChild(0).GetComponent<RectTransform>();
             while (tt < dur)
             {
                 tt += Time.deltaTime;
-                float k = Mathf.SmoothStep(0, 1, tt / dur);
-                int shown = Mathf.RoundToInt(Mathf.Lerp(100, r.finalEfficiency, k));
-                big.text = shown + "%";
-                big.color = LossColor(100 - shown);
+                int shown = Mathf.RoundToInt(Mathf.Lerp(100, r.finalEfficiency, Mathf.SmoothStep(0, 1, tt / dur)));
+                big.text = shown + "%"; big.color = LossColor(100 - shown);
                 gfill.anchorMax = new Vector2(shown / 100f, 1);
-                foreach (var (fill, val, loss) in bars)
-                {
-                    fill.rectTransform.anchorMax = new Vector2(Mathf.Lerp(100, 100 - loss, k) / 100f, 1);
-                    val.text = loss > 0 ? $"−{Mathf.RoundToInt(loss * k)}" : "0";
-                }
                 yield return null;
             }
             big.text = r.finalEfficiency + "%";
-            arrow.text = $"운영 효율  100%  →  {r.finalEfficiency}%";
-            sentence.text = r.drop == 0 ? "모든 사건에서 최선의 선택을 해 효율을 100% 지켰습니다." : $"최선의 대응과 비교해 효율이 {r.drop}% 떨어졌습니다.";
-            StartCoroutine(Pop(big.transform, 1.25f));
-            yield return new WaitForSeconds(0.4f);
-            foreach (var s in stamps)
+        }
+
+        void TableRow(Transform parent, string a, string b, string c, string d, Color ca, Color cb, Color cc, Color cd, bool head)
+        {
+            var row = NewRect("Row", parent); var h = HLayout(row.gameObject, 10, TextAnchor.MiddleLeft); h.padding = new RectOffset(4, 4, 9, 9);
+            var t1 = AddText(row, a, head ? 13 : 16, ca); LE(t1.gameObject, 380);
+            var t2 = AddText(row, b, head ? 13 : 16, cb); LE(t2.gameObject, 210);
+            var t3 = AddText(row, c, head ? 13 : 16, cc); LE(t3.gameObject, 210);
+            var t4 = AddText(row, head ? d : $"<b>{d}</b>", head ? 13 : 16, cd, FontStyle.Normal, TextAnchor.MiddleRight); LE(t4.gameObject, -1, -1, 1);
+            var line = NewRect("Line", parent); line.gameObject.AddComponent<Image>().color = CardLine; LE(line.gameObject, -1, 1);
+        }
+
+        Button SmallButton(Transform parent, string label)
+        {
+            var rt = NewRect("Btn", parent);
+            var img = Round(rt.gameObject, Tile, 1.6f);
+            var o = rt.gameObject.AddComponent<Outline>(); o.effectColor = CardLine; o.effectDistance = new Vector2(1, -1);
+            var h = HLayout(rt.gameObject, 0, TextAnchor.MiddleCenter); h.padding = new RectOffset(12, 12, 6, 6);
+            var b = rt.gameObject.AddComponent<Button>(); b.targetGraphic = img;
+            AddText(rt, $"<b>{label}</b>", 13, Body, FontStyle.Normal, TextAnchor.MiddleCenter).horizontalOverflow = HorizontalWrapMode.Overflow;
+            return b;
+        }
+
+        static List<string> LoadHistory()
+        {
+            var s = PlayerPrefs.GetString(HistoryKey, "");
+            return string.IsNullOrEmpty(s) ? new List<string>() : new List<string>(s.Split('|'));
+        }
+
+        static void SaveHistory(List<string> list) { PlayerPrefs.SetString(HistoryKey, string.Join("|", list)); PlayerPrefs.Save(); }
+
+        void DrawHistory(RectTransform bars, Text note, string current)
+        {
+            for (int i = bars.childCount - 1; i >= 0; i--) Destroy(bars.GetChild(i).gameObject);
+            var list = LoadHistory();
+            foreach (var type in ReportBuilder.Types)
             {
-                s.gameObject.SetActive(true);
-                LayoutRebuilder.ForceRebuildLayoutImmediate(card);
-                StartCoroutine(Pop(s.GetChild(1), 1.8f));
-                yield return new WaitForSeconds(0.45f);
+                int cnt = 0; foreach (var x in list) if (x == type) cnt++;
+                float pct = list.Count == 0 ? 0 : (float)cnt / list.Count;
+                var row = NewRect("Row", bars); HLayout(row.gameObject, 10, TextAnchor.MiddleLeft);
+                var tl = AddText(row, type == current ? $"<b>{type}</b>" : type, 15, type == current ? Teal : Body, FontStyle.Normal, TextAnchor.MiddleLeft); LE(tl.gameObject, 100);
+                var g = Gauge(row, pct, Teal, 8); LE(g.gameObject, 10, 8, 1);
+                var pv = AddText(row, $"{Mathf.RoundToInt(pct * 100)}%", 14, Dim, FontStyle.Normal, TextAnchor.MiddleRight); LE(pv.gameObject, 44);
             }
-            diagRow.gameObject.SetActive(true);
-            var full = Diagnose(r);
-            for (int i = 1; i <= full.Length; i++)
-            {
-                diag.text = full.Substring(0, i);
-                if (i % 3 == 0) LayoutRebuilder.ForceRebuildLayoutImmediate(card);
-                yield return new WaitForSeconds(0.015f);
-            }
-            restart.gameObject.SetActive(true);
-            LayoutRebuilder.ForceRebuildLayoutImmediate(card);
+            note.text = list.Count == 0 ? "아직 저장한 회차가 없습니다. 여러 판을 저장하면 성향 비율이 쌓입니다." : $"저장한 회차 {list.Count}번";
+        }
+
+        void Spacer(Transform parent, float h)
+        {
+            var s = NewRect("Space", parent); LE(s.gameObject, -1, h);
         }
 
         IEnumerator Pop(Transform tr, float from)
