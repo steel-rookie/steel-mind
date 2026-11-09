@@ -3,7 +3,7 @@ using UnityEngine.UI;
 
 namespace SteelMind
 {
-    /// <summary>「전체 공정 보기」: 카메라를 빼서 압연 라인 전체를 보여 주고, 다시 누르면 캐릭터로 돌아온다. Tab 키도 된다.</summary>
+    /// <summary>「전체 공정 보기」: 카메라를 빼서 공정 전체를 보여 주고, 다시 누르면 캐릭터로 돌아온다(Tab). 전체 보기 중에도 캐릭터는 움직인다.</summary>
     public class OverviewCamera : MonoBehaviour
     {
         public Camera cam;
@@ -38,7 +38,6 @@ namespace SteelMind
         {
             if (pixelPerfect) pixelPerfect.enabled = !overview;
             if (follow) follow.enabled = !overview;
-            if (playerMove) playerMove.enabled = !overview;
             if (!overview && cam && normalSize > 0) cam.orthographicSize = normalSize;
             if (label) label.text = overview ? "캐릭터로 돌아가기 (Tab)" : "전체 공정 보기 (Tab)";
         }
