@@ -27,8 +27,8 @@ namespace SteelMind.Scenario
             Teal = Hex("#6CC3B0"), Orange = Hex("#F0A04B"), Red = Hex("#FF6B6B"), Yellow = Hex("#F0C040"), Card = Hex("#24262B");
         static readonly Dictionary<string, (string name, string color, string persona)> Agents = new Dictionary<string, (string, string, string)>
         {
-            { "production", ("생산", "#7AA7FF", "납기 사수") }, { "quality", ("품질", "#C99BFF", "0.01mm 집착") },
-            { "equipment", ("설비", "#F0A04B", "롤 장인") }, { "safety", ("안전", "#6FCF97", "원칙주의자") },
+            { "production", ("한도윤", "#7AA7FF", "생산") }, { "quality", ("서지안", "#C99BFF", "품질") },
+            { "equipment", ("강태호", "#F0A04B", "설비") }, { "safety", ("윤하늘", "#6FCF97", "안전") },
             { "chief", ("공장장", "#F0C040", "공장장") }, { "player", ("나", "#6CC3B0", "운영 책임자") },
         };
         static readonly Dictionary<string, (string mood, string color)> Stance = new Dictionary<string, (string, string)>
@@ -169,11 +169,11 @@ namespace SteelMind.Scenario
             chatting = true; skip = false;
             OpenVN("열연 2라인 · 야간 교대 시작", false);
             yield return Say(null, null, "열연 2라인, 야간 교대.\n오늘 당신은 처음으로 이 라인의 운영 책임자를 맡았습니다.", null, false);
-            yield return Say(null, null, "이 공장에는 부서마다 AI Agent가 있습니다.\n모두 맞는 말을 하지만, 서로 다른 것을 지키려 합니다.", null, false);
-            yield return Say("production", null, "생산 담당 AI입니다. 납기와 물량은 제가 챙깁니다. 라인은 멈추면 안 돼요.", null, false);
-            yield return Say("quality", null, "품질 담당이에요. 0.01mm라도 어긋나면 불량입니다. 조건부터 잡아 주세요.", null, false);
-            yield return Say("equipment", null, "설비 담당입니다. 롤 소리만 들어도 상태를 알죠. 무리하면 결국 더 오래 멈춥니다.", null, false);
-            yield return Say("safety", null, "안전 담당입니다. 사람이 먼저입니다. 그건 타협 못 합니다.", null, false);
+            yield return Say(null, null, "오늘 함께 일할 AI 동료 네 명이 있습니다.\n모두 맞는 말을 하지만, 서로 다른 것을 지키려 합니다.", null, false);
+            yield return Say("production", null, "한도윤입니다. 오늘 밤 같이 라인을 지킵니다.", null, false);
+            yield return Say("quality", null, "서지안이에요. 궁금한 건 언제든 물어보세요.", null, false);
+            yield return Say("equipment", null, "강태호입니다. 이 라인에서 오래 일했습니다.", null, false);
+            yield return Say("safety", null, "윤하늘입니다. 잘 부탁드립니다.", null, false);
             yield return Say(null, null, "사건이 터지면 화살표를 따라 그 설비로 가세요.\nAI들의 의견을 듣고, 최종 결정은 당신이 내립니다.", null, false);
             yield return Say(null, null, "같은 선택은 언제나 같은 결과를 냅니다.\n교대가 끝나면 운영 결과 보고서를 받게 됩니다.", null, false);
             CloseChat();
@@ -942,7 +942,7 @@ namespace SteelMind.Scenario
                 float ax = whoR == agent ? 0.8f : 0.2f;
                 vnPlate.anchorMin = vnPlate.anchorMax = new Vector2(ax, 1); vnPlate.pivot = new Vector2(0.5f, 0.5f); vnPlate.anchoredPosition = Vector2.zero;
                 var (name, color, persona) = Agents.TryGetValue(agent, out var v) ? v : (agent, "#EEF0F3", "");
-                vnName.text = name; vnPersona.text = persona;
+                vnName.text = name; vnPersona.text = ""; vnPersona.gameObject.SetActive(false);
                 bool hasBadge = stance != null && StanceBadge.TryGetValue(stance, out var bc);
                 vnBadgeBg.gameObject.SetActive(hasBadge);
                 if (hasBadge) { vnBadgeBg.color = StanceBadge[stance]; vnBadge.text = stance; }
@@ -991,8 +991,6 @@ namespace SteelMind.Scenario
             for (int k = 0; k < ev.choices.Length; k++)
             {
                 var c = ev.choices[k];
-                var recs = new List<string>();
-                foreach (var a in ev.agents) if (a.rec == c.id && Agents.TryGetValue(a.agent, out var v)) recs.Add(v.name);
                 var rt = NewRect("Choice", col);
                 var bg = Round(rt.gameObject, Hex("#F4F5F7"), 2.2f);
                 var h = HLayout(rt.gameObject, 16, TextAnchor.MiddleLeft); h.padding = new RectOffset(20, 40, 12, 12);
@@ -1003,7 +1001,7 @@ namespace SteelMind.Scenario
                 var kr = kt.rectTransform; kr.anchorMin = Vector2.zero; kr.anchorMax = Vector2.one; kr.offsetMin = kr.offsetMax = Vector2.zero;
                 var tc = NewRect("Text", rt); VLayout(tc.gameObject, 0, 0, 2); LE(tc.gameObject, -1, -1, 1);
                 AddText(tc, $"<b>{c.label}</b>", 26, Hex("#262A31"), FontStyle.Normal, TextAnchor.MiddleCenter);
-                AddText(tc, c.detail + (recs.Count > 0 ? $"  ·  <color=#0F7A66><b>{string.Join("·", recs)} 추천</b></color>" : ""), 17, Hex("#5D636E"), FontStyle.Normal, TextAnchor.MiddleCenter);
+                AddText(tc, c.detail, 17, Hex("#5D636E"), FontStyle.Normal, TextAnchor.MiddleCenter);
                 int captured = k;
                 b.onClick.AddListener(() => Choose(captured));
             }
@@ -1221,7 +1219,7 @@ namespace SteelMind.Scenario
                 var cv = VLayout(card.gameObject, 14, 0, 6); cv.padding = new RectOffset(14, 14, 0, 14);
                 var bar = NewRect("Top", card); bar.gameObject.AddComponent<Image>().color = Hex(color); LE(bar.gameObject, -1, 3);
                 var hd = NewRect("Head", card); HLayout(hd.gameObject, 6, TextAnchor.MiddleLeft);
-                var nt = AddText(hd, $"<b>{name} Agent</b>", 16, Hex(color), FontStyle.Normal, TextAnchor.MiddleLeft); LE(nt.gameObject, -1, -1, 1);
+                var nt = AddText(hd, $"<b>{name}</b> <color=#A3A8B2>· {persona} 담당</color>", 16, Hex(color), FontStyle.Normal, TextAnchor.MiddleLeft); LE(nt.gameObject, -1, -1, 1);
                 AddText(hd, $"추천을 따른 사건 {v.followed}/{v.present}", 12, Dim, FontStyle.Normal, TextAnchor.MiddleRight).horizontalOverflow = HorizontalWrapMode.Overflow;
                 var moodColor = v.mood == "만족" ? Hex("#6FCF97") : v.mood == "불만" ? Hex("#FF6B6B") : Dim;
                 AddText(card, $"<b>{v.mood}</b>", 16, moodColor);
