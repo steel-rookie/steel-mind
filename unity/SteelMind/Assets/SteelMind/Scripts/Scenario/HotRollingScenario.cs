@@ -243,8 +243,40 @@ namespace SteelMind.Scenario
                 if (i + 1 < planned) SetStatus($"조치 진행 중: {chosen.label} · 사건 {i + 2}/{planned} 대기 중");
             }
             SetStatus("교대 근무를 마무리하는 중입니다");
-            yield return new WaitForSeconds(def.resultDelay);
+            yield return new WaitForSeconds(Mathf.Min(def.resultDelay, 1.5f));
+            yield return ReportLoading();
             yield return ResultScreen();
+        }
+
+        // "진단 보고서를 불러오는 중입니다…" — 캐릭터를 멈추고 잠깐 보여 준 뒤 보고서로
+        IEnumerator ReportLoading()
+        {
+            SetFrozen(true);
+            var ld = NewRect("Loading", canvas.transform); ld.anchorMin = Vector2.zero; ld.anchorMax = Vector2.one; ld.offsetMin = ld.offsetMax = Vector2.zero;
+            var bg = ld.gameObject.AddComponent<Image>(); bg.color = new Color(RBg.r, RBg.g, RBg.b, 0);
+            var cg = ld.gameObject.AddComponent<CanvasGroup>(); cg.alpha = 0;
+            var col = NewRect("Col", ld); col.anchorMin = col.anchorMax = new Vector2(0.5f, 0.5f); col.sizeDelta = new Vector2(640, 160);
+            VLayout(col.gameObject, 0, 0, 14).childAlignment = TextAnchor.MiddleCenter;
+            var title = AddText(col, "진단 보고서를 불러오는 중입니다", 26, RText, FontStyle.Bold, TextAnchor.MiddleCenter);
+            var sub = AddText(col, "", 16, RMute, FontStyle.Normal, TextAnchor.MiddleCenter);
+            var track = NewRect("Track", col); Round(track.gameObject, RLine, 0.5f); LE(track.gameObject, 420, 6);
+            var fill = NewRect("Fill", track); fill.anchorMin = Vector2.zero; fill.anchorMax = new Vector2(0, 1); fill.offsetMin = fill.offsetMax = Vector2.zero;
+            Round(fill.gameObject, RBlue, 0.5f);
+            ApplyReportFont(ld);
+            string[] steps = { "선택 기록을 정리하고 있습니다", "대처 역량 점수를 계산하고 있습니다", "AI가 진단 문장을 쓰고 있습니다" };
+            float dur = 2.6f, t = 0;
+            while (t < dur)
+            {
+                t += Time.deltaTime;
+                cg.alpha = Mathf.Clamp01(t / 0.3f);
+                bg.color = new Color(RBg.r, RBg.g, RBg.b, Mathf.Clamp01(t / 0.3f) * 0.92f);
+                int dots = 1 + (int)(t * 3f) % 3;
+                title.text = "진단 보고서를 불러오는 중입니다" + new string('.', dots);
+                sub.text = steps[Mathf.Min(steps.Length - 1, (int)(t / dur * steps.Length))];
+                fill.anchorMax = new Vector2(Mathf.SmoothStep(0, 1, t / dur), 1);
+                yield return null;
+            }
+            Destroy(ld.gameObject);
         }
 
         [System.Serializable] class PickReply { public string id, reason; }
@@ -1131,6 +1163,30 @@ namespace SteelMind.Scenario
             }
         }
 
+        System.Action<int, bool> selectAxis = (a, b) => { };
+        int pinnedAxis;
+
+        // 레이더가 가운데에서 펼쳐지는 애니메이션
+        IEnumerator GrowRadar(RadarChart main, RadarChart band, float[] vals, float[] hi, List<RectTransform> dots, List<RectTransform> scores, float R)
+        {
+            float t = 0, dur = 0.8f;
+            int n = vals.Length;
+            var dirs = new Vector2[n];
+            for (int i = 0; i < n; i++) { float a = Mathf.PI / 2f - i * 2f * Mathf.PI / n; dirs[i] = new Vector2(Mathf.Cos(a), Mathf.Sin(a)); }
+            while (t < dur && main)
+            {
+                t += Time.unscaledDeltaTime; float k = Mathf.SmoothStep(0, 1, t / dur);
+                for (int i = 0; i < n; i++)
+                {
+                    main.values[i] = vals[i] * k; band.values[i] = hi[i] * k;
+                    if (dots[i]) dots[i].anchoredPosition = dirs[i] * (R * vals[i] * k);
+                    if (scores[i]) scores[i].anchoredPosition = dirs[i] * Mathf.Max(R * vals[i] * k + 14f, 30f);
+                }
+                main.SetVerticesDirty(); band.SetVerticesDirty();
+                yield return null;
+            }
+        }
+
         int Score(string id) => Mathf.RoundToInt(model.Radar(id) * 100);
         float Sd(string id) => 0.2887f / Mathf.Sqrt(model.states[id].count + 1f);
         int Conf(string id) => Mathf.RoundToInt(Mathf.Clamp01(1f - Sd(id) / 0.2887f) * 100);
@@ -1227,9 +1283,10 @@ namespace SteelMind.Scenario
                 rc.fillColor = fill; rc.lineColor = line; rc.drawGrid = grid; rc.drawFill = doFill; rc.drawLine = doLine; rc.raycastTarget = false;
                 return rc;
             }
-            Layer(hi, new Color(RBlue.r, RBlue.g, RBlue.b, 0.08f), Color.clear, true, true, false);
+            var bandChart = Layer((float[])hi.Clone(), new Color(RBlue.r, RBlue.g, RBlue.b, 0.08f), Color.clear, true, true, false);
             if (retrainBase != null && retrainTarget != null) Layer(retrainBase, Color.clear, RMute, false, false, true);
-            Layer(vals, new Color(RBlue.r, RBlue.g, RBlue.b, 0.2f), RBlue, false, true, true);
+            var mainChart = Layer((float[])vals.Clone(), new Color(RBlue.r, RBlue.g, RBlue.b, 0.2f), RBlue, false, true, true);
+            var axisLabels = new List<Text>(); var axisDots = new List<RectTransform>(); var axisScores = new List<RectTransform>();
             for (int i = 0; i < CompetencyModel.Ids.Length; i++)
             {
                 string id = CompetencyModel.Ids[i];
@@ -1237,16 +1294,52 @@ namespace SteelMind.Scenario
                 var dirv = new Vector2(Mathf.Cos(ang), Mathf.Sin(ang));
                 var lab = NewRect("Axis", radarBox); lab.anchorMin = lab.anchorMax = new Vector2(0.5f, 0.5f); lab.sizeDelta = new Vector2(130, 22);
                 lab.anchoredPosition = dirv * (RR + 30f);
-                var lt = AddText(lab, model.Name(id), 13, RMute, FontStyle.Normal, TextAnchor.MiddleCenter);
+                var lt = AddText(lab, model.Name(id), 13, RMute, FontStyle.Normal, TextAnchor.MiddleCenter); axisLabels.Add(lt);
                 var ltr = lt.rectTransform; ltr.anchorMin = Vector2.zero; ltr.anchorMax = Vector2.one; ltr.offsetMin = ltr.offsetMax = Vector2.zero;
                 var sc = NewRect("Score", radarBox); sc.anchorMin = sc.anchorMax = new Vector2(0.5f, 0.5f); sc.sizeDelta = new Vector2(80, 20);
                 sc.anchoredPosition = dirv * Mathf.Max(RR * vals[i] + 14f, 30f);
                 var st = AddText(sc, model.states[id].count == 0 ? "근거 없음" : Score(id).ToString(), 12, model.states[id].count == 0 ? RMute : RText, FontStyle.Bold, TextAnchor.MiddleCenter);
-                var str = st.rectTransform; str.anchorMin = Vector2.zero; str.anchorMax = Vector2.one; str.offsetMin = str.offsetMax = Vector2.zero;
+                var str = st.rectTransform; str.anchorMin = Vector2.zero; str.anchorMax = Vector2.one; str.offsetMin = str.offsetMax = Vector2.zero; axisScores.Add(sc);
                 var dot = NewRect("Dot", radarBox); dot.anchorMin = dot.anchorMax = new Vector2(0.5f, 0.5f); dot.sizeDelta = new Vector2(7, 7);
-                dot.anchoredPosition = dirv * (RR * vals[i]); Round(dot.gameObject, RBlue, 0.5f);
+                dot.anchoredPosition = dirv * (RR * vals[i]); Round(dot.gameObject, RBlue, 0.5f); axisDots.Add(dot);
+                // 축 이름·점 위에 마우스를 올리거나 누르면 아래에 상세
+                int ai = i;
+                foreach (var spot in new[] { (dirv * (RR + 30f), new Vector2(130, 30)), (dirv * (RR * vals[i]), new Vector2(34, 34)) })
+                {
+                    var hit = NewRect("Hit", radarBox); hit.anchorMin = hit.anchorMax = new Vector2(0.5f, 0.5f); hit.anchoredPosition = spot.Item1; hit.sizeDelta = spot.Item2;
+                    hit.gameObject.AddComponent<Image>().color = new Color(0, 0, 0, 0);
+                    var et = hit.gameObject.AddComponent<EventTrigger>();
+                    var en = new EventTrigger.Entry { eventID = EventTriggerType.PointerEnter }; en.callback.AddListener(_ => selectAxis(ai, false)); et.triggers.Add(en);
+                    var ex = new EventTrigger.Entry { eventID = EventTriggerType.PointerExit }; ex.callback.AddListener(_ => selectAxis(pinnedAxis, false)); et.triggers.Add(ex);
+                    var ck = new EventTrigger.Entry { eventID = EventTriggerType.PointerClick }; ck.callback.AddListener(_ => selectAxis(ai, true)); et.triggers.Add(ck);
+                }
             }
-            AddText(left, "AI 대처 역량 프로파일 · 바깥 옅은 영역 = 불확실 범위", 12, RMute, FontStyle.Normal, TextAnchor.UpperCenter);
+            AddText(left, "축 이름이나 점에 마우스를 올리면 근거가 보입니다 · 바깥 옅은 영역 = 불확실 범위", 12, RMute, FontStyle.Normal, TextAnchor.UpperCenter);
+            var detail = RBox(left, null, 14);
+            var dTitle = AddText(detail, "", 17, RText);
+            var dDesc = AddText(detail, "", 13, RMute);
+            var dEv = AddText(detail, "", 13, RText);
+            selectAxis = (idx, pin) =>
+            {
+                if (idx < 0) return;
+                if (pin) pinnedAxis = idx;
+                string id = CompetencyModel.Ids[idx]; var st = model.states[id];
+                bool isS = strong.Contains(st), isW = weak.Contains(st);
+                string tag = st.count == 0 ? "<color=#AAB4C5>근거 없음</color>" : isS ? "<color=#6FCF97>강점</color>" : isW ? "<color=#FF8A80>보완</color>" : "<color=#AAB4C5>보통</color>";
+                dTitle.text = $"<b>{model.Name(id)}</b>   {(st.count == 0 ? "–" : Score(id) + "점")} · 확실도 {Conf(id)}% · 근거 {st.count}개 · {tag}";
+                var dd = Def(id); dDesc.text = dd != null ? dd.desc : "";
+                var g = Evidence(r, id, true); var b = Evidence(r, id, false);
+                var lines = g.Select(x => "<color=#6FCF97>▲</color> " + x).Concat(b.Select(x => "<color=#FF8A80>▼</color> " + x)).ToList();
+                dEv.text = lines.Count > 0 ? string.Join("\n", lines) : "이번 판에서는 이 역량을 시험한 사건이 없었습니다.";
+                for (int k = 0; k < axisLabels.Count; k++)
+                {
+                    axisLabels[k].color = k == idx ? RText : RMute;
+                    axisDots[k].localScale = Vector3.one * (k == idx ? 1.8f : 1f);
+                }
+            };
+            pinnedAxis = weak.Count > 0 ? System.Array.IndexOf(CompetencyModel.Ids, weak[0].id) : 0;
+            selectAxis(pinnedAxis, true);
+            StartCoroutine(GrowRadar(mainChart, bandChart, vals, hi, axisDots, axisScores, RR));
 
             // 오른쪽: AI 분석 + 강점/보완 + 학습 경로 + 버튼
             var right = NewRect("Right", row); VLayout(right.gameObject, 0, 0, 12); LE(right.gameObject, -1, -1, 1);
@@ -1400,7 +1493,8 @@ namespace SteelMind.Scenario
             yield return GoToSite(i);
             yield return EventChat(i);
             retraining = true;
-            yield return new WaitForSeconds(1.5f);
+            yield return new WaitForSeconds(1.2f);
+            yield return ReportLoading();
             yield return ResultScreen();
             retraining = false;
         }
@@ -1492,30 +1586,44 @@ namespace SteelMind.Scenario
             note.text = runs.Count == 0 ? "저장된 회차가 없습니다." : $"지금까지 {runs.Count}판";
         }
 
+        // 회차 기록: 위 줄(회차 · 효율 · 진단 · 최선 · 시각)과 아래 사건 줄의 열을 맞춘다
+        const float RunC1 = 96, RunC2 = 84, RunC3 = 190, RunC4 = 120, RunGap = 14;
+        Text RunCell(Transform row, string s, int size, Color c, float w)
+        {
+            var t = AddText(row, s, size, c, FontStyle.Normal, TextAnchor.MiddleLeft);
+            t.horizontalOverflow = HorizontalWrapMode.Wrap; LE(t.gameObject, w, -1, w < 0 ? 1 : -1);
+            return t;
+        }
+
         void DrawRuns(RectTransform box, int currentNo)
         {
             for (int i = box.childCount - 1; i >= 0; i--) Destroy(box.GetChild(i).gameObject);
             var runs = LoadRuns().runs;
-            if (runs.Count == 0) { AddText(box, "저장된 회차가 없습니다.", 14, Dim); return; }
+            if (runs.Count == 0) { AddText(box, "저장된 회차가 없습니다.", 14, RMute); return; }
             for (int i = runs.Count - 1; i >= 0; i--)
             {
                 var x = runs[i];
+                bool cur = x.no == currentNo;
                 var item = NewRect("Run", box);
-                Round(item.gameObject, x.no == currentNo ? Hex("#1F2C2A") : Tile, 1.4f);
-                if (x.no == currentNo) { var o = item.gameObject.AddComponent<Outline>(); o.effectColor = Teal; o.effectDistance = new Vector2(1, -1); }
-                VLayout(item.gameObject, 16, 10, 4);
-                var head = NewRect("Head", item); HLayout(head.gameObject, 12, TextAnchor.MiddleLeft);
-                AddText(head, $"<b>{x.no}회차</b>", 17, Body, FontStyle.Normal, TextAnchor.MiddleLeft).horizontalOverflow = HorizontalWrapMode.Overflow;
-                AddText(head, $"<b>{x.efficiency}%</b>", 17, LossColor(100 - x.efficiency), FontStyle.Normal, TextAnchor.MiddleLeft).horizontalOverflow = HorizontalWrapMode.Overflow;
-                AddText(head, x.type, 15, Teal, FontStyle.Normal, TextAnchor.MiddleLeft).horizontalOverflow = HorizontalWrapMode.Overflow;
-                AddText(head, $"최선 {x.bestCount}/{x.events}" + (x.accident ? "  <color=#FF6B6B>안전사고</color>" : ""), 14, Dim, FontStyle.Normal, TextAnchor.MiddleLeft).horizontalOverflow = HorizontalWrapMode.Overflow;
-                var when = AddText(head, $"{x.when}{(x.no == currentNo ? "  · 이번 판" : "")}", 13, Dim, FontStyle.Normal, TextAnchor.MiddleRight); LE(when.gameObject, -1, -1, 1);
-                var parts = new List<string>();
+                Round(item.gameObject, cur ? Hex("#14222A") : RCard, 1.4f);
+                var o = item.gameObject.AddComponent<Outline>(); o.effectColor = cur ? RBlue : RLine; o.effectDistance = new Vector2(1, -1);
+                VLayout(item.gameObject, 18, 12, 6);
+                var head = NewRect("Head", item); var hh = HLayout(head.gameObject, RunGap, TextAnchor.MiddleLeft); hh.childForceExpandWidth = false;
+                RunCell(head, $"<b>{x.no}회차</b>", 17, RText, RunC1);
+                RunCell(head, $"<b>{x.efficiency}%</b>", 17, LossColor(100 - x.efficiency), RunC2);
+                RunCell(head, $"<b>{x.type}</b>", 15, RBlue, RunC3);
+                RunCell(head, $"최선 {x.bestCount}/{x.events}" + (x.accident ? "  <color=#FF6B6B>사고</color>" : ""), 14, RMute, RunC4);
+                var when = AddText(head, $"{x.when}{(cur ? "  · 이번 판" : "")}", 13, RMute, FontStyle.Normal, TextAnchor.MiddleRight); LE(when.gameObject, -1, -1, 1);
+                var line = NewRect("Line", item); line.gameObject.AddComponent<Image>().color = RLine; LE(line.gameObject, -1, 1);
                 if (x.choices != null)
                     for (int k = 0; k < x.choices.Length; k++)
-                        parts.Add($"{(x.events_ != null && k < x.events_.Length ? x.events_[k] : $"사건 {k + 1}")} <color=#EEF0F3>{x.choices[k]}</color>");
-                AddText(item, string.Join("   ·   ", parts), 13, Dim);
-                var gap = NewRect("Gap", box); LE(gap.gameObject, -1, 8);
+                    {
+                        var row = NewRect("Ev", item); var rh = HLayout(row.gameObject, RunGap, TextAnchor.MiddleLeft); rh.childForceExpandWidth = false;
+                        RunCell(row, $"사건 {k + 1}", 13, RMute, RunC1);
+                        RunCell(row, x.events_ != null && k < x.events_.Length ? x.events_[k] : "", 13, RText, RunC2 + RunGap + RunC3);
+                        RunCell(row, x.choices[k], 13, RMute, -1);
+                    }
+                var gap = NewRect("Gap", box); LE(gap.gameObject, -1, 10);
             }
         }
 
