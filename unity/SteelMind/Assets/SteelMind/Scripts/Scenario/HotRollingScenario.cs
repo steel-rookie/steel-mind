@@ -709,9 +709,17 @@ namespace SteelMind.Scenario
         }
 
         // 대사 한 줄: 이름표 → 한 글자씩 → ▼ → 클릭·Space로 다음
+        // 문장이 끝나면(. ? !) 줄을 바꿔 한 줄에 한 문장씩 보이게 한다. "0.01mm"처럼 뒤에 공백이 없으면 그대로.
+        static string SplitSentences(string s)
+        {
+            if (string.IsNullOrEmpty(s)) return s;
+            return System.Text.RegularExpressions.Regex.Replace(s, @"([.?!…])[ \t]+(?=\S)", "$1\n");
+        }
+
         IEnumerator Say(string agent, string stance, string text, string sub, bool me)
         {
             if (!vn) yield break;
+            text = SplitSentences(text);
             bool narr = agent == null;
             yield return Place(narr ? null : agent);
             vnPlate.gameObject.SetActive(!narr);
