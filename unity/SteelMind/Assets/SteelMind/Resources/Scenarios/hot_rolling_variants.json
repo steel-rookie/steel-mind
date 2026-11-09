@@ -1,0 +1,147 @@
+{
+  "events": [
+    { "eventId": "furnace_low_temperature", "variants": [
+      { "id": "truck_waiting", "desc": "버너 한 구역의 화력이 떨어져 다음 슬라브가 목표 온도에 못 미칩니다. 공장 밖에는 고객사 납기 차량이 코일을 기다리고 있습니다.",
+        "patches": [
+          { "choice": "extract_now", "loss": { "quality": 5, "cost": 5 }, "outcome": "차량은 제시간에 보냈지만 덜 데운 슬라브로 만든 코일에서 재질 불량이 나와 반품이 왔습니다." },
+          { "choice": "soak_longer", "loss": { "production": 2 }, "outcome": "차량을 조금 더 세웠지만 온도를 맞춰 불량 없이 실어 보냈습니다." },
+          { "choice": "inspect_burner", "loss": { "production": 9, "cost": 3 }, "outcome": "점검이 길어져 납기 차량이 그냥 돌아갔고 위약금이 나왔습니다." } ] },
+      { "id": "gas_smell", "bestChoice": "inspect_burner", "desc": "버너 한 구역의 화력이 떨어졌고, 순찰자가 가열로 옆에서 가스 냄새가 난다고 보고했습니다. 다음 슬라브는 목표 온도에 못 미칩니다.",
+        "patches": [
+          { "choice": "extract_now", "loss": { "quality": 4, "safety": 8, "cost": 4 }, "outcome": "일정은 지켰지만 가스 누설을 방치해 경보가 울렸고, 주변 인원이 급히 대피했습니다." },
+          { "choice": "soak_longer", "loss": { "safety": 9, "cost": 2 }, "outcome": "더 가열하는 동안 샌 가스가 쌓여 경보가 울렸고, 결국 버너를 끄고 대피했습니다." },
+          { "choice": "inspect_burner", "loss": { "production": 3, "cost": 1 }, "outcome": "연소 배관 이음부의 누설을 찾아 막았습니다. 냄새 보고를 놓치지 않아 사고를 막았습니다." } ] } ] },
+
+    { "eventId": "roughing_bar_drift", "variants": [
+      { "id": "tight_tolerance", "desc": "압연 중인 바가 한쪽으로 쏠리고 있습니다. 이번 주문은 폭 허용 오차가 아주 좁은 자동차용 강판입니다.",
+        "patches": [
+          { "choice": "keep_pass", "loss": { "quality": 9, "safety": 3, "cost": 4 }, "outcome": "패스 순서는 지켰지만 폭이 허용 오차를 벗어나 코일 전량이 등외품이 됐습니다." },
+          { "choice": "level_roll", "outcome": "간격을 맞추자 바가 곧게 펴졌고, 까다로운 폭 기준을 그대로 맞췄습니다." },
+          { "choice": "pull_bar", "loss": { "production": 4, "cost": 2 }, "outcome": "바 한 장을 버렸지만 고객 기준을 벗어난 제품을 내보내지는 않았습니다." } ] },
+      { "id": "guide_crack", "bestChoice": "pull_bar", "desc": "압연 중인 바가 한쪽으로 쏠리고 있습니다. 쏠리는 쪽 사이드 가이드에 금이 간 것이 보인다는 보고가 들어왔습니다.",
+        "patches": [
+          { "choice": "keep_pass", "loss": { "quality": 3, "safety": 12, "cost": 6 }, "outcome": "금 간 가이드가 바에 맞아 부러졌고 파편이 통로까지 튀었습니다." },
+          { "choice": "level_roll", "loss": { "safety": 8, "cost": 3 }, "outcome": "롤 간격은 맞췄지만 금 간 가이드를 그대로 둬서 다음 패스에서 가이드가 부러졌습니다." },
+          { "choice": "pull_bar", "loss": { "production": 3, "cost": 1 }, "outcome": "바를 먼저 빼낸 덕분에 금 간 가이드를 안전하게 교체했습니다." } ] } ] },
+
+    { "eventId": "worker_in_zone", "variants": [
+      { "id": "no_radio", "bestChoice": "emergency_stop", "desc": "가동 중인 런아웃 테이블 옆 통제 구역에 외주 작업자 두 명이 들어왔습니다. 두 사람에게는 무전이 연결되지 않습니다.",
+        "patches": [
+          { "choice": "continue_with_radio", "loss": { "safety": 30 }, "outcome": "무전이 닿지 않아 경고가 전달되지 않았고, 작업자 한 명이 다쳤습니다. 안전사고로 라인이 멈췄습니다." },
+          { "choice": "slow_and_clear", "loss": { "production": 1, "safety": 14 }, "outcome": "속도는 낮췄지만 알릴 방법이 없어 두 사람이 계속 안쪽으로 걸어갔고 아찔한 순간이 있었습니다." },
+          { "choice": "emergency_stop", "loss": { "production": 3, "cost": 2 }, "outcome": "즉시 멈춰 두 사람을 안전하게 내보냈습니다. 무전이 안 되는 상황에서는 이 방법이 맞았습니다." } ] },
+      { "id": "escorted_inspector", "desc": "가동 중인 런아웃 테이블의 통제 구역 가장자리에 안전 담당자와 동행한 점검자 한 명이 있습니다. 무전은 바로 연결됩니다.",
+        "patches": [
+          { "choice": "continue_with_radio", "dropFlag": true, "loss": { "safety": 18 }, "outcome": "다친 사람은 없었지만, 사람이 있는 구역에서 라인을 돌린 규정 위반이 기록됐습니다." },
+          { "choice": "slow_and_clear", "outcome": "점검자가 물러난 것을 무전으로 확인한 뒤 속도를 올렸습니다." },
+          { "choice": "emergency_stop", "loss": { "production": 7, "cost": 4 }, "outcome": "사람은 안전했지만 무전으로 해결할 일에 급정지를 해 강판이 테이블에서 꼬였습니다." } ] } ] },
+
+    { "eventId": "descaler_low_pressure", "variants": [
+      { "id": "premium_surface", "desc": "고압수 노즐 일부가 막혀 수압이 기준 아래로 떨어졌습니다. 이번 슬라브는 자동차 외판용이라 표면 기준이 특히 까다롭습니다.",
+        "patches": [
+          { "choice": "pass_through", "loss": { "quality": 12, "cost": 3 }, "outcome": "라인은 쉬지 않았지만 외판용 표면 기준을 넘지 못해 코일 전량이 격하됐습니다." },
+          { "choice": "switch_pump", "outcome": "수압을 회복해 까다로운 표면 기준을 맞췄습니다." },
+          { "choice": "replace_nozzle", "loss": { "production": 4, "cost": 2 }, "outcome": "라인을 세운 만큼 생산은 줄었지만 외판용 표면 품질은 지켰습니다." } ] },
+      { "id": "spare_pump_down", "bestChoice": "replace_nozzle", "desc": "고압수 노즐 일부가 막혀 수압이 기준 아래로 떨어졌습니다. 예비 펌프는 지금 정비 중이라 쓸 수 없습니다.",
+        "patches": [
+          { "choice": "pass_through", "loss": { "quality": 10, "cost": 3 }, "outcome": "라인은 쉬지 않았지만 스케일이 강판에 눌려 붙어 표면 흠이 넓게 생겼습니다." },
+          { "choice": "switch_pump", "loss": { "production": 6, "quality": 2 }, "outcome": "예비 펌프가 정비 중인 것을 확인하느라 시간만 보냈고, 그동안 표면 흠이 생겼습니다." },
+          { "choice": "replace_nozzle", "loss": { "production": 4, "cost": 2 }, "outcome": "예비 펌프가 없는 상황에서는 라인을 세우고 노즐을 바꾸는 것이 가장 빨랐습니다." } ] } ] },
+
+    { "eventId": "rolling_temperature", "variants": [
+      { "id": "cooling_water_low", "bestChoice": "stop_and_inspect", "desc": "롤 온도가 빠르게 오르는데 롤 냉각수 유량까지 평소보다 적습니다. 오늘 출하할 코일 주문이 남아 있습니다.",
+        "patches": [
+          { "choice": "continue_production", "loss": { "quality": 6, "safety": 16 }, "outcome": "냉각수가 부족한 채 계속 돌려 롤 표면이 갈라졌고 과열 구역이 위험해졌습니다." },
+          { "choice": "reduce_speed", "loss": { "production": 2, "quality": 3, "safety": 5 }, "outcome": "속도를 낮춰도 냉각수가 부족해 온도가 계속 올랐고, 결국 멈춰야 했습니다." },
+          { "choice": "stop_and_inspect", "loss": { "production": 4, "cost": 2 }, "outcome": "라인을 세워 막힌 냉각수 스트레이너를 찾아 뚫었고, 롤 손상 없이 재가동했습니다." } ] },
+      { "id": "last_coil", "desc": "롤 온도가 기준보다 빠르게 오릅니다. 오늘 출하분은 코일 한 개만 남았습니다.",
+        "patches": [
+          { "choice": "continue_production", "loss": { "quality": 3, "safety": 8 }, "outcome": "마지막 코일은 맞췄지만 온도가 흔들려 두께가 고르지 않았습니다." },
+          { "choice": "reduce_speed", "outcome": "속도를 낮춰 온도를 안정시키고 마지막 코일까지 무사히 마쳤습니다." },
+          { "choice": "stop_and_inspect", "loss": { "production": 7, "cost": 3 }, "outcome": "코일 한 개만 남았는데 라인 전체를 멈춰 재가동 비용이 더 들었습니다." } ] } ] },
+
+    { "eventId": "coiler_side_shift", "variants": [
+      { "id": "export_order", "desc": "감고 있는 코일의 옆면이 한쪽으로 조금씩 밀려 나옵니다. 이 코일은 내일 배에 실릴 수출품입니다.",
+        "patches": [
+          { "choice": "keep_coiling", "loss": { "quality": 9, "cost": 4 }, "outcome": "제시간에 감았지만 항구 검수에서 옆면 불량으로 선적을 거절당했습니다." },
+          { "choice": "adjust_tension", "outcome": "장력을 맞춰 옆면을 정리했고, 수출 검수 기준을 통과했습니다." },
+          { "choice": "cut_coil", "loss": { "production": 3, "cost": 2 }, "outcome": "밀린 부분을 잘라 내 선적량은 줄었지만 검수는 통과했습니다." } ] },
+      { "id": "strip_tear", "bestChoice": "cut_coil", "desc": "감고 있는 코일의 옆면이 밀려 나오고, 강판 가장자리에 찢어진 자국까지 보입니다.",
+        "patches": [
+          { "choice": "keep_coiling", "loss": { "quality": 6, "safety": 12, "cost": 3 }, "outcome": "찢어진 가장자리가 권취 중에 터지면서 강판 조각이 주변으로 튀었습니다." },
+          { "choice": "adjust_tension", "loss": { "quality": 2, "safety": 7 }, "outcome": "장력을 낮췄지만 찢어진 부분이 계속 벌어져 결국 위험한 상태에서 멈췄습니다." },
+          { "choice": "cut_coil", "loss": { "production": 3, "cost": 1 }, "outcome": "찢어진 부분이 더 벌어지기 전에 잘라 내 사고를 막았습니다." } ] } ] },
+
+    { "eventId": "power_dip", "variants": [
+      { "id": "long_outage", "desc": "변전소 쪽 고장으로 주전원이 끊겼고, 복구에 몇 시간 걸린다는 연락이 왔습니다. 사상압연기 안에 강판이 걸린 채 멈췄습니다.",
+        "patches": [
+          { "choice": "restart_now", "loss": { "quality": 4, "safety": 4, "cost": 10 }, "outcome": "비상 전원으로 무리하게 돌려 강판은 뺐지만 커플링이 손상됐습니다." },
+          { "choice": "staged_restart", "loss": { "production": 3, "cost": 2 }, "outcome": "비상 전원 범위 안에서 차례로 살려 강판을 빼냈고, 복구를 기다리지 않아도 됐습니다." },
+          { "choice": "wait_power", "loss": { "production": 12, "quality": 3, "cost": 5 }, "outcome": "몇 시간을 기다리는 동안 강판이 롤에 눌어붙어 제거에 하루가 걸렸습니다." } ] },
+      { "id": "weak_generator", "bestChoice": "wait_power", "desc": "순간 정전으로 비상 발전기로 넘어갔지만, 발전기 용량이 제어 계통만 겨우 버틸 정도입니다. 주전원은 곧 돌아온다는 연락이 왔습니다.",
+        "patches": [
+          { "choice": "restart_now", "loss": { "quality": 4, "safety": 6, "cost": 12 }, "outcome": "압연기를 돌리자 발전기가 과부하로 꺼져 제어 계통까지 함께 멈췄습니다." },
+          { "choice": "staged_restart", "loss": { "production": 6, "cost": 3 }, "outcome": "차례로 살리다가 발전기가 버티지 못해 처음부터 다시 해야 했습니다." },
+          { "choice": "wait_power", "loss": { "production": 4, "cost": 2 }, "outcome": "제어 계통을 지키며 기다렸고, 주전원이 돌아오자 바로 안전하게 재가동했습니다." } ] } ] },
+
+    { "eventId": "pipe_burst", "variants": [
+      { "id": "far_from_panel", "desc": "런아웃 테이블 아래 3번 냉각수 배관이 터졌습니다. 물이 번지는 쪽에 전기 설비는 없고, 사람도 없습니다.",
+        "patches": [
+          { "choice": "run_and_call", "loss": { "production": 4, "quality": 3, "safety": 2, "cost": 3 }, "outcome": "큰 위험은 없었지만 냉각이 모자란 채 돌려 코일 품질이 떨어졌습니다." },
+          { "choice": "isolate", "loss": { "production": 2, "cost": 1 }, "outcome": "밸브를 잠그고 구역을 표시한 뒤 짧은 시간에 배관을 교체했습니다." },
+          { "choice": "self_fix", "loss": { "production": 1, "safety": 3, "cost": 1 }, "outcome": "밸브는 잠갔지만 혼자 들어간 것은 절차 위반으로 기록됐습니다." } ] },
+      { "id": "worker_near_panel", "desc": "런아웃 테이블 아래 3번 냉각수 배관이 터져 물이 번지고 있습니다. 전기 제어반 앞에 작업자 한 명이 서 있습니다.",
+        "patches": [
+          { "choice": "run_and_call", "loss": { "production": 6, "quality": 3, "safety": 16, "cost": 5 }, "outcome": "물이 제어반에 닿아 누전이 일어났고, 앞에 있던 작업자가 감전될 뻔했습니다." },
+          { "choice": "isolate", "loss": { "production": 3, "cost": 2 }, "outcome": "전원을 먼저 끊어 작업자를 안전하게 빼내고 배관을 교체했습니다." },
+          { "choice": "self_fix", "loss": { "production": 1, "safety": 11, "cost": 1 }, "outcome": "밸브는 잠갔지만 전원이 살아 있는 물바닥에 사람을 더 들여보낸 셈이었습니다." } ] } ] },
+
+    { "eventId": "gauge_mismatch", "variants": [
+      { "id": "gauge_two_expired", "desc": "출구 두께 측정기 두 대가 0.08mm 차이 나는 값을 보여 줍니다. 1번은 오늘 아침 교정을 마쳤고, 2번은 교정 기한이 지났습니다.",
+        "patches": [
+          { "choice": "trust_one", "loss": { "quality": 2, "cost": 1 }, "outcome": "이번에는 1번이 맞았습니다. 결과는 괜찮았지만 실제로 확인하지는 않았습니다." },
+          { "choice": "cross_check", "loss": { "production": 1 }, "outcome": "샘플로 1번이 맞음을 확인하고 2번을 교정 대상으로 돌렸습니다." },
+          { "choice": "average", "loss": { "quality": 6, "cost": 2 }, "outcome": "교정이 지난 2번 값까지 섞어 오히려 기준을 벗어난 코일이 나왔습니다." } ] },
+      { "id": "sample_takes_time", "desc": "출구 두께 측정기 두 대가 0.08mm 차이 나는 값을 보여 줍니다. 샘플을 실측하려면 라인을 8분 세워야 합니다.",
+        "patches": [
+          { "choice": "trust_one", "loss": { "quality": 9, "cost": 3 }, "outcome": "8분을 아꼈지만 1번 측정기가 틀어져 있어 코일 여러 개가 두께 불량으로 돌아왔습니다." },
+          { "choice": "cross_check", "loss": { "production": 3, "cost": 1 }, "outcome": "8분을 들여 실측했고, 1번 측정기 오차를 찾아 불량을 막았습니다." },
+          { "choice": "average", "loss": { "quality": 4, "cost": 2 }, "outcome": "라인은 안 멈췄지만 오차가 절반만 줄어 일부 코일이 기준을 벗어났습니다." } ] } ] },
+
+    { "eventId": "rush_order", "variants": [
+      { "id": "key_customer", "desc": "올해 가장 큰 고객사에서 오늘 밤 안에 코일 20개를 더 달라고 합니다. 1시간 뒤에는 권취기 정기 점검이 잡혀 있습니다.",
+        "patches": [
+          { "choice": "delay_check", "loss": { "quality": 2, "safety": 2, "cost": 6 }, "outcome": "큰 고객은 지켰지만 점검을 미룬 권취기가 며칠 뒤 멈췄습니다." },
+          { "choice": "negotiate", "loss": { "production": 2, "cost": 1 }, "outcome": "핵심 점검만 하기로 합의해 고객사 물량 대부분을 맞췄습니다." },
+          { "choice": "force_check", "loss": { "production": 10, "cost": 2 }, "outcome": "설명 없이 거절해 가장 큰 고객사와의 다음 계약이 위태로워졌습니다." } ] },
+      { "id": "bearing_alarm", "bestChoice": "force_check", "desc": "오늘 밤 안에 코일 20개를 더 달라는 긴급 주문이 왔습니다. 그런데 어제부터 권취기 베어링 온도 경보가 간헐적으로 떴습니다.",
+        "patches": [
+          { "choice": "delay_check", "loss": { "quality": 2, "safety": 10, "cost": 12 }, "outcome": "주문 도중 베어링이 깨져 권취기가 멈췄고, 코일이 풀리며 위험한 상황이 벌어졌습니다." },
+          { "choice": "negotiate", "loss": { "production": 4, "safety": 4 }, "outcome": "점검을 줄이기로 합의했지만, 줄인 항목에 베어링이 있어 문제를 찾지 못했습니다." },
+          { "choice": "force_check", "loss": { "production": 3 }, "outcome": "이유를 설명하고 점검을 강행해 깨지기 직전의 베어링을 찾아 교체했습니다." } ] } ] },
+
+    { "eventId": "crane_overload", "variants": [
+      { "id": "empty_aisle", "bestChoice": "finish_slow", "desc": "코일을 옮기던 천장 크레인에서 과부하 경보가 울립니다. 아래 통로에는 아무도 없고, 코일은 이미 적치대 바로 위에 있습니다.",
+        "patches": [
+          { "choice": "finish_slow", "loss": { "cost": 1 }, "outcome": "사람이 없는 것을 확인하고 바로 아래 적치대에 천천히 내려놓은 뒤 크레인을 점검했습니다." },
+          { "choice": "lower_now", "loss": { "production": 4, "cost": 2 }, "outcome": "통로에 코일을 내려놓는 바람에 옮기는 작업을 한 번 더 해야 했습니다." },
+          { "choice": "reset_alarm", "loss": { "production": 4, "safety": 8, "cost": 6 }, "outcome": "경보는 진짜였습니다. 와이어가 늘어나 크레인을 세우고 긴급 교체했습니다." } ] },
+      { "id": "wire_fray", "desc": "코일을 들어 올리던 천장 크레인에서 과부하 경보가 울리고, 와이어 소선이 끊어진 것이 보입니다. 아래 통로로 작업자 두 명이 지나갑니다.",
+        "patches": [
+          { "choice": "finish_slow", "loss": { "safety": 16 }, "outcome": "끊어져 가는 와이어로 사람 머리 위를 지나간, 사고 직전의 작업이었습니다." },
+          { "choice": "lower_now", "loss": { "production": 2, "cost": 2 }, "outcome": "작업자를 먼저 피하게 하고 코일을 내려 끊어져 가던 와이어를 교체했습니다." },
+          { "choice": "reset_alarm", "loss": { "production": 4, "safety": 14, "cost": 8 }, "outcome": "경보를 끄고 계속하다가 와이어가 더 풀려 코일이 흔들렸습니다." } ] } ] },
+
+    { "eventId": "rookie_report", "variants": [
+      { "id": "temperature_rising", "bestChoice": "stop_line", "desc": "입사 2주 차 작업자가 조압연기 쪽에서 끼익 소리가 난다고 무전을 했습니다. 방금 베어링 온도도 오르기 시작했습니다.",
+        "patches": [
+          { "choice": "log_only", "loss": { "safety": 6, "cost": 14 }, "outcome": "한 시간 뒤 베어링이 깨져 조압연기가 멈췄고 파편이 튀었습니다." },
+          { "choice": "check_together", "loss": { "production": 2, "safety": 5, "cost": 3 }, "outcome": "확인하러 가는 사이 베어링이 깨져, 설비 옆에 있던 두 사람이 위험했습니다." },
+          { "choice": "stop_line", "loss": { "production": 3, "cost": 2 }, "outcome": "소리와 온도가 함께 변한 것을 보고 바로 멈춰 베어링 파손을 막았습니다." } ] },
+      { "id": "short_staffed", "desc": "입사 2주 차 작업자가 조압연기 쪽에서 끼익 소리가 난다고 무전을 했습니다. 계기판은 정상이고, 야간 교대라 설비 담당은 한 명뿐입니다.",
+        "patches": [
+          { "choice": "log_only", "loss": { "safety": 2, "cost": 12 }, "outcome": "바쁜 야간이라 넘겼는데, 며칠 뒤 베어링이 깨져 라인이 오래 멈췄습니다." },
+          { "choice": "check_together", "loss": { "production": 2, "cost": 1 }, "outcome": "한 명뿐인 설비 담당과 잠깐 확인해 베어링 초기 손상을 찾았습니다." },
+          { "choice": "stop_line", "loss": { "production": 8, "cost": 2 }, "outcome": "계기판이 정상인데 바로 멈췄고, 야간에 재가동할 인력이 모자라 오래 걸렸습니다." } ] } ] }
+  ]
+}
