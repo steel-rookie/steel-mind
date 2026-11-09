@@ -224,8 +224,10 @@ namespace SteelMind.Scenario
                 if (i < baseN) ev = baseEvents[i];
                 else
                 {
+                    var cands = model.TopCandidates(pool, 3);
                     var pk = model.PickNext(pool);
                     if (pk == null) break;
+                    if (GeminiClient.Available) yield return AskPick(pk, cands);
                     ev = pk.ev; pool.Remove(ev); pickAt[i] = pk;
                     yield return new WaitForSeconds(1.2f);
                     yield return AiToast("AI 판단 · 다음 사건 선택", $"노리는 역량  <b>{model.Name(pk.target)}</b>\n{pk.reason}\n→ 돌발상황을 준비합니다", 3.6f, true);
@@ -240,6 +242,70 @@ namespace SteelMind.Scenario
             SetStatus("교대 근무를 마무리하는 중입니다");
             yield return new WaitForSeconds(def.resultDelay);
             yield return ResultScreen();
+        }
+
+        [System.Serializable] class PickReply { public string id, reason; }
+        [System.Serializable] class DiagReply { public string title, body; public string[] coaching; }
+
+        // Gemini가 후보 3개 중 다음 돌발상황을 고르고 이유를 쓴다. 실패하면 규칙 기반 선택 그대로.
+        IEnumerator AskPick(Pick pk, List<ScenarioEvent> cands)
+        {
+            var sb = new System.Text.StringBuilder();
+            sb.Append("너는 제철소 신입 운영자의 돌발상황 대처 역량을 진단하는 평가 AI다. 적응형 검사처럼, 지금까지의 답변으로 가장 약하거나 아직 덜 확인된 역량을 정확히 측정할 다음 사건 하나를 고른다.\n");
+            sb.Append("역량 현황(평균 -2~+2): ").Append(model.Summary()).Append("\n지금까지의 선택:\n");
+            for (int i = 0; i < played.Count && i < picks.Count; i++) sb.Append($"- {played[i].title}: {played[i].choices[picks[i]].label}\n");
+            sb.Append("후보 사건:\n");
+            foreach (var c in cands) sb.Append($"- id={c.id}, 제목={c.title}, 시험 역량={string.Join("/", c.probes)}\n");
+            sb.Append("JSON으로만 답하라: {\"id\": 후보 id, \"reason\": 한국어 한 문장, 40자 이내, 어떤 역량을 왜 확인하려는지}");
+            string reply = null;
+            yield return GeminiClient.Ask(sb.ToString(), 6f, t => reply = t);
+            if (string.IsNullOrEmpty(reply)) yield break;
+            try
+            {
+                var r = JsonUtility.FromJson<PickReply>(reply);
+                var ev = cands.Find(c => c.id == r.id);
+                if (ev == null) yield break;
+                pk.ev = ev;
+                pk.target = ev.probes.OrderByDescending(model.Need).First();
+                if (!string.IsNullOrEmpty(r.reason)) pk.reason = r.reason;
+                pk.byGemini = true;
+            }
+            catch { }
+        }
+
+        // 보고서 진단 문장을 Gemini로 다시 쓴다
+        IEnumerator AskDiagnosis(RunResult r, Text title, Text body, Text chip, RectTransform coachBox)
+        {
+            if (!GeminiClient.Available) yield break;
+            chip.text = "Gemini 작성 중…";
+            var sb = new System.Text.StringBuilder();
+            sb.Append("너는 제철소 신입 운영자의 돌발상황 대처 역량을 진단하고 교육 담당자에게 보고하는 AI다. 아래 기록만 근거로 판단하고, 숫자를 지어내지 마라.\n");
+            sb.Append("역량 정의:\n");
+            foreach (var c in def.competencies) sb.Append($"- {c.name}: {c.desc}\n");
+            sb.Append("역량 결과(평균 -2~+2, 확인 횟수): ").Append(model.Summary()).Append("\n사건 기록:\n");
+            for (int i = 0; i < r.events.Count; i++)
+            {
+                var e = r.events[i];
+                sb.Append($"- {e.ev.title} → '{e.chosen.label}' ({e.chosen.outcome})");
+                if (pickAt.TryGetValue(i, out var pk)) sb.Append($" [AI가 '{model.Name(pk.target)}' 확인을 위해 낸 돌발상황]");
+                sb.Append("\n");
+            }
+            sb.Append("JSON으로만 답하라: {\"title\": 진단 한 줄 20자 이내, \"body\": 운영자에게 존댓말 2~3문장(강점과 보완점, 근거가 된 사건 이름 포함), \"coaching\": [다음 교육에서 할 구체적 훈련 2개, 각 30자 이내]}");
+            string reply = null;
+            yield return GeminiClient.Ask(sb.ToString(), 15f, t => reply = t);
+            DiagReply d = null;
+            try { if (!string.IsNullOrEmpty(reply)) d = JsonUtility.FromJson<DiagReply>(reply); } catch { }
+            if (d == null || string.IsNullOrEmpty(d.title)) { chip.text = "기본 문장"; yield break; }
+            if (title) title.text = $"<b>{d.title}</b>";
+            if (body && !string.IsNullOrEmpty(d.body)) body.text = d.body;
+            chip.text = $"Gemini · {GeminiClient.Model}";
+            if (coachBox && d.coaching != null && d.coaching.Length > 0)
+            {
+                AddText(coachBox, "<b>AI 코칭</b>", 15, Teal);
+                foreach (var c in d.coaching) AddText(coachBox, "• " + c, 15, Body);
+                LayoutRebuilder.ForceRebuildLayoutImmediate(coachBox);
+                if (overlay) LayoutRebuilder.ForceRebuildLayoutImmediate(overlay);
+            }
         }
 
         // AI 분석·판단 알림 (오른쪽 위 카드). wait=true면 사라질 때까지 기다린다
@@ -1003,13 +1069,14 @@ namespace SteelMind.Scenario
             return c;
         }
 
-        void AiTag(Transform parent, string label)
+        Text AiTag(Transform parent, string label)
         {
             var row = NewRect("Label", parent); HLayout(row.gameObject, 8, TextAnchor.MiddleLeft);
             AddText(row, label, 15, Dim, FontStyle.Bold, TextAnchor.MiddleLeft).horizontalOverflow = HorizontalWrapMode.Overflow;
             var chip = NewRect("Chip", row); Round(chip.gameObject, Hex("#1F3A33"), 1.8f);
             var h = HLayout(chip.gameObject, 0, TextAnchor.MiddleCenter); h.padding = new RectOffset(8, 8, 2, 2);
-            AddText(chip, "기본 문장", 12, Teal, FontStyle.Bold, TextAnchor.MiddleCenter).horizontalOverflow = HorizontalWrapMode.Overflow;
+            var ct = AddText(chip, "기본 문장", 12, Teal, FontStyle.Bold, TextAnchor.MiddleCenter); ct.horizontalOverflow = HorizontalWrapMode.Overflow;
+            return ct;
         }
 
         // 진단 요약 (기본 문장. Gemini가 있으면 덮어쓴다)
@@ -1065,9 +1132,9 @@ namespace SteelMind.Scenario
             // 1줄: 진단 요약 | 운영 효율
             var row1 = NewRect("Row1", page); var h1 = HLayout(row1.gameObject, 16); h1.childForceExpandWidth = true; h1.childForceExpandHeight = true;
             var typeCard = ReportCard(row1); LE(typeCard.gameObject, 12, -1, 1.3f);
-            AiTag(typeCard, "AI 진단 요약");
-            AddText(typeCard, $"<b>{diag.title}</b>", 34, Color.white);
-            AddText(typeCard, diag.body, 18, Body);
+            var diagChip = AiTag(typeCard, "AI 진단 요약");
+            var diagTitle = AddText(typeCard, $"<b>{diag.title}</b>", 34, Color.white);
+            var diagBody = AddText(typeCard, diag.body, 18, Body);
             var chips = NewRect("Chips", typeCard); HLayout(chips.gameObject, 8, TextAnchor.MiddleLeft);
             foreach (var st in strong) Chip(chips, "강점 · " + model.Name(st.id), Hex("#1F3A2A"), Hex("#6FCF97"));
             foreach (var wk in weak) Chip(chips, "보완 · " + model.Name(wk.id), Hex("#3A1F1F"), Hex("#FF8A80"));
@@ -1121,6 +1188,7 @@ namespace SteelMind.Scenario
             var edu = ReportCard(row3); LE(edu.gameObject, 10, -1, 1);
             AddText(edu, "<b>맞춤 교육</b>", 17, Teal);
             foreach (var wk in focus) { var dd = Def(wk.id); if (dd != null) { AddText(edu, $"<b>{dd.name}</b>", 15, Body); AddText(edu, dd.training, 15, Dim); } }
+            StartCoroutine(AskDiagnosis(r, diagTitle, diagBody, diagChip, edu));
             var men = ReportCard(row3); LE(men.gameObject, 10, -1, 1);
             AddText(men, "<b>추천 사수</b>", 17, Teal);
             AddText(men, "보완할 역량을 강점으로 가진 선배를 붙입니다.", 13, Dim);
@@ -1137,7 +1205,7 @@ namespace SteelMind.Scenario
             for (int i = 0; i < r.events.Count; i++)
             {
                 var e = r.events[i];
-                string who = pickAt.TryGetValue(i, out var pk) ? $"<color=#6CC3B0><b>AI 선택</b></color> · {pk.reason}" : "<color=#A3A8B2>기본 측정</color>";
+                string who = pickAt.TryGetValue(i, out var pk) ? $"<color=#6CC3B0><b>{(pk.byGemini ? "Gemini 선택" : "AI 선택")}</b></color> · {pk.reason}" : "<color=#A3A8B2>기본 측정</color>";
                 AddText(c4a, $"<b>{i + 1}. {e.ev.title}</b>   {who}", 15, Body);
                 AddText(c4a, $"     '{e.chosen.label}' → {(i < eventDeltas.Count ? DeltaText(eventDeltas[i]) : "")}", 14, Dim);
             }

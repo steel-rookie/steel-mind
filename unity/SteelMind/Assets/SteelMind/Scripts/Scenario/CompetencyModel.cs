@@ -20,6 +20,7 @@ namespace SteelMind.Scenario
         public string target;      // 노린 역량
         public float score;
         public string reason;      // 화면·보고서에 보여 줄 판단 이유 (기본 문장)
+        public bool byGemini;      // Gemini가 고르고 이유를 썼는가
     }
 
     public class CompetencyModel
@@ -84,6 +85,12 @@ namespace SteelMind.Scenario
             }
             return best;
         }
+
+        // Gemini에게 보여 줄 후보 (필요 점수 순)
+        public List<ScenarioEvent> TopCandidates(IEnumerable<ScenarioEvent> pool, int n) =>
+            pool.Where(e => e.probes != null && e.probes.Length > 0).OrderByDescending(e => e.probes.Sum(Need)).Take(n).ToList();
+
+        public string Summary() => string.Join(", ", Ids.Select(i => $"{Name(i)}(id={i}) 평균 {states[i].Mean:0.0}, {states[i].count}회"));
 
         public List<CompetencyState> Strengths() =>
             Ids.Select(i => states[i]).Where(s => s.count > 0 && s.Mean >= 1f).OrderByDescending(s => s.Mean).ToList();
