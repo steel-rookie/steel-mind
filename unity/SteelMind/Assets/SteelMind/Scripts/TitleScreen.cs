@@ -189,7 +189,7 @@ namespace SteelMind
                 t += Time.deltaTime; float k = t / life;
                 rt.anchoredPosition = new Vector2(Mathf.Round(drift * k * 2.5f), Mathf.Round(4 + 30 * k));
                 float s = Mathf.Round(size0 + 16 * k); rt.sizeDelta = new Vector2(s, s);
-                img.color = new Color(0.62f, 0.58f, 0.66f, 0.55f * (1 - k));
+                img.color = new Color(0.96f, 0.94f, 0.9f, 0.7f * (1 - k));   // 노을빛 하얀 수증기
                 yield return null;
             }
             if (rt) Destroy(rt.gameObject);
