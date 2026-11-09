@@ -1377,5 +1377,964 @@
       ],
       "delay": 6
     }
+  ],
+  "retrains": [
+    {
+      "id": "rt_hyd_leak",
+      "level": "재훈련",
+      "warn": "coiler",
+      "probes": [
+        "safety",
+        "aware"
+      ],
+      "delay": 4,
+      "title": "권취기 유압 배관 기름 누유",
+      "desc": "권취기 옆 유압 배관에서 기름이 새어 바닥에 번지고 있습니다. 근처에서 작업자 한 명이 코일 띠를 묶고 있습니다.",
+      "chief": "생산을 이어 갈지, 미끄럼·화재 위험부터 막을지가 쟁점입니다.",
+      "agents": [
+        {
+          "agent": "production",
+          "say": "흡착포만 깔고 계속 감죠.",
+          "why": "",
+          "rec": "absorb_run"
+        },
+        {
+          "agent": "equipment",
+          "say": "압력을 빼고 배관을 잠가야 합니다.",
+          "why": "",
+          "rec": "lockout"
+        },
+        {
+          "agent": "quality",
+          "say": "기름이 코일에 튀면 표면 불량이에요.",
+          "why": "",
+          "rec": "lockout"
+        },
+        {
+          "agent": "safety",
+          "say": "작업자부터 빼고 잠금장치를 거세요.",
+          "why": "",
+          "rec": "lockout"
+        }
+      ],
+      "choices": [
+        {
+          "id": "absorb_run",
+          "label": "흡착포만 깔고 가동 유지",
+          "detail": "닦으면서 계속 감는다",
+          "outcome": "작업자가 기름에 미끄러질 뻔했고, 결국 라인을 세웠습니다.",
+          "loss": {
+            "production": 3,
+            "quality": 2,
+            "safety": 8,
+            "cost": 2
+          },
+          "skills": {
+            "safety": -2,
+            "aware": -1
+          },
+          "lineSpeed": 1,
+          "resumeAfter": 0
+        },
+        {
+          "id": "lockout",
+          "label": "작업자 대피·정지·잠금 후 수리",
+          "detail": "구역을 비우고 유압을 빼 잠금장치를 건다",
+          "outcome": "사람을 먼저 빼고 잠금 뒤 수리해 사고 없이 재가동했습니다.",
+          "loss": {
+            "production": 3,
+            "quality": 0,
+            "safety": 0,
+            "cost": 1
+          },
+          "skills": {
+            "safety": 2,
+            "aware": 1
+          },
+          "lineSpeed": 0,
+          "resumeAfter": 3,
+          "best": true
+        },
+        {
+          "id": "self_valve",
+          "label": "내가 들어가 밸브 잠금",
+          "detail": "가장 가까우니 직접 처리한다",
+          "outcome": "밸브는 잠갔지만 기름 바닥을 혼자 지나간 위험한 순간이었습니다.",
+          "loss": {
+            "production": 1,
+            "quality": 0,
+            "safety": 6,
+            "cost": 1
+          },
+          "skills": {
+            "safety": -2,
+            "aware": 1
+          },
+          "lineSpeed": 1,
+          "resumeAfter": 0
+        }
+      ]
+    },
+    {
+      "id": "rt_visitors",
+      "level": "재훈련",
+      "warn": "reheating_furnace",
+      "probes": [
+        "safety",
+        "team"
+      ],
+      "delay": 4,
+      "title": "가열로 앞 고온 구역에 견학 인원",
+      "desc": "협력사 견학 인원 5명이 안내 없이 가열로 문 앞 고온 구역 쪽으로 걸어오고 있습니다. 곧 슬라브 추출이 있습니다.",
+      "chief": "추출 일정을 지킬지, 동선부터 통제할지가 쟁점입니다.",
+      "agents": [
+        {
+          "agent": "production",
+          "say": "추출 끝나고 안내해도 늦지 않아요.",
+          "why": "",
+          "rec": "radio_only"
+        },
+        {
+          "agent": "equipment",
+          "say": "추출 때 문이 열리면 열기가 셉니다.",
+          "why": "",
+          "rec": "hold_clear"
+        },
+        {
+          "agent": "quality",
+          "say": "추출을 늦추면 온도가 조금 떨어져요.",
+          "why": "",
+          "rec": "radio_only"
+        },
+        {
+          "agent": "safety",
+          "say": "추출을 미루고 동선부터 막아야 합니다.",
+          "why": "",
+          "rec": "hold_clear"
+        }
+      ],
+      "choices": [
+        {
+          "id": "radio_only",
+          "label": "무전으로 주의만 주고 추출",
+          "detail": "안내 담당에게 무전하고 일정대로 꺼낸다",
+          "outcome": "견학 인원이 열기에 놀라 넘어질 뻔했습니다.",
+          "loss": {
+            "production": 0,
+            "quality": 0,
+            "safety": 8,
+            "cost": 0
+          },
+          "skills": {
+            "safety": -2,
+            "team": -1
+          },
+          "lineSpeed": 1,
+          "resumeAfter": 0
+        },
+        {
+          "id": "hold_clear",
+          "label": "추출 보류·동선 통제·안내 담당 호출",
+          "detail": "잠시 멈추고 안전한 길로 안내한 뒤 추출한다",
+          "outcome": "몇 분 늦었지만 견학 인원을 안전한 통로로 옮긴 뒤 추출했습니다.",
+          "loss": {
+            "production": 1,
+            "quality": 1,
+            "safety": 0,
+            "cost": 0
+          },
+          "skills": {
+            "safety": 2,
+            "team": 1
+          },
+          "lineSpeed": 0.6,
+          "resumeAfter": 2,
+          "best": true
+        },
+        {
+          "id": "go_myself",
+          "label": "추출은 그대로, 내가 뛰어가 안내",
+          "detail": "자리를 비우고 직접 막으러 간다",
+          "outcome": "사람은 막았지만 운전석이 비어 추출 타이밍이 어긋났습니다.",
+          "loss": {
+            "production": 2,
+            "quality": 2,
+            "safety": 2,
+            "cost": 1
+          },
+          "skills": {
+            "safety": -1,
+            "team": 1
+          },
+          "lineSpeed": 1,
+          "resumeAfter": 0
+        }
+      ]
+    },
+    {
+      "id": "rt_coil_color",
+      "level": "재훈련",
+      "warn": "coiler",
+      "probes": [
+        "aware",
+        "tech"
+      ],
+      "delay": 4,
+      "title": "온도계는 정상인데 코일 끝 색이 이상",
+      "desc": "권취 온도계는 목표 범위인데, 방금 감은 코일 끝부분 색이 평소보다 붉습니다.",
+      "chief": "계기 숫자를 믿을지, 눈에 보이는 신호를 확인할지가 쟁점입니다.",
+      "agents": [
+        {
+          "agent": "production",
+          "say": "계기가 정상이면 정상입니다.",
+          "why": "",
+          "rec": "trust_gauge"
+        },
+        {
+          "agent": "equipment",
+          "say": "온도계 렌즈에 증기가 끼면 낮게 나와요.",
+          "why": "",
+          "rec": "cross_check"
+        },
+        {
+          "agent": "quality",
+          "say": "끝부분만 따로 재 보죠.",
+          "why": "",
+          "rec": "cross_check"
+        },
+        {
+          "agent": "safety",
+          "say": "판단은 품질·설비에 맡기겠습니다.",
+          "why": "",
+          "rec": "cross_check"
+        }
+      ],
+      "choices": [
+        {
+          "id": "trust_gauge",
+          "label": "온도계 값 믿고 계속",
+          "detail": "숫자가 정상이니 그대로 간다",
+          "outcome": "온도계 렌즈가 흐려져 있었습니다. 코일 끝 재질 불량이 이어졌습니다.",
+          "loss": {
+            "production": 0,
+            "quality": 8,
+            "safety": 0,
+            "cost": 2
+          },
+          "skills": {
+            "aware": -2,
+            "tech": -1
+          },
+          "lineSpeed": 1,
+          "resumeAfter": 0
+        },
+        {
+          "id": "cross_check",
+          "label": "휴대 측정·샘플로 교차 확인",
+          "detail": "다른 방법으로 재고 렌즈를 점검한다",
+          "outcome": "렌즈 오염을 찾아 닦고 보정해 불량을 막았습니다.",
+          "loss": {
+            "production": 1,
+            "quality": 0,
+            "safety": 0,
+            "cost": 1
+          },
+          "skills": {
+            "aware": 2,
+            "tech": 1
+          },
+          "lineSpeed": 0.7,
+          "resumeAfter": 2,
+          "best": true
+        },
+        {
+          "id": "stop_line",
+          "label": "바로 라인 정지",
+          "detail": "이상하니 일단 세운다",
+          "outcome": "원인은 찾았지만 확인 전에 멈춰 손실이 컸습니다.",
+          "loss": {
+            "production": 5,
+            "quality": 0,
+            "safety": 0,
+            "cost": 2
+          },
+          "skills": {
+            "aware": 1,
+            "judge": -1
+          },
+          "lineSpeed": 0,
+          "resumeAfter": 3
+        }
+      ]
+    },
+    {
+      "id": "rt_frozen_gauge",
+      "level": "재훈련",
+      "warn": "descaler",
+      "probes": [
+        "aware",
+        "team"
+      ],
+      "delay": 4,
+      "title": "수압계 숫자가 몇 분째 그대로",
+      "desc": "스케일 제거기 수압계가 몇 분째 같은 숫자에 멈춰 있습니다. 슬라브 표면은 평소와 비슷해 보입니다.",
+      "chief": "멈춘 숫자를 의심할지, 괜찮아 보이니 넘어갈지가 쟁점입니다.",
+      "agents": [
+        {
+          "agent": "production",
+          "say": "표면이 괜찮으면 된 거죠.",
+          "why": "",
+          "rec": "ignore"
+        },
+        {
+          "agent": "equipment",
+          "say": "계기가 멈춘 거면 실제 수압을 모릅니다.",
+          "why": "",
+          "rec": "verify"
+        },
+        {
+          "agent": "quality",
+          "say": "스케일이 조금씩 남을 수 있어요.",
+          "why": "",
+          "rec": "verify"
+        },
+        {
+          "agent": "safety",
+          "say": "고압수 배관이면 현장 확인이 필요합니다.",
+          "why": "",
+          "rec": "verify"
+        }
+      ],
+      "choices": [
+        {
+          "id": "ignore",
+          "label": "괜찮아 보이니 그대로",
+          "detail": "숫자는 신경 쓰지 않는다",
+          "outcome": "실제 수압이 떨어져 있었고 표면 스케일 불량이 쌓였습니다.",
+          "loss": {
+            "production": 0,
+            "quality": 7,
+            "safety": 0,
+            "cost": 2
+          },
+          "skills": {
+            "aware": -2
+          },
+          "lineSpeed": 1,
+          "resumeAfter": 0
+        },
+        {
+          "id": "verify",
+          "label": "예비 계기·현장 확인 후 설비팀 공유",
+          "detail": "다른 계기로 재고 설비팀에 알린다",
+          "outcome": "실제 수압 저하를 찾아 예비 펌프로 바꾸고 설비팀이 계기를 고쳤습니다.",
+          "loss": {
+            "production": 1,
+            "quality": 0,
+            "safety": 0,
+            "cost": 1
+          },
+          "skills": {
+            "aware": 2,
+            "team": 1
+          },
+          "lineSpeed": 0.7,
+          "resumeAfter": 2,
+          "best": true
+        },
+        {
+          "id": "ticket_only",
+          "label": "계기 교체 요청만 넣고 계속",
+          "detail": "정비 요청서만 쓰고 운전한다",
+          "outcome": "요청은 남겼지만 그동안의 수압을 아무도 확인하지 않았습니다.",
+          "loss": {
+            "production": 0,
+            "quality": 4,
+            "safety": 0,
+            "cost": 1
+          },
+          "skills": {
+            "aware": -1,
+            "team": 1
+          },
+          "lineSpeed": 1,
+          "resumeAfter": 0
+        }
+      ]
+    },
+    {
+      "id": "rt_overcurrent",
+      "level": "재훈련",
+      "warn": "roughing_mill",
+      "probes": [
+        "judge",
+        "tech"
+      ],
+      "delay": 4,
+      "title": "조압연기 모터 과전류 경보 반복",
+      "desc": "조압연기 모터에서 과전류 경보가 10분 사이 두 번 울렸다가 꺼졌습니다. 출하 마감까지 1시간 남았습니다.",
+      "chief": "마감을 지킬지, 설비를 지킬지 사이에서 균형을 찾는 것이 쟁점입니다.",
+      "agents": [
+        {
+          "agent": "production",
+          "say": "두 번 다 금방 꺼졌잖아요. 그대로 갑시다.",
+          "why": "",
+          "rec": "ignore"
+        },
+        {
+          "agent": "equipment",
+          "say": "부하를 낮추고 원인을 봐야 합니다.",
+          "why": "",
+          "rec": "slow_check"
+        },
+        {
+          "agent": "quality",
+          "say": "무리하면 두께가 흔들려요.",
+          "why": "",
+          "rec": "slow_check"
+        },
+        {
+          "agent": "safety",
+          "say": "모터가 타면 화재 위험도 있습니다.",
+          "why": "",
+          "rec": "full_stop"
+        }
+      ],
+      "choices": [
+        {
+          "id": "ignore",
+          "label": "경보 무시하고 정속",
+          "detail": "꺼졌으니 신경 쓰지 않는다",
+          "outcome": "세 번째 경보에서 모터가 트립되어 30분 넘게 멈췄습니다.",
+          "loss": {
+            "production": 8,
+            "quality": 2,
+            "safety": 2,
+            "cost": 6
+          },
+          "skills": {
+            "judge": -2,
+            "safety": -1
+          },
+          "lineSpeed": 1,
+          "resumeAfter": 0
+        },
+        {
+          "id": "slow_check",
+          "label": "감속 운전하며 원인 확인",
+          "detail": "부하를 낮추고 다음 빈틈에 점검한다",
+          "outcome": "감속으로 버티며 냉각팬 이상을 찾아 마감도 거의 맞췄습니다.",
+          "loss": {
+            "production": 1,
+            "quality": 0,
+            "safety": 0,
+            "cost": 1
+          },
+          "skills": {
+            "judge": 2,
+            "tech": 1
+          },
+          "lineSpeed": 0.6,
+          "resumeAfter": 3,
+          "best": true
+        },
+        {
+          "id": "full_stop",
+          "label": "전면 정지·모터 교체 대기",
+          "detail": "원인을 모르니 다 세운다",
+          "outcome": "안전했지만 교체가 필요 없던 모터를 기다리느라 마감을 놓쳤습니다.",
+          "loss": {
+            "production": 8,
+            "quality": 0,
+            "safety": 0,
+            "cost": 3
+          },
+          "skills": {
+            "judge": -1,
+            "safety": 1
+          },
+          "lineSpeed": 0,
+          "resumeAfter": 4
+        }
+      ]
+    },
+    {
+      "id": "rt_pressure_blip",
+      "level": "재훈련",
+      "warn": "finishing_mill",
+      "probes": [
+        "judge",
+        "aware"
+      ],
+      "delay": 4,
+      "title": "냉각수 압력이 잠깐 떨어졌다 회복",
+      "desc": "사상압연 중 롤 냉각수 압력이 3초 동안 떨어졌다가 다시 정상으로 돌아왔습니다.",
+      "chief": "지나간 신호로 볼지, 다시 올 수 있는 신호로 볼지가 쟁점입니다.",
+      "agents": [
+        {
+          "agent": "production",
+          "say": "돌아왔으니 끝난 일입니다.",
+          "why": "",
+          "rec": "ignore"
+        },
+        {
+          "agent": "equipment",
+          "say": "필터가 막히기 시작하면 이렇게 깜빡입니다.",
+          "why": "",
+          "rec": "slow_watch"
+        },
+        {
+          "agent": "quality",
+          "say": "그 3초 동안 지나간 코일은 확인해야 해요.",
+          "why": "",
+          "rec": "slow_watch"
+        },
+        {
+          "agent": "safety",
+          "say": "또 떨어지면 롤이 달아오릅니다.",
+          "why": "",
+          "rec": "slow_watch"
+        }
+      ],
+      "choices": [
+        {
+          "id": "ignore",
+          "label": "회복됐으니 그대로",
+          "detail": "기록만 하고 넘어간다",
+          "outcome": "20분 뒤 압력이 다시 떨어져 롤 온도가 올랐습니다.",
+          "loss": {
+            "production": 3,
+            "quality": 4,
+            "safety": 3,
+            "cost": 2
+          },
+          "skills": {
+            "judge": -1,
+            "aware": -1
+          },
+          "lineSpeed": 1,
+          "resumeAfter": 0
+        },
+        {
+          "id": "slow_watch",
+          "label": "속도 낮추고 필터 확인·해당 코일 표시",
+          "detail": "운전은 이어 가며 원인과 영향을 본다",
+          "outcome": "필터 막힘을 찾아 교체했고, 그 3초 사이 코일만 따로 검사했습니다.",
+          "loss": {
+            "production": 1,
+            "quality": 0,
+            "safety": 0,
+            "cost": 1
+          },
+          "skills": {
+            "judge": 2,
+            "aware": 1
+          },
+          "lineSpeed": 0.7,
+          "resumeAfter": 2,
+          "best": true
+        },
+        {
+          "id": "full_check",
+          "label": "라인 정지 후 전수 점검",
+          "detail": "다 세우고 처음부터 본다",
+          "outcome": "원인은 찾았지만 필요 이상으로 오래 멈췄습니다.",
+          "loss": {
+            "production": 6,
+            "quality": 0,
+            "safety": 0,
+            "cost": 2
+          },
+          "skills": {
+            "judge": -1,
+            "safety": 1
+          },
+          "lineSpeed": 0,
+          "resumeAfter": 4
+        }
+      ]
+    },
+    {
+      "id": "rt_yellow_flame",
+      "level": "재훈련",
+      "warn": "reheating_furnace",
+      "probes": [
+        "tech",
+        "judge"
+      ],
+      "delay": 4,
+      "title": "가열로 버너 불꽃이 노랗게 변함",
+      "desc": "가열로 2번 버너의 불꽃이 파란색에서 노란색으로 바뀌었고, 연기가 조금 보입니다.",
+      "chief": "원인에 맞는 조치를 고르는 것이 쟁점입니다.",
+      "agents": [
+        {
+          "agent": "production",
+          "say": "온도만 맞으면 되니 설정을 올리죠.",
+          "why": "",
+          "rec": "raise_temp"
+        },
+        {
+          "agent": "equipment",
+          "say": "공기가 부족한 겁니다. 공기비를 맞춰야 해요.",
+          "why": "",
+          "rec": "air_ratio"
+        },
+        {
+          "agent": "quality",
+          "say": "온도가 들쭉날쭉해지면 재질이 흔들려요.",
+          "why": "",
+          "rec": "air_ratio"
+        },
+        {
+          "agent": "safety",
+          "say": "불완전 연소면 일산화탄소가 나옵니다.",
+          "why": "",
+          "rec": "air_ratio"
+        }
+      ],
+      "choices": [
+        {
+          "id": "raise_temp",
+          "label": "온도 설정만 올림",
+          "detail": "모자라는 열을 더 넣는다",
+          "outcome": "불완전 연소가 심해져 그을음과 연료 낭비가 늘었습니다.",
+          "loss": {
+            "production": 0,
+            "quality": 3,
+            "safety": 3,
+            "cost": 6
+          },
+          "skills": {
+            "tech": -2
+          },
+          "lineSpeed": 1,
+          "resumeAfter": 0
+        },
+        {
+          "id": "air_ratio",
+          "label": "공기비 조정·버너 점검",
+          "detail": "공기 공급을 맞추고 노즐을 본다",
+          "outcome": "공기 댐퍼 이상을 찾아 조정하니 불꽃이 다시 파래졌습니다.",
+          "loss": {
+            "production": 1,
+            "quality": 0,
+            "safety": 0,
+            "cost": 1
+          },
+          "skills": {
+            "tech": 2,
+            "judge": 1
+          },
+          "lineSpeed": 0.8,
+          "resumeAfter": 2,
+          "best": true
+        },
+        {
+          "id": "burner_off",
+          "label": "2번 버너 끄고 나머지로 운전",
+          "detail": "문제 버너만 빼고 간다",
+          "outcome": "급한 불은 껐지만 가열이 고르지 않아 속도를 크게 낮춰야 했습니다.",
+          "loss": {
+            "production": 4,
+            "quality": 2,
+            "safety": 0,
+            "cost": 1
+          },
+          "skills": {
+            "tech": -1,
+            "judge": 1
+          },
+          "lineSpeed": 1,
+          "resumeAfter": 0
+        }
+      ]
+    },
+    {
+      "id": "rt_mandrel",
+      "level": "재훈련",
+      "warn": "coiler",
+      "probes": [
+        "tech",
+        "aware"
+      ],
+      "delay": 4,
+      "title": "권취기 맨드릴 진동이 커짐",
+      "desc": "권취기 맨드릴(코일을 감는 축)의 진동 값이 지난주보다 두 배로 올랐습니다. 아직 경보 기준 아래입니다.",
+      "chief": "기준 아래인 신호를 어떻게 다룰지가 쟁점입니다.",
+      "agents": [
+        {
+          "agent": "production",
+          "say": "경보 아래면 문제없습니다.",
+          "why": "",
+          "rec": "ignore"
+        },
+        {
+          "agent": "equipment",
+          "say": "베어링 초기 마모일 수 있어요.",
+          "why": "",
+          "rec": "lower_book"
+        },
+        {
+          "agent": "quality",
+          "say": "진동이 크면 코일 옆면이 고르지 않아요.",
+          "why": "",
+          "rec": "lower_book"
+        },
+        {
+          "agent": "safety",
+          "say": "축이 풀리면 코일이 튈 수 있습니다.",
+          "why": "",
+          "rec": "lower_book"
+        }
+      ],
+      "choices": [
+        {
+          "id": "ignore",
+          "label": "경보 기준 아래라 그대로",
+          "detail": "기준을 넘을 때 본다",
+          "outcome": "일주일 뒤 베어링이 깨져 권취기가 반나절 멈췄습니다.",
+          "loss": {
+            "production": 0,
+            "quality": 2,
+            "safety": 2,
+            "cost": 9
+          },
+          "skills": {
+            "tech": -2,
+            "aware": -1
+          },
+          "lineSpeed": 1,
+          "resumeAfter": 0
+        },
+        {
+          "id": "lower_book",
+          "label": "장력·속도 낮추고 베어링 점검 예약",
+          "detail": "부하를 줄이고 다음 정비에 넣는다",
+          "outcome": "초기 마모를 계획 정비 때 바꿔 멈춤 없이 넘겼습니다.",
+          "loss": {
+            "production": 1,
+            "quality": 0,
+            "safety": 0,
+            "cost": 1
+          },
+          "skills": {
+            "tech": 2,
+            "aware": 1
+          },
+          "lineSpeed": 0.8,
+          "resumeAfter": 2,
+          "best": true
+        },
+        {
+          "id": "swap_now",
+          "label": "즉시 맨드릴 교체",
+          "detail": "멈추고 바로 바꾼다",
+          "outcome": "교체는 했지만 계획 없이 세워 생산 손실이 컸습니다.",
+          "loss": {
+            "production": 6,
+            "quality": 0,
+            "safety": 0,
+            "cost": 3
+          },
+          "skills": {
+            "tech": 1,
+            "judge": -1
+          },
+          "lineSpeed": 0,
+          "resumeAfter": 4
+        }
+      ]
+    },
+    {
+      "id": "rt_handover",
+      "level": "재훈련",
+      "warn": "finishing_mill",
+      "probes": [
+        "team",
+        "aware"
+      ],
+      "delay": 4,
+      "title": "교대 인계 직전, 롤 이상 소음",
+      "desc": "교대 15분 전입니다. 사상압연기 롤 쪽에서 가끔 '딱' 소리가 납니다. 아직 원인은 모릅니다.",
+      "chief": "내가 안 위험을 다음 조에 어떻게 넘길지가 쟁점입니다.",
+      "agents": [
+        {
+          "agent": "production",
+          "say": "별일 없으면 굳이 적을 필요 없어요.",
+          "why": "",
+          "rec": "skip"
+        },
+        {
+          "agent": "equipment",
+          "say": "소리 난 시각과 위치를 적어 두면 찾기 쉬워요.",
+          "why": "",
+          "rec": "brief"
+        },
+        {
+          "agent": "quality",
+          "say": "다음 조가 모르면 같은 걸 또 놓쳐요.",
+          "why": "",
+          "rec": "brief"
+        },
+        {
+          "agent": "safety",
+          "say": "말로도 직접 전해야 합니다.",
+          "why": "",
+          "rec": "brief"
+        }
+      ],
+      "choices": [
+        {
+          "id": "skip",
+          "label": "확실하지 않으니 인계 생략",
+          "detail": "원인을 모르니 말하지 않는다",
+          "outcome": "다음 조는 소리를 몰랐고, 롤 베어링 손상이 커진 뒤에야 발견했습니다.",
+          "loss": {
+            "production": 2,
+            "quality": 2,
+            "safety": 2,
+            "cost": 8
+          },
+          "skills": {
+            "team": -2,
+            "aware": -1
+          },
+          "lineSpeed": 1,
+          "resumeAfter": 0
+        },
+        {
+          "id": "brief",
+          "label": "인계 일지 기록 + 다음 조장에게 직접 설명",
+          "detail": "시각·위치·상태를 적고 얼굴 보고 전한다",
+          "outcome": "다음 조가 바로 이어서 확인해 베어링 이상을 초기에 찾았습니다.",
+          "loss": {
+            "production": 0,
+            "quality": 0,
+            "safety": 0,
+            "cost": 1
+          },
+          "skills": {
+            "team": 2,
+            "aware": 1
+          },
+          "lineSpeed": 1,
+          "resumeAfter": 0,
+          "best": true
+        },
+        {
+          "id": "chat_only",
+          "label": "메신저에 한 줄만 남김",
+          "detail": "\"롤 소리 남\"이라고만 보낸다",
+          "outcome": "메시지는 남았지만 위치와 시각이 없어 다음 조가 찾지 못했습니다.",
+          "loss": {
+            "production": 1,
+            "quality": 1,
+            "safety": 0,
+            "cost": 4
+          },
+          "skills": {
+            "team": -1
+          },
+          "lineSpeed": 1,
+          "resumeAfter": 0
+        }
+      ]
+    },
+    {
+      "id": "rt_ship_dispute",
+      "level": "재훈련",
+      "warn": "coiler",
+      "probes": [
+        "team",
+        "judge"
+      ],
+      "delay": 4,
+      "title": "출하 판정을 두고 두 팀이 다툼",
+      "desc": "두께가 기준 경계에 걸린 코일 8개를 두고 생산팀은 출하, 품질팀은 보류를 주장하며 언성이 높아졌습니다.",
+      "chief": "한쪽 편을 들지, 기준을 함께 확인해 합의할지가 쟁점입니다.",
+      "agents": [
+        {
+          "agent": "production",
+          "say": "기준 안이니 내보내야 합니다.",
+          "why": "",
+          "rec": "side_prod"
+        },
+        {
+          "agent": "equipment",
+          "say": "측정기 교정 기록부터 보죠.",
+          "why": "",
+          "rec": "convene"
+        },
+        {
+          "agent": "quality",
+          "say": "경계값이면 보류가 원칙이에요.",
+          "why": "",
+          "rec": "side_qual"
+        },
+        {
+          "agent": "safety",
+          "say": "판단은 두 팀이 함께 내려야 합니다.",
+          "why": "",
+          "rec": "convene"
+        }
+      ],
+      "choices": [
+        {
+          "id": "side_prod",
+          "label": "생산팀 의견대로 출하",
+          "detail": "기준 안이니 내보낸다",
+          "outcome": "고객사에서 두께 클레임이 들어왔고 품질팀과의 신뢰가 깨졌습니다.",
+          "loss": {
+            "production": 0,
+            "quality": 8,
+            "safety": 0,
+            "cost": 3
+          },
+          "skills": {
+            "team": -2,
+            "judge": -1
+          },
+          "lineSpeed": 1,
+          "resumeAfter": 0
+        },
+        {
+          "id": "convene",
+          "label": "두 팀 소집·기준 확인·경계 코일 분리",
+          "detail": "측정 기록을 같이 보고 확실한 것만 출하한다",
+          "outcome": "재측정으로 5개는 출하, 3개는 보류로 합의해 양쪽 모두 받아들였습니다.",
+          "loss": {
+            "production": 1,
+            "quality": 0,
+            "safety": 0,
+            "cost": 1
+          },
+          "skills": {
+            "team": 2,
+            "judge": 1
+          },
+          "lineSpeed": 1,
+          "resumeAfter": 0,
+          "best": true
+        },
+        {
+          "id": "side_qual",
+          "label": "품질팀 의견대로 전량 보류",
+          "detail": "원칙대로 다 막는다",
+          "outcome": "안전한 선택이었지만 생산팀 의견은 듣지 않아 불만이 남았습니다.",
+          "loss": {
+            "production": 4,
+            "quality": 0,
+            "safety": 0,
+            "cost": 1
+          },
+          "skills": {
+            "team": -1,
+            "judge": 1
+          },
+          "lineSpeed": 1,
+          "resumeAfter": 0
+        }
+      ]
+    }
   ]
 }

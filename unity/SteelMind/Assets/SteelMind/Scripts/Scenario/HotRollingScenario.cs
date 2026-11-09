@@ -191,7 +191,7 @@ namespace SteelMind.Scenario
             resume = null;
             picks.Clear(); flags.Clear();
             played.Clear(); def.events = new ScenarioEvent[0]; eventDeltas.Clear(); pickAt.Clear();
-            retrainTarget = null; retrainBefore = null; retrainBase = null; retrainEvent = null; retraining = false;
+            retrainTarget = null; retrainBefore = null; retrainBase = null; retrainEvent = null; retraining = false; retrainFrom = -1; retrainEvents = null;
             if (canvas) foreach (Transform ch in canvas.transform) if (ch.name == "AiToast") Destroy(ch.gameObject);
             model = new CompetencyModel(def);
             current = -1; deciding = chatting = showingResult = guiding = finished = false;
@@ -1067,7 +1067,7 @@ namespace SteelMind.Scenario
         const string HistoryKey = "steelmind.history";
         const string RunsKey = "steelmind.runs";
 
-        [System.Serializable] class RunRecord { public int no; public string when, path, type, title; public int efficiency, bestCount, events; public bool accident; public string[] choices; public string[] events_; public int[] losses; public bool[] best; public string[] bestLabels; public string[] carryNotes; }
+        [System.Serializable] class RunRecord { public int no; public string when, path, type, title; public int efficiency, bestCount, events; public bool accident; public string[] choices; public string[] events_; public int[] losses; public bool[] best; public string[] bestLabels; public string[] carryNotes; public string retrainComp; public int retrainBefore = -1, retrainAfter = -1; }
         [System.Serializable] class RunList { public List<RunRecord> runs = new List<RunRecord>(); }
 
         static RunList LoadRuns()
@@ -1144,6 +1144,20 @@ namespace SteelMind.Scenario
             ROk = Hex("#6FCF97"), RNo = Hex("#FF8A80"), RMute = Hex("#AAB4C5"), RText = Hex("#F1F4F8"), RWarn = Hex("#E0B84A");
         RunRecord lastRecord;
         string retrainTarget;
+        int retrainFrom = -1;                        // 재훈련 사건이 시작된 played 번호
+        List<ScenarioEvent> retrainEvents;
+        static int ScoreOfMean(float mean) => Mathf.Clamp(Mathf.RoundToInt((mean + 2f) / 4f * 100f), 0, 100);
+
+        // 재훈련 사건들에서만 계산한 목표 역량 점수 (누적 평균이 옛 실수에 묻히지 않게)
+        (int before, int after, int cumulative, int n) RetrainResult()
+        {
+            string k = retrainTarget;
+            var vals = new List<int>();
+            for (int i = Mathf.Max(0, retrainFrom); i < eventDeltas.Count; i++)
+                if (eventDeltas[i].TryGetValue(k, out var v)) vals.Add(v);
+            int after = vals.Count > 0 ? ScoreOfMean((float)vals.Average()) : Score(k);
+            return (retrainBefore[k], after, Score(k), vals.Count);
+        }
         Dictionary<string, int> retrainBefore;
         float[] retrainBase;
         ScenarioEvent retrainEvent;
@@ -1217,6 +1231,13 @@ namespace SteelMind.Scenario
             var diag = Diagnose();
             rep.type = diag.label;
             var record = retraining && lastRecord != null ? lastRecord : SaveRun(rep);
+            if (retraining && retrainTarget != null && retrainBefore != null)
+            {
+                var rr = RetrainResult();
+                record.retrainComp = model.Name(retrainTarget); record.retrainBefore = rr.before; record.retrainAfter = rr.after;
+                var all = LoadRuns(); int at = all.runs.FindIndex(x => x.no == record.no);
+                if (at >= 0) { all.runs[at] = record; SaveRuns(all); }
+            }
             lastRecord = record;
             showingResult = true; finished = true;
             var strong = model.Strengths(); var weak = model.Weaknesses();
@@ -1262,13 +1283,8 @@ namespace SteelMind.Scenario
             var ftr = ft.rectTransform; ftr.anchorMin = Vector2.zero; ftr.anchorMax = Vector2.one; ftr.offsetMin = ftr.offsetMax = Vector2.zero;
 
             // ── 1. 진단 결과 ──
-            if (retrainTarget != null && retrainBefore != null && retrainEvent != null)
-            {
-                var bn = NewRect("Banner", P(0)); Round(bn.gameObject, Hex("#2A2412"), 1.2f);
-                var bo = bn.gameObject.AddComponent<Outline>(); bo.effectColor = RWarn; bo.effectDistance = new Vector2(1, -1);
-                VLayout(bn.gameObject, 14, 10, 0);
-                AddText(bn, $"<b>재훈련 결과 · {model.Name(retrainTarget)}: {retrainBefore[retrainTarget]} → {Score(retrainTarget)}</b>. 같은 문제가 아니라 조건이 다른 상황({retrainEvent.title})에서 확인했습니다. 회색 선은 재훈련 전 프로필입니다.", 15, RText);
-            }
+            if (retrainTarget != null && retrainBefore != null && retrainFrom >= 0 && eventDeltas.Count > retrainFrom)
+                RetrainCard(P(0), r);
             var row = NewRect("Row", P(0)); var rh = HLayout(row.gameObject, 24, TextAnchor.UpperLeft); rh.childForceExpandHeight = false;
             // 왼쪽: 레이더
             var left = NewRect("Left", row); VLayout(left.gameObject, 0, 0, 6); LE(left.gameObject, 380);
@@ -1314,7 +1330,7 @@ namespace SteelMind.Scenario
                     var ck = new EventTrigger.Entry { eventID = EventTriggerType.PointerClick }; ck.callback.AddListener(_ => selectAxis(ai, true)); et.triggers.Add(ck);
                 }
             }
-            AddText(left, "축 이름이나 점에 마우스를 올리면 근거가 보입니다 · 바깥 옅은 영역 = 불확실 범위", 12, RMute, FontStyle.Normal, TextAnchor.UpperCenter);
+            AddText(left, retrainBase != null && retrainTarget != null ? "회색 선 = 재훈련 전 프로필 · 축 이름이나 점에 마우스를 올리면 근거가 보입니다" : "축 이름이나 점에 마우스를 올리면 근거가 보입니다 · 바깥 옅은 영역 = 불확실 범위", 12, RMute, FontStyle.Normal, TextAnchor.UpperCenter);
             var detail = RBox(left, null, 14);
             var dTitle = AddText(detail, "", 17, RText);
             var dDesc = AddText(detail, "", 13, RMute);
@@ -1382,7 +1398,7 @@ namespace SteelMind.Scenario
             AddText(path, "공정 체험·교육 경로 추천이며, \"이 사람은 OO 부서에 적합하다\"는 판단을 하지 않습니다. 최종 결정은 교육 담당자와 사수가 합니다.", 12, RMute);
 
             var btns = NewRect("Buttons", right); HLayout(btns.gameObject, 8, TextAnchor.MiddleLeft);
-            if (weak.Count > 0 && !retraining)
+            if (weak.Count > 0)
             {
                 string k0 = weak[0].id;
                 var rt0 = Button_(btns, $"맞춤 재훈련 시작 · {model.Name(k0)}", RBlue, Hex("#0D1117"), 44); LE(rt0.gameObject, 260, 44);
@@ -1467,31 +1483,80 @@ namespace SteelMind.Scenario
             catch (System.Exception e) { StartCoroutine(AiToast("저장 실패", e.Message, 4f, false)); }
         }
 
-        // 맞춤 재훈련: 약한 역량을 조건이 다른, 아직 안 본 상황으로 한 번 더 확인한다
-        void StartRetrain(string k)
+        // 재훈련 전후 비교 카드: 목표 역량 점수(진단 → 재훈련 상황), 상황별 판단, 5개 역량 전/후 막대
+        void RetrainCard(Transform parent, RunResult r)
         {
-            var cand = surprisePool.Concat(baseEvents)
-                .Where(e => !played.Contains(e) && e.probes != null && System.Array.IndexOf(e.probes, k) >= 0)
-                .OrderByDescending(e => e.probes[0] == k ? 1 : 0).FirstOrDefault();
-            if (cand == null) { StartCoroutine(AiToast("맞춤 재훈련", "남은 재훈련 상황이 없습니다", 2.5f, false)); return; }
-            retrainTarget = k; retrainEvent = cand;
-            retrainBefore = CompetencyModel.Ids.ToDictionary(i => i, Score);
-            retrainBase = System.Array.ConvertAll(CompetencyModel.Ids, id => model.Radar(id));
-            if (overlay) Destroy(overlay.gameObject);
-            overlay = null; showingResult = false; finished = false;
-            StartCoroutine(RetrainRun(cand, k));
+            string k = retrainTarget;
+            var (before, after, cum, n) = RetrainResult();
+            int diff = after - before;
+            string verdict = diff >= 15 ? "향상" : diff > -10 ? "유지" : "하락";
+            Color vc = diff >= 15 ? ROk : diff > -10 ? RWarn : RNo;
+            var card = NewRect("Retrain", parent); Round(card.gameObject, Hex("#1E1A10"), 1.2f);
+            var o = card.gameObject.AddComponent<Outline>(); o.effectColor = RWarn; o.effectDistance = new Vector2(1, -1);
+            VLayout(card.gameObject, 18, 14, 8);
+            var hd = NewRect("Head", card); HLayout(hd.gameObject, 10, TextAnchor.MiddleLeft);
+            AddText(hd, $"<b>재훈련 전후 비교 · {model.Name(k)}</b>", 17, RText, FontStyle.Normal, TextAnchor.MiddleLeft).horizontalOverflow = HorizontalWrapMode.Overflow;
+            Chip(hd, verdict, new Color(vc.r, vc.g, vc.b, 0.18f), vc);
+            var big = NewRect("Big", card); HLayout(big.gameObject, 16, TextAnchor.LowerLeft);
+            AddText(big, $"<color=#AAB4C5>진단</color> <b>{before}</b>  →  <color=#AAB4C5>재훈련</color> <b>{after}</b>", 30, RText, FontStyle.Normal, TextAnchor.LowerLeft).horizontalOverflow = HorizontalWrapMode.Overflow;
+            AddText(big, $"<b>{(diff >= 0 ? "+" : "")}{diff}</b>", 26, vc, FontStyle.Normal, TextAnchor.LowerLeft).horizontalOverflow = HorizontalWrapMode.Overflow;
+            AddText(card, $"진단 점수는 처음 6개 상황 기준, 재훈련 점수는 조건이 다른 처음 보는 상황 {n}개에서만 계산했습니다. 모든 상황을 합친 누적 점수는 {cum}점입니다.", 13, RMute);
+            for (int i = retrainFrom; i < r.events.Count && i < eventDeltas.Count; i++)
+            {
+                var e = r.events[i];
+                eventDeltas[i].TryGetValue(k, out var v);
+                string mark = v > 0 ? $"<color=#6FCF97>▲{v}</color>" : v < 0 ? $"<color=#FF8A80>▼{-v}</color>" : "<color=#AAB4C5>–</color>";
+                AddText(card, $"{i - retrainFrom + 1}. <b>{e.ev.title}</b>  ·  '{e.chosen.label}'  ·  {model.Name(k)} {mark}", 14, RText);
+            }
+            var line = NewRect("Line", card); line.gameObject.AddComponent<Image>().color = RLine; LE(line.gameObject, -1, 1);
+            AddText(card, "다섯 역량 · <color=#AAB4C5>회색 = 재훈련 전</color> · <color=#4CC3FF>파랑 = 지금(누적)</color>", 13, RMute);
+            foreach (var id in CompetencyModel.Ids)
+            {
+                int b0 = retrainBefore[id], a0 = Score(id);
+                var row = NewRect("Cmp", card); HLayout(row.gameObject, 10, TextAnchor.MiddleLeft);
+                var nm = AddText(row, id == k ? $"<b>{model.Name(id)}</b>" : model.Name(id), 14, id == k ? RText : RMute, FontStyle.Normal, TextAnchor.MiddleLeft); LE(nm.gameObject, 130);
+                var bars = NewRect("Bars", row); VLayout(bars.gameObject, 0, 0, 3); LE(bars.gameObject, -1, -1, 1);
+                var g0 = Gauge(bars, b0 / 100f, RMute, 6); LE(g0.gameObject, -1, 6);
+                var g1 = Gauge(bars, a0 / 100f, RBlue, 6); LE(g1.gameObject, -1, 6);
+                int d = a0 - b0;
+                var tv = AddText(row, $"{b0} → <b>{a0}</b> {(d == 0 ? "" : d > 0 ? $"<color=#6FCF97>+{d}</color>" : $"<color=#FF8A80>{d}</color>")}", 13, RText, FontStyle.Normal, TextAnchor.MiddleRight); LE(tv.gameObject, 120);
+            }
         }
 
-        IEnumerator RetrainRun(ScenarioEvent ev, string k)
+        // 맞춤 재훈련: 약한 역량을 조건이 다른, 아직 안 본 상황으로 한 번 더 확인한다
+        // 맞춤 재훈련: 약한 역량을 조건이 다른, 아직 안 본 상황 2개로 다시 확인한다 (돌발상황 6개 안에서)
+        void StartRetrain(string k)
         {
-            var pk = new Pick { ev = ev, target = k, reason = $"재훈련 · {model.Name(k)} · 조건이 다른 처음 보는 상황으로 다시 확인합니다" };
-            model.picks.Add(pk);
-            int i = played.Count; pickAt[i] = pk;
-            played.Add(ev); def.events = played.ToArray(); planned = played.Count;
-            yield return AiToast("AI 판단 · 맞춤 재훈련", $"노리는 역량  <b>{model.Name(k)}</b>\n조건이 다른 처음 보는 상황으로 다시 확인합니다", 3f, true);
-            yield return new WaitForSeconds(1.5f);
-            yield return GoToSite(i);
-            yield return EventChat(i);
+            // 재훈련 전용 상황을 먼저, 모자라면 아직 안 본 돌발상황·기본 상황에서 채운다
+            var cands = (def.retrains ?? new ScenarioEvent[0]).Concat(surprisePool).Concat(baseEvents)
+                .Where(e => !played.Contains(e) && e.probes != null && System.Array.IndexOf(e.probes, k) >= 0)
+                .OrderByDescending(e => e.probes[0] == k ? 1 : 0)
+                .Take(2).ToList();
+            if (cands.Count == 0) { StartCoroutine(AiToast("맞춤 재훈련", $"{model.Name(k)}을(를) 확인할 남은 상황이 없습니다", 2.5f, false)); return; }
+            retrainTarget = k; retrainEvents = cands; retrainEvent = cands[0];
+            retrainBefore = CompetencyModel.Ids.ToDictionary(i => i, Score);
+            retrainBase = System.Array.ConvertAll(CompetencyModel.Ids, id => model.Radar(id));
+            retrainFrom = played.Count;
+            if (overlay) Destroy(overlay.gameObject);
+            overlay = null; showingResult = false; finished = false;
+            StartCoroutine(RetrainRun(cands, k));
+        }
+
+        IEnumerator RetrainRun(List<ScenarioEvent> list, string k)
+        {
+            planned = played.Count + list.Count;
+            yield return AiToast("AI 판단 · 맞춤 재훈련", $"노리는 역량  <b>{model.Name(k)}</b>  (지금 {retrainBefore[k]}점)\n조건이 다른 처음 보는 상황 {list.Count}개로 다시 확인합니다", 3.2f, true);
+            for (int n = 0; n < list.Count; n++)
+            {
+                var ev = list[n];
+                var pk = new Pick { ev = ev, target = k, reason = $"재훈련 {n + 1}/{list.Count} · {model.Name(k)} · 조건이 다른 처음 보는 상황" };
+                model.picks.Add(pk);
+                int i = played.Count; pickAt[i] = pk;
+                played.Add(ev); def.events = played.ToArray();
+                yield return new WaitForSeconds(n == 0 ? 1.5f : 3f);
+                yield return GoToSite(i);
+                yield return EventChat(i);
+            }
             retraining = true;
             yield return new WaitForSeconds(1.2f);
             yield return ReportLoading();
@@ -1614,6 +1679,13 @@ namespace SteelMind.Scenario
                 RunCell(head, $"<b>{x.type}</b>", 15, RBlue, RunC3);
                 RunCell(head, $"최선 {x.bestCount}/{x.events}" + (x.accident ? "  <color=#FF6B6B>사고</color>" : ""), 14, RMute, RunC4);
                 var when = AddText(head, $"{x.when}{(cur ? "  · 이번 판" : "")}", 13, RMute, FontStyle.Normal, TextAnchor.MiddleRight); LE(when.gameObject, -1, -1, 1);
+                if (!string.IsNullOrEmpty(x.retrainComp) && x.retrainBefore >= 0)
+                {
+                    int d = x.retrainAfter - x.retrainBefore;
+                    var rr = NewRect("Retrain", item); var rh2 = HLayout(rr.gameObject, RunGap, TextAnchor.MiddleLeft); rh2.childForceExpandWidth = false;
+                    RunCell(rr, "재훈련", 14, RWarn, RunC1);
+                    RunCell(rr, $"<b>{x.retrainComp}</b>  {x.retrainBefore} → <b>{x.retrainAfter}</b>  {(d >= 0 ? $"<color=#6FCF97>+{d}</color>" : $"<color=#FF8A80>{d}</color>")}", 14, RText, -1);
+                }
                 var line = NewRect("Line", item); line.gameObject.AddComponent<Image>().color = RLine; LE(line.gameObject, -1, 1);
                 if (x.choices != null)
                     for (int k = 0; k < x.choices.Length; k++)
