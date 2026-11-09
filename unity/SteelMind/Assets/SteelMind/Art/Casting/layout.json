@@ -1,0 +1,379 @@
+{
+ "map": {
+  "width": 1136,
+  "height": 736,
+  "tile": 16,
+  "pixelsPerUnit": 16,
+  "wallHeight": 240,
+  "title": "연주 공장  CONTINUOUS CASTING"
+ },
+ "layers": [
+  {
+   "id": "ground",
+   "file": "ground.png",
+   "order": -1000
+  },
+  {
+   "id": "glow_floor",
+   "file": "glow_floor.png",
+   "order": -900
+  },
+  {
+   "id": "glow_air",
+   "file": "glow_air.png",
+   "order": 9500
+  }
+ ],
+ "objects": [
+  {
+   "id": "ladle_turret",
+   "label": "래들 터릿",
+   "file": "eq_ladle_turret.png",
+   "rect": [
+    180,
+    113,
+    177,
+    228
+   ],
+   "sortY": 508,
+   "collider": [
+    183,
+    388,
+    170,
+    120
+   ],
+   "warnFile": "eq_ladle_turret_warn.png",
+   "equipment": true
+  },
+  {
+   "id": "tundish",
+   "label": "턴디시",
+   "file": "eq_tundish.png",
+   "rect": [
+    301,
+    221,
+    120,
+    168
+   ],
+   "sortY": 507,
+   "collider": [
+    298,
+    389,
+    120,
+    118
+   ],
+   "warnFile": "eq_tundish_warn.png",
+   "equipment": true
+  },
+  {
+   "id": "cc_mold",
+   "label": "주형",
+   "file": "eq_cc_mold.png",
+   "rect": [
+    365,
+    347,
+    32,
+    25
+   ],
+   "sortY": 492,
+   "collider": [
+    352,
+    404,
+    58,
+    88
+   ],
+   "warnFile": "eq_cc_mold_warn.png",
+   "equipment": true
+  },
+  {
+   "id": "secondary_cooling",
+   "label": "2차 냉각",
+   "file": "eq_secondary_cooling.png",
+   "rect": [
+    333,
+    309,
+    197,
+    229
+   ],
+   "sortY": 534,
+   "collider": [
+    332,
+    378,
+    194,
+    156
+   ],
+   "warnFile": "eq_secondary_cooling_warn.png",
+   "equipment": true
+  },
+  {
+   "id": "withdrawal_straightener",
+   "label": "인발·교정 롤",
+   "file": "eq_withdrawal_straightener.png",
+   "rect": [
+    477,
+    333,
+    228,
+    198
+   ],
+   "sortY": 549,
+   "collider": [
+    480,
+    390,
+    221,
+    159
+   ],
+   "warnFile": "eq_withdrawal_straightener_warn.png",
+   "equipment": true
+  },
+  {
+   "id": "torch_cutter",
+   "label": "절단기",
+   "file": "eq_torch_cutter.png",
+   "rect": [
+    700,
+    290,
+    334,
+    234
+   ],
+   "sortY": 523,
+   "collider": [
+    704,
+    388,
+    326,
+    135
+   ],
+   "warnFile": "eq_torch_cutter_warn.png",
+   "equipment": true
+  },
+  {
+   "id": "turret_structure",
+   "label": "터릿 구조물",
+   "file": "eq_turret_structure.png",
+   "rect": [
+    132,
+    163,
+    182,
+    385
+   ],
+   "sortY": 547,
+   "collider": [
+    136,
+    351,
+    174,
+    196
+   ]
+  },
+  {
+   "id": "casting_floor",
+   "label": "주조 작업대",
+   "file": "eq_casting_floor.png",
+   "rect": [
+    290,
+    192,
+    234,
+    356
+   ],
+   "sortY": 544,
+   "collider": [
+    293,
+    334,
+    227,
+    210
+   ]
+  },
+  {
+   "id": "strands",
+   "label": "주편",
+   "file": "eq_strands.png",
+   "rect": [
+    392,
+    382,
+    359,
+    86
+   ],
+   "sortY": 485,
+   "collider": [
+    379,
+    411,
+    380,
+    74
+   ]
+  },
+  {
+   "id": "ladle_crane",
+   "label": "래들 크레인",
+   "file": "eq_ladle_crane.png",
+   "rect": [
+    113,
+    22,
+    347,
+    151
+   ],
+   "sortY": 9000
+  }
+ ],
+ "effects": [
+  {
+   "type": "pulse",
+   "file": "fx_glow_ladle_turret.png",
+   "x": 180,
+   "y": 113,
+   "order": 509,
+   "speed": 1.6
+  },
+  {
+   "type": "pulse",
+   "file": "fx_glow_tundish.png",
+   "x": 301,
+   "y": 221,
+   "order": 508,
+   "speed": 2.0
+  },
+  {
+   "type": "pulse",
+   "file": "fx_glow_cc_mold.png",
+   "x": 365,
+   "y": 347,
+   "order": 493,
+   "speed": 2.4000000000000004
+  },
+  {
+   "type": "pulse",
+   "file": "fx_glow_torch_cutter.png",
+   "x": 700,
+   "y": 290,
+   "order": 524,
+   "speed": 2.8000000000000003
+  },
+  {
+   "type": "pulse",
+   "file": "fx_glow_strands.png",
+   "x": 392,
+   "y": 382,
+   "order": 486,
+   "speed": 3.2
+  },
+  {
+   "type": "spawner",
+   "file": "fx_cut_slab.png",
+   "path": [
+    771,
+    401,
+    970,
+    401
+   ],
+   "speed": 28,
+   "interval": 3.2,
+   "order": 524
+  },
+  {
+   "type": "frames",
+   "files": [
+    "fx_sparks_0.png",
+    "fx_sparks_1.png",
+    "fx_sparks_2.png",
+    "fx_sparks_3.png"
+   ],
+   "x": 779,
+   "y": 388,
+   "fps": 14,
+   "order": 9050
+  },
+  {
+   "type": "frames",
+   "files": [
+    "fx_spray_0.png",
+    "fx_spray_1.png",
+    "fx_spray_2.png"
+   ],
+   "x": 401,
+   "y": 385,
+   "fps": 12,
+   "order": 9040
+  },
+  {
+   "type": "mover",
+   "target": "ladle_crane",
+   "path": [
+    113,
+    22,
+    233,
+    22
+   ],
+   "speed": 12,
+   "pause": 3,
+   "pingpong": true
+  },
+  {
+   "type": "steam",
+   "x0": 336,
+   "x1": 386,
+   "y": 253,
+   "rate": 0.4,
+   "order": 9100
+  }
+ ],
+ "spawn": [
+  60,
+  696
+ ],
+ "colliders": [
+  {
+   "id": "back_wall",
+   "rect": [
+    0,
+    0,
+    1136,
+    246
+   ]
+  },
+  {
+   "id": "front_wall",
+   "rect": [
+    0,
+    728,
+    1136,
+    8
+   ]
+  }
+ ],
+ "scene": "Casting",
+ "portals": [
+  {
+   "scene": "Steelmaking",
+   "label": "← 제강",
+   "rect": [
+    -4,
+    246,
+    6,
+    490
+   ]
+  },
+  {
+   "scene": "Rolling",
+   "label": "압연 →",
+   "rect": [
+    1134,
+    246,
+    6,
+    490
+   ]
+  }
+ ],
+ "spawns": [
+  {
+   "scene": "Steelmaking",
+   "pos": [
+    20,
+    696
+   ]
+  },
+  {
+   "scene": "Rolling",
+   "pos": [
+    1116,
+    696
+   ]
+  }
+ ]
+}

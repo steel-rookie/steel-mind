@@ -1,0 +1,377 @@
+{
+ "map": {
+  "width": 1136,
+  "height": 752,
+  "tile": 16,
+  "pixelsPerUnit": 16,
+  "wallHeight": 176,
+  "title": "제선 공장  IRONMAKING"
+ },
+ "layers": [
+  {
+   "id": "ground",
+   "file": "ground.png",
+   "order": -1000
+  },
+  {
+   "id": "glow_floor",
+   "file": "glow_floor.png",
+   "order": -900
+  },
+  {
+   "id": "glow_air",
+   "file": "glow_air.png",
+   "order": 9500
+  }
+ ],
+ "objects": [
+  {
+   "id": "sinter_plant",
+   "label": "소결기",
+   "file": "eq_sinter_plant.png",
+   "rect": [
+    233,
+    43,
+    258,
+    309
+   ],
+   "sortY": 426,
+   "collider": [
+    237,
+    216,
+    253,
+    210
+   ],
+   "warnFile": "eq_sinter_plant_warn.png",
+   "equipment": true
+  },
+  {
+   "id": "coke_oven",
+   "label": "코크스 오븐",
+   "file": "eq_coke_oven.png",
+   "rect": [
+    117,
+    333,
+    251,
+    248
+   ],
+   "sortY": 577,
+   "collider": [
+    121,
+    463,
+    242,
+    114
+   ],
+   "warnFile": "eq_coke_oven_warn.png",
+   "equipment": true
+  },
+  {
+   "id": "blast_furnace",
+   "label": "고로",
+   "file": "eq_blast_furnace.png",
+   "rect": [
+    690,
+    231,
+    152,
+    280
+   ],
+   "sortY": 509,
+   "collider": [
+    694,
+    373,
+    144,
+    136
+   ],
+   "warnFile": "eq_blast_furnace_warn.png",
+   "equipment": true
+  },
+  {
+   "id": "hot_stove",
+   "label": "열풍로",
+   "file": "eq_hot_stove.png",
+   "rect": [
+    418,
+    119,
+    312,
+    237
+   ],
+   "sortY": 422,
+   "collider": [
+    422,
+    283,
+    324,
+    139
+   ],
+   "warnFile": "eq_hot_stove_warn.png",
+   "equipment": true
+  },
+  {
+   "id": "taphole_casthouse",
+   "label": "출선구·주상",
+   "file": "eq_taphole_casthouse.png",
+   "rect": [
+    679,
+    445,
+    352,
+    110
+   ],
+   "sortY": 571,
+   "collider": [
+    682,
+    469,
+    345,
+    102
+   ],
+   "warnFile": "eq_taphole_casthouse_warn.png",
+   "equipment": true
+  },
+  {
+   "id": "gas_cleaning",
+   "label": "가스 청정",
+   "file": "eq_gas_cleaning.png",
+   "rect": [
+    804,
+    169,
+    258,
+    239
+   ],
+   "sortY": 404,
+   "collider": [
+    808,
+    343,
+    250,
+    61
+   ]
+  },
+  {
+   "id": "raw_yard",
+   "label": "원료 야드",
+   "file": "eq_raw_yard.png",
+   "rect": [
+    46,
+    179,
+    208,
+    189
+   ],
+   "sortY": 365,
+   "collider": [
+    50,
+    194,
+    201,
+    171
+   ]
+  },
+  {
+   "id": "conveyor",
+   "label": "장입 컨베이어",
+   "file": "eq_conveyor.png",
+   "rect": [
+    328,
+    275,
+    399,
+    218
+   ],
+   "sortY": 489,
+   "collider": [
+    332,
+    425,
+    393,
+    64
+   ]
+  },
+  {
+   "id": "rails",
+   "label": "토페도 레일",
+   "file": "eq_rails.png",
+   "rect": [
+    586,
+    562,
+    496,
+    18
+   ],
+   "sortY": -800
+  },
+  {
+   "id": "torpedo_car",
+   "label": "토페도카",
+   "file": "eq_torpedo_car.png",
+   "rect": [
+    757,
+    535,
+    70,
+    43
+   ],
+   "sortY": 582,
+   "collider": [
+    761,
+    561,
+    62,
+    21
+   ],
+   "warnFile": "eq_torpedo_car_warn.png",
+   "equipment": true
+  }
+ ],
+ "effects": [
+  {
+   "type": "pulse",
+   "file": "fx_glow_sinter_plant.png",
+   "x": 233,
+   "y": 43,
+   "order": 427,
+   "speed": 1.6
+  },
+  {
+   "type": "pulse",
+   "file": "fx_glow_coke_oven.png",
+   "x": 117,
+   "y": 333,
+   "order": 578,
+   "speed": 2.0
+  },
+  {
+   "type": "pulse",
+   "file": "fx_glow_taphole_casthouse.png",
+   "x": 679,
+   "y": 445,
+   "order": 572,
+   "speed": 2.4000000000000004
+  },
+  {
+   "type": "pulse",
+   "file": "fx_glow_torpedo_car.png",
+   "x": 757,
+   "y": 535,
+   "order": 583,
+   "speed": 2.8000000000000003
+  },
+  {
+   "type": "spawner",
+   "file": "fx_bucket.png",
+   "path": [
+    337,
+    438,
+    391,
+    438,
+    713,
+    281
+   ],
+   "speed": 40,
+   "interval": 1.1,
+   "order": 490
+  },
+  {
+   "type": "steam",
+   "x0": 212,
+   "x1": 272,
+   "y": 430,
+   "rate": 0.35,
+   "order": 9100
+  },
+  {
+   "type": "steam",
+   "x0": 903,
+   "x1": 963,
+   "y": 255,
+   "rate": 0.35,
+   "order": 9100
+  },
+  {
+   "type": "steam",
+   "x0": 332,
+   "x1": 392,
+   "y": 220,
+   "rate": 0.35,
+   "order": 9100
+  },
+  {
+   "type": "frames",
+   "files": [
+    "fx_sparks_0.png",
+    "fx_sparks_1.png",
+    "fx_sparks_2.png",
+    "fx_sparks_3.png"
+   ],
+   "x": 783.4926568758344,
+   "y": 463.9332443257677,
+   "fps": 10,
+   "order": 9050
+  },
+  {
+   "type": "mover",
+   "target": "torpedo_car",
+   "path": [
+    757,
+    535,
+    1002,
+    535
+   ],
+   "speed": 30,
+   "pause": 2.5,
+   "pingpong": true
+  }
+ ],
+ "spawn": [
+  60,
+  712
+ ],
+ "colliders": [
+  {
+   "id": "back_wall",
+   "rect": [
+    0,
+    0,
+    1136,
+    182
+   ]
+  },
+  {
+   "id": "front_wall",
+   "rect": [
+    0,
+    744,
+    1136,
+    8
+   ]
+  }
+ ],
+ "scene": "Ironmaking",
+ "portals": [
+  {
+   "scene": "Rolling",
+   "label": "← 압연",
+   "rect": [
+    -4,
+    182,
+    6,
+    570
+   ]
+  },
+  {
+   "scene": "Steelmaking",
+   "label": "제강 →",
+   "rect": [
+    1134,
+    182,
+    6,
+    570
+   ]
+  }
+ ],
+ "spawns": [
+  {
+   "scene": "Rolling",
+   "pos": [
+    20,
+    712
+   ]
+  },
+  {
+   "scene": "Steelmaking",
+   "pos": [
+    1116,
+    712
+   ]
+  }
+ ]
+}

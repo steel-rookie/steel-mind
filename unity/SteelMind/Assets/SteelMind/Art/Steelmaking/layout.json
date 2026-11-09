@@ -1,0 +1,335 @@
+{
+ "map": {
+  "width": 1184,
+  "height": 752,
+  "tile": 16,
+  "pixelsPerUnit": 16,
+  "wallHeight": 256,
+  "title": "제강 공장  STEELMAKING"
+ },
+ "layers": [
+  {
+   "id": "ground",
+   "file": "ground.png",
+   "order": -1000
+  },
+  {
+   "id": "glow_floor",
+   "file": "glow_floor.png",
+   "order": -900
+  },
+  {
+   "id": "glow_air",
+   "file": "glow_air.png",
+   "order": 9500
+  }
+ ],
+ "objects": [
+  {
+   "id": "hot_metal_pretreatment",
+   "label": "용선 예비처리",
+   "file": "eq_hot_metal_pretreatment.png",
+   "rect": [
+    64,
+    286,
+    196,
+    203
+   ],
+   "sortY": 486,
+   "collider": [
+    68,
+    353,
+    188,
+    133
+   ],
+   "warnFile": "eq_hot_metal_pretreatment_warn.png",
+   "equipment": true
+  },
+  {
+   "id": "bof_converter",
+   "label": "전로",
+   "file": "eq_bof_converter.png",
+   "rect": [
+    203,
+    177,
+    206,
+    258
+   ],
+   "sortY": 431,
+   "collider": [
+    207,
+    270,
+    236,
+    161
+   ],
+   "warnFile": "eq_bof_converter_warn.png",
+   "equipment": true
+  },
+  {
+   "id": "oxygen_lance_offgas",
+   "label": "산소 랜스·배가스",
+   "file": "eq_oxygen_lance_offgas.png",
+   "rect": [
+    301,
+    23,
+    269,
+    416
+   ],
+   "sortY": 437,
+   "collider": [
+    305,
+    334,
+    261,
+    103
+   ],
+   "warnFile": "eq_oxygen_lance_offgas_warn.png",
+   "equipment": true
+  },
+  {
+   "id": "tapping_ladle_crane",
+   "label": "출강 래들·크레인",
+   "file": "eq_tapping_ladle_crane.png",
+   "rect": [
+    560,
+    269,
+    125,
+    221
+   ],
+   "sortY": 488,
+   "collider": [
+    563,
+    396,
+    118,
+    92
+   ],
+   "warnFile": "eq_tapping_ladle_crane_warn.png",
+   "equipment": true
+  },
+  {
+   "id": "secondary_refining",
+   "label": "2차 정련",
+   "file": "eq_secondary_refining.png",
+   "rect": [
+    700,
+    288,
+    159,
+    200
+   ],
+   "sortY": 484,
+   "collider": [
+    704,
+    392,
+    151,
+    92
+   ],
+   "warnFile": "eq_secondary_refining_warn.png",
+   "equipment": true
+  },
+  {
+   "id": "caster",
+   "label": "연주 설비(→ 연주 공장)",
+   "file": "eq_caster.png",
+   "rect": [
+    891,
+    232,
+    159,
+    397
+   ],
+   "sortY": 630,
+   "collider": [
+    895,
+    384,
+    151,
+    246
+   ]
+  },
+  {
+   "id": "rails",
+   "label": "래들 레일",
+   "file": "eq_rails.png",
+   "rect": [
+    50,
+    434,
+    865,
+    24
+   ],
+   "sortY": -800
+  },
+  {
+   "id": "pit",
+   "label": "피트",
+   "file": "eq_pit.png",
+   "rect": [
+    363,
+    483,
+    63,
+    61
+   ],
+   "sortY": -800
+  },
+  {
+   "id": "ladle_transfer",
+   "label": "래들 이송",
+   "file": "eq_ladle_transfer.png",
+   "rect": [
+    849,
+    389,
+    50,
+    67
+   ],
+   "sortY": 464,
+   "collider": [
+    853,
+    429,
+    42,
+    35
+   ],
+   "warnFile": "eq_ladle_transfer_warn.png",
+   "equipment": true
+  }
+ ],
+ "effects": [
+  {
+   "type": "pulse",
+   "file": "fx_glow_hot_metal_pretreatment.png",
+   "x": 64,
+   "y": 286,
+   "order": 487,
+   "speed": 1.6
+  },
+  {
+   "type": "pulse",
+   "file": "fx_glow_tapping_ladle_crane.png",
+   "x": 560,
+   "y": 269,
+   "order": 489,
+   "speed": 2.0
+  },
+  {
+   "type": "pulse",
+   "file": "fx_glow_secondary_refining.png",
+   "x": 700,
+   "y": 288,
+   "order": 485,
+   "speed": 2.4000000000000004
+  },
+  {
+   "type": "pulse",
+   "file": "fx_glow_caster.png",
+   "x": 891,
+   "y": 232,
+   "order": 631,
+   "speed": 2.8000000000000003
+  },
+  {
+   "type": "pulse",
+   "file": "fx_glow_ladle_transfer.png",
+   "x": 849,
+   "y": 389,
+   "order": 465,
+   "speed": 3.2
+  },
+  {
+   "type": "mover",
+   "target": "ladle_transfer",
+   "path": [
+    849,
+    389,
+    70,
+    389
+   ],
+   "speed": 45,
+   "pause": 2.0,
+   "pingpong": true
+  },
+  {
+   "type": "frames",
+   "files": [
+    "fx_sparks_0.png",
+    "fx_sparks_1.png",
+    "fx_sparks_2.png",
+    "fx_sparks_3.png"
+   ],
+   "x": 805.7428571428571,
+   "y": 398.1714285714286,
+   "fps": 12,
+   "order": 9050
+  },
+  {
+   "type": "steam",
+   "x0": 509,
+   "x1": 549,
+   "y": 39,
+   "rate": 0.3,
+   "order": 9100
+  },
+  {
+   "type": "shake",
+   "target": "tapping_ladle_crane",
+   "period": 0.12
+  }
+ ],
+ "spawn": [
+  60,
+  712
+ ],
+ "colliders": [
+  {
+   "id": "back_wall",
+   "rect": [
+    0,
+    0,
+    1184,
+    262
+   ]
+  },
+  {
+   "id": "front_wall",
+   "rect": [
+    0,
+    744,
+    1184,
+    8
+   ]
+  }
+ ],
+ "scene": "Steelmaking",
+ "portals": [
+  {
+   "scene": "Ironmaking",
+   "label": "← 제선",
+   "rect": [
+    -4,
+    262,
+    6,
+    490
+   ]
+  },
+  {
+   "scene": "Casting",
+   "label": "연주 →",
+   "rect": [
+    1182,
+    262,
+    6,
+    490
+   ]
+  }
+ ],
+ "spawns": [
+  {
+   "scene": "Ironmaking",
+   "pos": [
+    20,
+    712
+   ]
+  },
+  {
+   "scene": "Casting",
+   "pos": [
+    1164,
+    712
+   ]
+  }
+ ]
+}

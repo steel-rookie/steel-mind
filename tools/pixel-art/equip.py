@@ -8,6 +8,11 @@ Z_BACK = -2.6     # 뒷벽이 서 있는 world z
 X0 = -16.1        # map px 0 에 해당하는 world x
 MAP_W, MAP_H = 1536, 560
 
+def setup(s, x0, z_back, wall_h, map_w, map_h):
+    """공정마다 축척과 지도 크기를 바꾼다"""
+    global S, X0, Z_BACK, WALL_H, MAP_W, MAP_H
+    S, X0, Z_BACK, WALL_H, MAP_W, MAP_H = s, x0, z_back, wall_h, map_w, map_h
+
 def to_px(x, y, z):
     return (x - X0) * S, WALL_H + (z - Z_BACK) * S - y * S
 
@@ -164,3 +169,42 @@ def render_prop(parts, mat_names, seed):
     rgba = pk.outline(stylize(r, names, seed))
     img, rect = crop(rgba)
     return dict(rgba=img, rect=rect, footprint=footprint(np.concatenate([t for _, t in parts])))
+
+
+def build_groups(glb_path, groups, separate=(), seed=7):
+    """groups: {key: [glb 태그...]}. separate에 든 그룹(움직이는 차량 등)은 따로 온전히 렌더링한다."""
+    j, parts = glb.triangles(glb_path)
+    names = [m['name'] for m in j['materials']]
+    hot_ids = {i for i, n in enumerate(names) if n in pk.HOT_MATS}
+    keys = [k for k in groups if k not in separate]
+    tl, geo = [], {k: [] for k in groups}
+    for tag, _, m, t in parts:
+        for k, tags in groups.items():
+            if tag in tags:
+                geo[k].append(t)
+                if k in keys:
+                    tl.append((m, t, keys.index(k)))
+    sprites = {}
+    if tl:
+        r = oblique.render(tl, MAP_W, MAP_H, to_px)
+        rgba = stylize(r, names, seed)
+        rgba, gid = outline_by_group(rgba, r['gid'])
+        hot = np.isin(r['mat'], list(hot_ids))
+        for gi, k in enumerate(keys):
+            sel = (gid == gi) & (rgba[..., 3] > 0)
+            if not sel.any():
+                continue
+            layer = np.zeros_like(rgba); layer[sel] = rgba[sel]
+            img, rect = crop(layer)
+            hm = (hot & sel)[rect[1]:rect[1] + rect[3], rect[0]:rect[0] + rect[2]]
+            sprites[k] = dict(rgba=img, rect=rect, footprint=footprint(np.concatenate(geo[k])), hot=hm)
+    for k in separate:
+        if not geo[k]:
+            continue
+        tl2 = [(m, t) for tag, _, m, t in parts if tag in groups[k]]
+        r = oblique.render(tl2, MAP_W, MAP_H, to_px)
+        rgba = pk.outline(stylize(r, names, seed + 5))
+        img, rect = crop(rgba)
+        hm = np.isin(r['mat'], list(hot_ids))[rect[1]:rect[1] + rect[3], rect[0]:rect[0] + rect[2]]
+        sprites[k] = dict(rgba=img, rect=rect, footprint=footprint(np.concatenate(geo[k])), hot=hm)
+    return sprites, j, parts

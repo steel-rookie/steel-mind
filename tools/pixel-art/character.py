@@ -4,7 +4,7 @@ import pixkit as pk
 
 FW, FH = 24, 32
 C = {k: pk.hx(v) for k, v in dict(
-    hw='#ffd447', hm='#e8ad22', hd='#b07a14', hb='#7a520e', fs='#231d2a', fs2='#342b3c',          # 안전모
+    hw='#ffd447', hm='#e8ad22', hd='#b07a14', hb='#7a520e', fs='#231d2a', fs2='#342b3c', ss='#6e4a44', ss2='#9a6a5a',          # 안전모
     sk='#f3c9a6', sd='#d9a283', bl='#f09a8a', ey='#1c1418', hr='#2a1f1c', hr2='#3d2e28',
     o1='#ff9a3c', o2='#ee7a22', o3='#c45c18',                         # 주황
     n1='#3a4f86', n2='#2a3a68', n3='#1d284c',                         # 남색
@@ -45,7 +45,12 @@ def helmet(img, by, side=0, back=False):
         R(img, 14, by + 3, 16, by + 4, 'n2')
 
 def face_front(img, y):
-    R(img, 5, y, 18, y + 5, 'fs'); R(img, 6, y + 4, 17, y + 5, 'fs2'); R(img, 6, y + 6, 17, y + 6, 'fs')
+    # 얼굴은 보이고, 눈 높이까지는 안전모 그림자
+    R(img, 5, y, 18, y + 6, 'sk'); R(img, 5, y + 6, 18, y + 6, 'sd')
+    R(img, 4, y, 4, y + 4, 'hr'); R(img, 19, y, 19, y + 4, 'hr')
+    R(img, 5, y, 18, y + 1, 'fs'); R(img, 5, y + 2, 18, y + 2, 'ss'); R(img, 5, y + 3, 18, y + 3, 'ss2')
+    R(img, 6, y + 4, 7, y + 4, 'bl'); R(img, 16, y + 4, 17, y + 4, 'bl')
+    R(img, 11, y + 5, 12, y + 5, 'sd')
     return
     R(img, 5, y, 18, y + 6, 'sk'); R(img, 5, y + 6, 18, y + 6, 'sd')
     R(img, 4, y, 4, y + 4, 'hr'); R(img, 19, y, 19, y + 4, 'hr')
@@ -56,12 +61,13 @@ def face_front(img, y):
     R(img, 11, y + 5, 12, y + 5, 'sd')
 
 def face_back(img, y):
-    R(img, 5, y, 18, y + 5, 'fs'); R(img, 6, y + 4, 17, y + 5, 'fs2'); R(img, 6, y + 6, 17, y + 6, 'fs')
-    return
     R(img, 4, y, 19, y + 5, 'hr'); R(img, 5, y + 1, 18, y + 3, 'hr2'); R(img, 6, y + 6, 17, y + 6, 'sd')
 
 def face_side(img, y):
-    R(img, 5, y, 18, y + 5, 'fs'); R(img, 8, y + 4, 18, y + 5, 'fs2'); R(img, 7, y + 6, 17, y + 6, 'fs')
+    R(img, 5, y, 18, y + 6, 'hr'); R(img, 6, y + 1, 9, y + 4, 'hr2')
+    R(img, 10, y, 19, y + 6, 'sk'); R(img, 10, y + 6, 19, y + 6, 'sd')
+    R(img, 10, y, 19, y + 1, 'fs'); R(img, 10, y + 2, 19, y + 2, 'ss'); R(img, 10, y + 3, 19, y + 3, 'ss2')
+    R(img, 15, y + 4, 16, y + 4, 'bl'); R(img, 10, y + 2, 11, y + 4, 'sd')
     return
     R(img, 5, y, 18, y + 6, 'hr'); R(img, 6, y + 1, 9, y + 4, 'hr2')
     R(img, 10, y, 19, y + 6, 'sk'); R(img, 10, y + 6, 19, y + 6, 'sd'); R(img, 10, y, 19, y, 'hr2')
