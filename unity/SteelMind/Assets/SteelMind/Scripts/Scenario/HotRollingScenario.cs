@@ -793,13 +793,53 @@ namespace SteelMind.Scenario
             return c;
         }
 
-        void AiTag(Transform parent, string label)
+        Text AiTag(Transform parent, string label)
         {
             var row = NewRect("Label", parent); HLayout(row.gameObject, 8, TextAnchor.MiddleLeft);
             AddText(row, label, 15, Dim, FontStyle.Bold, TextAnchor.MiddleLeft).horizontalOverflow = HorizontalWrapMode.Overflow;
             var chip = NewRect("Chip", row); Round(chip.gameObject, Hex("#1F3A33"), 1.8f);
             var h = HLayout(chip.gameObject, 0, TextAnchor.MiddleCenter); h.padding = new RectOffset(8, 8, 2, 2);
-            AddText(chip, "기본 문장", 12, Teal, FontStyle.Bold, TextAnchor.MiddleCenter).horizontalOverflow = HorizontalWrapMode.Overflow;
+            var tag = AddText(chip, ReportLlm.HasKey ? "기본 문장 · AI 작성 중" : "기본 문장", 12, Teal, FontStyle.Bold, TextAnchor.MiddleCenter);
+            tag.horizontalOverflow = HorizontalWrapMode.Overflow;
+            return tag;
+        }
+
+        // 결과 화면의 문장 칸: 기본 문장을 먼저 보여 주고, LLM 문장이 오면 칸마다 바꿔 끼운다
+        class TextSlots
+        {
+            public Text headline, headlineTag, momentsTag, agentsTag, next, nextTag;
+            public List<Text> moments = new List<Text>();
+            public Dictionary<string, Text> agents = new Dictionary<string, Text>();
+        }
+
+        IEnumerator FillWithLlm(Report rep, TextSlots s, RectTransform page)
+        {
+            if (!ReportLlm.HasKey) yield break;
+            LlmText ai = null; string err = null;
+            yield return ReportLlm.Fetch(def, rep, x => ai = x, x => err = x);
+            if (page == null) yield break; // 기다리는 사이 보고서를 닫았음
+            void Tag(Text t, bool used) { if (t != null) t.text = used ? "AI 작성" : "기본 문장"; }
+            if (ai == null)
+            {
+                Debug.LogWarning("[ReportLlm] AI 문장을 받지 못해 기본 문장으로 둡니다: " + err);
+                foreach (var t in new[] { s.headlineTag, s.momentsTag, s.agentsTag, s.nextTag }) Tag(t, false);
+                yield break;
+            }
+            if (ai.headline != null) s.headline.text = $"<b>{ai.headline}</b>";
+            Tag(s.headlineTag, ai.headline != null);
+            if (ai.moments != null)
+                for (int i = 0; i < s.moments.Count; i++)
+                {
+                    s.moments[i].gameObject.SetActive(i < ai.moments.Count);
+                    if (i < ai.moments.Count) s.moments[i].text = $"{C(ColorHex(Orange), "●")}  {ai.moments[i]}";
+                }
+            Tag(s.momentsTag, ai.moments != null);
+            foreach (var kv in ai.agents) if (s.agents.TryGetValue(kv.Key, out var t)) t.text = kv.Value;
+            if (s.agentsTag != null) s.agentsTag.text = ai.agents.Count == s.agents.Count ? "AI 작성" : ai.agents.Count > 0 ? "일부 AI 작성" : "기본 문장";
+            if (ai.nextTry != null) s.next.text = $"<b>{ai.nextTry}</b>";
+            Tag(s.nextTag, ai.nextTry != null);
+            LayoutRebuilder.ForceRebuildLayoutImmediate(page);
+            Debug.Log($"[ReportLlm] AI 문장 도착 · {ai.provider} · {ai.seconds:0.0}초");
         }
 
         IEnumerator ResultScreen()
@@ -859,14 +899,15 @@ namespace SteelMind.Scenario
                 var ltr = lt.rectTransform; ltr.anchorMin = Vector2.zero; ltr.anchorMax = Vector2.one; ltr.offsetMin = ltr.offsetMax = Vector2.zero;
             }
             var col2 = NewRect("Col", row2); VLayout(col2.gameObject, 0, 0, 8); LE(col2.gameObject, -1, -1, 1);
-            AiTag(col2, "한 줄 총평");
-            AddText(col2, $"<b>{rep.headline}</b>", 23, Color.white);
-            AiTag(col2, "결정적 순간");
-            foreach (var m in rep.moments) AddText(col2, $"{C(ColorHex(Orange), "●")}  {m}", 15, Body);
+            var slots = new TextSlots();
+            slots.headlineTag = AiTag(col2, "한 줄 총평");
+            slots.headline = AddText(col2, $"<b>{rep.headline}</b>", 23, Color.white);
+            slots.momentsTag = AiTag(col2, "결정적 순간");
+            foreach (var m in rep.moments) slots.moments.Add(AddText(col2, $"{C(ColorHex(Orange), "●")}  {m}", 15, Body));
 
             // 3줄: Agent 회의
             var c3 = ReportCard(page);
-            AiTag(c3, "Agent 회의");
+            slots.agentsTag = AiTag(c3, "Agent 회의");
             var row3 = NewRect("Agents", c3); var h3 = HLayout(row3.gameObject, 12); h3.childForceExpandWidth = true; h3.childForceExpandHeight = true;
             foreach (var v in rep.agents)
             {
@@ -879,7 +920,7 @@ namespace SteelMind.Scenario
                 AddText(hd, $"추천을 따른 사건 {v.followed}/{v.present}", 12, Dim, FontStyle.Normal, TextAnchor.MiddleRight).horizontalOverflow = HorizontalWrapMode.Overflow;
                 var moodColor = v.mood == "만족" ? Hex("#6FCF97") : v.mood == "불만" ? Hex("#FF6B6B") : Dim;
                 AddText(card, $"<b>{v.mood}</b>", 16, moodColor);
-                AddText(card, v.comment, 15, Body);
+                slots.agents[v.agent] = AddText(card, v.comment, 15, Body);
             }
 
             // 4줄: 사건별 기록
@@ -897,8 +938,8 @@ namespace SteelMind.Scenario
             // 5줄: 다음 판 제안 | 회차별 성향 분포
             var row5 = NewRect("Row5", page); var h5 = HLayout(row5.gameObject, 16); h5.childForceExpandWidth = true; h5.childForceExpandHeight = true;
             var sug = ReportCard(row5); LE(sug.gameObject, 10, -1, 1);
-            AiTag(sug, "다음 판 제안");
-            AddText(sug, $"<b>{rep.suggestion}</b>", 21, Color.white);
+            slots.nextTag = AiTag(sug, "다음 판 제안");
+            slots.next = AddText(sug, $"<b>{rep.suggestion}</b>", 21, Color.white);
             var hist = ReportCard(row5); LE(hist.gameObject, 10, -1, 1);
             AddText(hist, "회차별 성향 분포", 15, Dim, FontStyle.Bold);
             var bars = NewRect("Bars", hist); VLayout(bars.gameObject, 0, 4, 8);
@@ -930,6 +971,7 @@ namespace SteelMind.Scenario
             var restart = Button_(btns, "다시 플레이 (R)", Yellow, Hex("#1A1408"), 52); LE(restart.gameObject, 210, 52);
             restart.onClick.AddListener(Restart);
             LayoutRebuilder.ForceRebuildLayoutImmediate(page);
+            StartCoroutine(FillWithLlm(rep, slots, page)); // 기본 문장으로 먼저 보여 주고 AI 문장이 오면 바꿔 끼운다
 
             // 효율 숫자 내려가기
             float dur = 1.2f, tt = 0;
