@@ -1,0 +1,528 @@
+// 열간압연 시나리오(사건 6개 × 선택지 3개 = 729가지 경로). 결말 로드맵(729.html)에서 그대로 옮긴 데이터.
+// file://로 열어도 읽히도록 JSON이 아니라 전역 변수로 둔다.
+window.SCENARIO = {
+ "id": "hot_rolling_test",
+ "title": "열간압연",
+ "resultDelay": 3,
+ "events": [
+  {
+   "id": "furnace_low_temperature",
+   "level": "LEVEL 1",
+   "delay": 5,
+   "warn": "reheating_furnace",
+   "title": "가열로 슬라브 온도 미달",
+   "desc": "버너 한 구역의 화력이 떨어져 다음 슬라브가 목표 온도에 못 미칩니다. 압연 일정은 이미 잡혀 있습니다.",
+   "agents": [
+    {
+     "agent": "production",
+     "say": "일정대로 꺼내야 뒤 공정이 쉬지 않습니다.",
+     "why": "슬라브 간격이 벌어지면 시간당 생산량이 바로 떨어져요.",
+     "rec": "extract_now"
+    },
+    {
+     "agent": "equipment",
+     "say": "추출을 늦추고 더 가열합시다.",
+     "why": "덜 뜨거운 슬라브는 압연기에 큰 하중을 줍니다.",
+     "rec": "soak_longer"
+    },
+    {
+     "agent": "quality",
+     "say": "온도가 모자라면 강판 재질이 고르지 않아요.",
+     "why": "목표 온도까지 올린 뒤에 꺼내야 합니다.",
+     "rec": "soak_longer"
+    },
+    {
+     "agent": "safety",
+     "say": "버너 구역부터 점검하는 게 안전합니다.",
+     "why": "연소 이상을 방치하면 더 큰 사고로 번집니다.",
+     "rec": "inspect_burner"
+    }
+   ],
+   "chief": "일정을 지킬지, 뒤 공정의 부담을 줄일지가 쟁점입니다.",
+   "choices": [
+    {
+     "id": "extract_now",
+     "label": "그대로 추출",
+     "detail": "일정대로 슬라브를 꺼낸다",
+     "outcome": "일정은 지켰지만 덜 데워진 슬라브가 나와 압연 하중이 커지고 재질 편차가 생겼습니다.",
+     "loss": {
+      "production": 0,
+      "quality": 4,
+      "safety": 0,
+      "cost": 6
+     },
+     "flag": "cold_slab",
+     "lineSpeed": 1,
+     "resumeAfter": 0
+    },
+    {
+     "id": "soak_longer",
+     "label": "추출 늦추고 더 가열",
+     "detail": "잠시 기다려 목표 온도까지 올린다",
+     "outcome": "슬라브가 목표 온도에 도달했습니다. 조금 늦었지만 뒤 공정이 안정됐습니다.",
+     "loss": {
+      "production": 0,
+      "quality": 0,
+      "safety": 0,
+      "cost": 0
+     },
+     "best": true,
+     "lineSpeed": 0.7,
+     "resumeAfter": 3
+    },
+    {
+     "id": "inspect_burner",
+     "label": "가열로 점검",
+     "detail": "추출을 멈추고 버너 구역을 확인한다",
+     "outcome": "이상은 찾았지만 필요 이상으로 오래 멈춰 생산이 줄고 연료가 더 들었습니다.",
+     "loss": {
+      "production": 5,
+      "quality": 0,
+      "safety": 0,
+      "cost": 2
+     },
+     "lineSpeed": 0,
+     "resumeAfter": 3
+    }
+   ]
+  },
+  {
+   "id": "descaler_low_pressure",
+   "level": "LEVEL 1",
+   "delay": 6,
+   "warn": "descaler",
+   "title": "스케일 제거기 수압 저하",
+   "desc": "고압수 노즐 일부가 막혀 수압이 기준 아래로 떨어졌습니다. 슬라브 표면의 산화막(스케일)이 덜 벗겨지고 있습니다.",
+   "agents": [
+    {
+     "agent": "production",
+     "say": "수압이 조금 낮아도 일단 통과시킵시다.",
+     "why": "여기서 멈추면 가열로의 슬라브까지 밀립니다.",
+     "rec": "pass_through"
+    },
+    {
+     "agent": "quality",
+     "say": "스케일이 남으면 강판 표면에 그대로 눌려 붙어요.",
+     "why": "표면 흠은 뒤 공정에서 고칠 수 없습니다.",
+     "rec": "switch_pump"
+    },
+    {
+     "agent": "equipment",
+     "say": "예비 펌프로 바꾸고 잠깐 속도를 낮추죠.",
+     "why": "라인을 세우지 않고도 수압을 회복할 수 있습니다.",
+     "rec": "switch_pump"
+    },
+    {
+     "agent": "safety",
+     "say": "라인을 세우고 노즐을 손봐야 합니다.",
+     "why": "고압수 배관은 가동 중에 손대면 작업자가 다칩니다.",
+     "rec": "replace_nozzle"
+    }
+   ],
+   "chief": "표면 품질을 지킬지, 라인 흐름을 지킬지가 쟁점입니다.",
+   "choices": [
+    {
+     "id": "pass_through",
+     "label": "그대로 통과",
+     "detail": "수압이 낮은 채로 슬라브를 보낸다",
+     "outcome": "라인은 쉬지 않았지만 스케일이 강판에 눌려 붙어 표면 흠이 생겼습니다.",
+     "loss": {
+      "production": 0,
+      "quality": 8,
+      "safety": 0,
+      "cost": 2
+     },
+     "flag": "scale_left",
+     "lineSpeed": 1,
+     "resumeAfter": 0
+    },
+    {
+     "id": "switch_pump",
+     "label": "예비 펌프 전환",
+     "detail": "예비 펌프를 켜고 수압이 오를 때까지 감속한다",
+     "outcome": "수압이 회복돼 스케일이 깨끗하게 제거됐습니다.",
+     "loss": {
+      "production": 0,
+      "quality": 0,
+      "safety": 0,
+      "cost": 0
+     },
+     "best": true,
+     "lineSpeed": 0.6,
+     "resumeAfter": 3
+    },
+    {
+     "id": "replace_nozzle",
+     "label": "라인 정지·노즐 교체",
+     "detail": "라인을 세우고 막힌 노즐을 바꾼다",
+     "outcome": "수압은 돌아왔지만 예비 펌프로 넘길 수 있는 일에 라인을 세워 생산과 비용을 잃었습니다.",
+     "loss": {
+      "production": 5,
+      "quality": 0,
+      "safety": 0,
+      "cost": 3
+     },
+     "lineSpeed": 0,
+     "resumeAfter": 4
+    }
+   ]
+  },
+  {
+   "id": "roughing_bar_drift",
+   "level": "LEVEL 2",
+   "delay": 6,
+   "warn": "roughing_mill",
+   "title": "조압연기 바 쏠림",
+   "desc": "압연 중인 바(두꺼운 강판)가 한쪽으로 쏠리고 있습니다. 좌우 롤 간격이 조금 어긋난 것으로 보입니다.",
+   "carry": {
+    "ifFlag": "cold_slab",
+    "note": "앞에서 덜 데운 슬라브를 꺼내 압연 하중이 평소보다 큽니다.",
+    "loss": {
+     "production": 0,
+     "quality": 0,
+     "safety": 0,
+     "cost": 3
+    }
+   },
+   "agents": [
+    {
+     "agent": "production",
+     "say": "가이드가 잡아 줄 테니 그대로 밀어요.",
+     "why": "패스 순서가 밀리면 사상압연까지 줄줄이 늦어집니다.",
+     "rec": "keep_pass"
+    },
+    {
+     "agent": "equipment",
+     "say": "다음 패스 전에 롤 간격부터 맞추죠.",
+     "why": "쏠린 채 누르면 롤과 가이드가 한쪽만 닳습니다.",
+     "rec": "level_roll"
+    },
+    {
+     "agent": "quality",
+     "say": "쏠리면 폭과 두께가 어긋납니다.",
+     "why": "간격을 맞춰야 제품 치수가 나옵니다.",
+     "rec": "level_roll"
+    },
+    {
+     "agent": "safety",
+     "say": "바를 빼내고 설비부터 살펴봅시다.",
+     "why": "쏠린 바가 가이드를 치면 파편이 튈 수 있어요.",
+     "rec": "pull_bar"
+    }
+   ],
+   "chief": "지금 속도를 지킬지, 쏠림을 먼저 잡을지가 쟁점입니다.",
+   "choices": [
+    {
+     "id": "keep_pass",
+     "label": "그대로 압연",
+     "detail": "사이드 가이드에 맡기고 계속한다",
+     "outcome": "패스 순서는 지켰지만 바가 가이드에 긁혀 폭이 어긋나고 설비가 손상됐습니다.",
+     "loss": {
+      "production": 0,
+      "quality": 3,
+      "safety": 3,
+      "cost": 4
+     },
+     "lineSpeed": 1,
+     "resumeAfter": 0
+    },
+    {
+     "id": "level_roll",
+     "label": "롤 간격 보정",
+     "detail": "다음 패스 전에 좌우 롤 간격을 맞춘다",
+     "outcome": "바가 곧게 펴졌습니다. 잠깐의 보정으로 제품 치수를 지켰습니다.",
+     "loss": {
+      "production": 0,
+      "quality": 0,
+      "safety": 0,
+      "cost": 0
+     },
+     "best": true,
+     "lineSpeed": 0.7,
+     "resumeAfter": 3
+    },
+    {
+     "id": "pull_bar",
+     "label": "바 회수 후 점검",
+     "detail": "바를 라인에서 빼내고 설비를 확인한다",
+     "outcome": "설비는 지켰지만 바 한 장을 버려 생산이 줄고 손실이 났습니다.",
+     "loss": {
+      "production": 6,
+      "quality": 0,
+      "safety": 0,
+      "cost": 2
+     },
+     "lineSpeed": 0,
+     "resumeAfter": 4
+    }
+   ]
+  },
+  {
+   "id": "rolling_temperature",
+   "level": "LEVEL 2",
+   "delay": 6,
+   "warn": "finishing_mill",
+   "title": "사상압연기 온도 상승",
+   "desc": "롤 온도가 기준보다 빠르게 오릅니다. 오늘 출하할 코일 주문이 남아 있습니다.",
+   "carry": {
+    "ifFlag": "scale_left",
+    "note": "앞에서 남은 스케일 때문에 롤 표면이 거칠어져 품질 부담이 커졌습니다.",
+    "loss": {
+     "production": 0,
+     "quality": 3,
+     "safety": 0,
+     "cost": 0
+    }
+   },
+   "agents": [
+    {
+     "agent": "production",
+     "say": "속도를 유지해야 오늘 주문량을 맞춥니다.",
+     "why": "감속하면 남은 코일 출하가 늦어져요.",
+     "rec": "continue_production"
+    },
+    {
+     "agent": "equipment",
+     "say": "속도를 낮추고 롤 냉각부터 확인하죠.",
+     "why": "이대로 오르면 롤이 상해 더 오래 멈춥니다.",
+     "rec": "reduce_speed"
+    },
+    {
+     "agent": "safety",
+     "say": "과열 구역 주변 인원부터 빼 주세요.",
+     "why": "설비 이상이 커지면 근처 사람이 먼저 다칩니다.",
+     "rec": "stop_and_inspect"
+    },
+    {
+     "agent": "quality",
+     "say": "온도가 흔들리면 강판 두께가 고르지 않아요.",
+     "why": "속도를 조정해 조건을 안정시키는 게 좋습니다.",
+     "rec": "reduce_speed"
+    }
+   ],
+   "chief": "납기를 지킬지, 더 큰 정지와 사고를 막을지가 쟁점입니다.",
+   "choices": [
+    {
+     "id": "continue_production",
+     "label": "속도 유지",
+     "detail": "그대로 돌리며 온도만 지켜본다",
+     "outcome": "출하량은 지켰지만 롤이 과열됐습니다. 두께가 고르지 않은 코일이 나왔고 과열 구역의 위험이 커졌습니다.",
+     "loss": {
+      "production": 0,
+      "quality": 5,
+      "safety": 12,
+      "cost": 0
+     },
+     "flag": "overheated",
+     "lineSpeed": 1,
+     "resumeAfter": 0,
+     "keepWarning": true
+    },
+    {
+     "id": "reduce_speed",
+     "label": "감속 후 점검",
+     "detail": "속도를 낮추고 롤 냉각을 확인한다",
+     "outcome": "롤 온도가 안정됐습니다. 품질과 설비를 지키면서 생산을 이어 갔습니다.",
+     "loss": {
+      "production": 0,
+      "quality": 0,
+      "safety": 0,
+      "cost": 0
+     },
+     "best": true,
+     "lineSpeed": 0.55,
+     "resumeAfter": 0
+    },
+    {
+     "id": "stop_and_inspect",
+     "label": "일시 정지·구역 통제",
+     "detail": "라인을 멈추고 과열 구역 출입을 막는다",
+     "outcome": "위험은 없앴지만 필요 이상으로 오래 멈춰 생산이 줄고 재가동 비용이 더 들었습니다.",
+     "loss": {
+      "production": 5,
+      "quality": 0,
+      "safety": 0,
+      "cost": 2
+     },
+     "lineSpeed": 0,
+     "resumeAfter": 3
+    }
+   ]
+  },
+  {
+   "id": "worker_in_zone",
+   "level": "LEVEL 2",
+   "delay": 6,
+   "warn": "runout_table",
+   "title": "작업자 위험 구역 진입",
+   "desc": "가동 중인 런아웃 테이블 옆 통제 구역에 작업자 한 명이 들어왔습니다.",
+   "carry": {
+    "ifFlag": "overheated",
+    "note": "앞에서 속도를 유지해 설비가 달아오른 채로 시작했습니다.",
+    "loss": {
+     "production": 0,
+     "quality": 0,
+     "safety": 3,
+     "cost": 0
+    }
+   },
+   "agents": [
+    {
+     "agent": "production",
+     "say": "무전으로 알리고 라인은 계속 돌립시다.",
+     "why": "또 멈추면 오늘 목표는 못 맞춥니다.",
+     "rec": "continue_with_radio"
+    },
+    {
+     "agent": "safety",
+     "say": "지금 바로 라인을 멈춰야 합니다!",
+     "why": "사람이 있는 구역에서 설비를 돌리면 안 됩니다.",
+     "rec": "emergency_stop"
+    },
+    {
+     "agent": "equipment",
+     "say": "감속하고, 작업자가 나간 걸 확인한 뒤 올리죠.",
+     "why": "급정지는 설비에 부담이지만 감속은 위험을 줄입니다.",
+     "rec": "slow_and_clear"
+    }
+   ],
+   "chief": "생산을 이어 갈지, 사람이 있는 구역의 위험부터 없앨지가 쟁점입니다.",
+   "choices": [
+    {
+     "id": "continue_with_radio",
+     "label": "무전 경고 후 계속",
+     "detail": "작업자에게 알리고 라인은 그대로",
+     "outcome": "무전이 늦게 닿아 가동 중인 설비 옆에서 작업자가 다쳤습니다. 안전사고로 라인이 멈췄습니다.",
+     "loss": {
+      "production": 0,
+      "quality": 0,
+      "safety": 25,
+      "cost": 0
+     },
+     "flag": "accident",
+     "lineSpeed": 0,
+     "resumeAfter": 6
+    },
+    {
+     "id": "slow_and_clear",
+     "label": "감속 후 구역 비우기",
+     "detail": "속도를 낮추고 작업자 이동을 확인",
+     "outcome": "작업자가 구역을 벗어난 것을 확인한 뒤 속도를 올렸습니다. 사고 없이 생산을 이어 갔습니다.",
+     "loss": {
+      "production": 0,
+      "quality": 0,
+      "safety": 0,
+      "cost": 0
+     },
+     "best": true,
+     "lineSpeed": 0.4,
+     "resumeAfter": 3
+    },
+    {
+     "id": "emergency_stop",
+     "label": "즉시 정지",
+     "detail": "라인을 멈추고 구역을 통제",
+     "outcome": "사고는 막았지만 급정지로 설비에 부담이 갔고, 재가동까지 생산이 더 줄었습니다.",
+     "loss": {
+      "production": 4,
+      "quality": 0,
+      "safety": 0,
+      "cost": 3
+     },
+     "lineSpeed": 0,
+     "resumeAfter": 4
+    }
+   ]
+  },
+  {
+   "id": "coiler_side_shift",
+   "level": "LEVEL 2",
+   "delay": 6,
+   "warn": "coiler",
+   "title": "권취기 코일 옆면 밀림",
+   "desc": "감고 있는 코일의 옆면이 한쪽으로 조금씩 밀려 나옵니다. 장력이 고르지 않은 것으로 보입니다.",
+   "carry": {
+    "ifFlag": "accident",
+    "note": "앞선 안전사고로 라인 점검이 겹쳐 출하 일정이 밀렸습니다.",
+    "loss": {
+     "production": 3,
+     "quality": 0,
+     "safety": 0,
+     "cost": 0
+    }
+   },
+   "agents": [
+    {
+     "agent": "production",
+     "say": "이 코일만 끝까지 감아 출하합시다.",
+     "why": "오늘 마지막 출하 시간이 얼마 안 남았습니다.",
+     "rec": "keep_coiling"
+    },
+    {
+     "agent": "quality",
+     "say": "옆면이 밀린 코일은 고객이 받지 않습니다.",
+     "why": "장력을 맞춰 바로잡는 게 맞습니다.",
+     "rec": "adjust_tension"
+    },
+    {
+     "agent": "equipment",
+     "say": "장력을 낮추고 가이드를 다시 맞추죠.",
+     "why": "권취기를 세우지 않고도 잡을 수 있습니다.",
+     "rec": "adjust_tension"
+    },
+    {
+     "agent": "safety",
+     "say": "권취를 멈추고 코일을 잘라 냅시다.",
+     "why": "밀린 코일이 풀리면 주변 작업자가 위험합니다.",
+     "rec": "cut_coil"
+    }
+   ],
+   "chief": "오늘 출하를 맞출지, 제품 형상을 지킬지가 쟁점입니다.",
+   "choices": [
+    {
+     "id": "keep_coiling",
+     "label": "그대로 권취",
+     "detail": "끝까지 감아 출하한다",
+     "outcome": "출하는 했지만 옆면이 밀린 코일이 반품돼 재작업 비용이 들었습니다.",
+     "loss": {
+      "production": 0,
+      "quality": 5,
+      "safety": 0,
+      "cost": 3
+     },
+     "lineSpeed": 1,
+     "resumeAfter": 0
+    },
+    {
+     "id": "adjust_tension",
+     "label": "장력 낮추고 가이드 조정",
+     "detail": "속도를 줄이며 코일 형상을 바로잡는다",
+     "outcome": "코일 옆면이 고르게 정리됐습니다. 출하 기준을 맞췄습니다.",
+     "loss": {
+      "production": 0,
+      "quality": 0,
+      "safety": 0,
+      "cost": 0
+     },
+     "best": true,
+     "lineSpeed": 0.6,
+     "resumeAfter": 3
+    },
+    {
+     "id": "cut_coil",
+     "label": "권취 중단·코일 절단",
+     "detail": "멈추고 밀린 코일을 잘라 낸다",
+     "outcome": "위험은 없앴지만 잘라 낸 만큼 생산이 줄고 손실이 났습니다.",
+     "loss": {
+      "production": 4,
+      "quality": 0,
+      "safety": 0,
+      "cost": 2
+     },
+     "lineSpeed": 0,
+     "resumeAfter": 3
+    }
+   ]
+  }
+ ]
+};

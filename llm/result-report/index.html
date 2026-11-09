@@ -1,0 +1,537 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>운영 결과 보고서 · STEEL MIND</title>
+<!--
+  결과 보고서 프로토타입.
+  - 틀과 숫자(결과 ID, 성향 유형, 레이더, 효율·순위, 사건별 기록)는 규칙으로 계산해 바로 그린다.
+  - 문장 칸 4개(총평, 결정적 순간, Agent 한마디, 다음 판 제안)는 먼저 기본 문장으로 채우고,
+    server.py에 백그라운드 작업을 맡겨 AI 문장이 오면 칸마다 검사한 뒤 바꿔 끼운다.
+  - AI 문장은 숫자를 쓰지 못하게 하고(숫자는 규칙 칸에만), 글자 수를 넘거나 비면 그 칸만 기본 문장으로 둔다.
+  - 서버 없이 파일로 열어도 기본 문장으로 끝까지 동작한다.
+-->
+<style>
+:root {
+  --bg: #121213; --panel: #221f1d; --panel2: #2b2826; --line: rgba(255,255,255,.14);
+  --text: #f2f2f2; --muted: #b9b9be; --dim: #8d8d93; --accent: #6cc3b0; --accent-soft: rgba(108,195,176,.14);
+  --heat: #f0a04b; --ok: #6fcf97; --mid: #e8c25a; --bad: #ff6b6b;
+  --prod: #7aa7ff; --qual: #c99bff; --equip: #f0a04b; --safe: #6fcf97;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.55 "Pretendard", "Malgun Gothic", "Noto Sans KR", sans-serif; word-break: keep-all; }
+button { font: inherit; color: inherit; cursor: pointer; }
+button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+h1, h2, h3, p, ul { margin: 0; padding: 0; } ul { list-style: none; }
+.wrap { max-width: 1180px; margin: 0 auto; padding: 32px 24px 56px; }
+.eyebrow { color: var(--heat); font-size: 13px; font-weight: 700; letter-spacing: .04em; }
+h1 { font-size: 32px; font-weight: 800; margin-top: 4px; }
+.lead { color: var(--muted); margin-top: 6px; max-width: 820px; }
+
+/* 경로 고르기(프로토타입 전용) */
+.picker { margin-top: 20px; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; }
+.picker-top { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.picker-top b { font-size: 14px; margin-right: 6px; }
+.pill { background: var(--panel2); border: 1px solid var(--line); border-radius: 999px; padding: 5px 12px; font-size: 13px; font-weight: 600; }
+.pill:hover { border-color: rgba(108,195,176,.6); }
+.pill.on { border-color: var(--accent); background: var(--accent-soft); }
+.spacer { flex: 1; }
+.rows { display: grid; gap: 6px; margin-top: 12px; }
+.prow { display: grid; grid-template-columns: 210px repeat(3, minmax(0, 1fr)); gap: 6px; align-items: center; font-size: 13px; }
+.prow > span { color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.opt { background: var(--panel2); border: 1px solid transparent; border-radius: 8px; padding: 5px 8px; text-align: left; font-size: 13px; }
+.opt.on { border-color: var(--accent); background: var(--accent-soft); }
+
+/* 작업 상태 */
+.job { display: flex; gap: 10px; align-items: center; margin-top: 16px; padding: 10px 14px; border-radius: 10px; background: var(--panel2); font-size: 13px; color: var(--muted); }
+.job .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--dim); flex: none; }
+.job.run .dot { background: var(--mid); animation: blink 1s infinite; }
+.job.ok .dot { background: var(--ok); } .job.fail .dot { background: var(--bad); }
+@keyframes blink { 50% { opacity: .25; } }
+
+/* 보고서 */
+.report { margin-top: 14px; background: #1a1816; border: 1px solid var(--line); border-radius: 18px; padding: 22px; display: grid; gap: 16px; }
+.grid2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
+.card { background: var(--panel); border-radius: 14px; padding: 16px 18px; min-width: 0; }
+.k { color: var(--muted); font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+.typename { font-size: 40px; font-weight: 900; line-height: 1.15; margin-top: 4px; }
+.typedesc { color: var(--muted); margin-top: 4px; }
+.idrow { display: flex; gap: 8px; align-items: center; margin-top: 12px; font: 700 14px Consolas, monospace; }
+.idrow button { font: 600 12px inherit; background: var(--panel2); border: 1px solid var(--line); border-radius: 6px; padding: 3px 8px; }
+.warn { color: var(--bad); font-weight: 700; margin-top: 8px; }
+.eff { font-size: 44px; font-weight: 900; line-height: 1.1; margin-top: 4px; font-variant-numeric: tabular-nums; }
+.bar { height: 10px; border-radius: 5px; background: rgba(255,255,255,.1); overflow: hidden; margin-top: 10px; }
+.bar i { display: block; height: 100%; background: currentColor; }
+.facts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 12px; }
+.facts li { background: var(--panel2); border-radius: 8px; padding: 6px; text-align: center; font-size: 12px; color: var(--muted); }
+.facts b { display: block; color: var(--text); font-size: 17px; }
+.radarbox { display: grid; grid-template-columns: 230px minmax(0, 1fr); gap: 16px; align-items: center; }
+.radar text { fill: var(--muted); font-size: 12px; font-weight: 700; }
+.ai { position: relative; }
+.badge { font-size: 11px; font-weight: 800; padding: 1px 7px; border-radius: 999px; background: var(--panel2); color: var(--dim); }
+.badge.ai { background: var(--accent-soft); color: var(--accent); }
+.badge.wait { color: var(--mid); }
+.slot { margin-top: 6px; transition: opacity .25s; }
+.slot.swap { animation: swap .5s ease; }
+@keyframes swap { from { opacity: .2; transform: translateY(3px); } }
+.headline { font-size: 21px; font-weight: 800; line-height: 1.4; }
+.tp li { margin-top: 6px; padding-left: 14px; position: relative; color: var(--text); }
+.tp li::before { content: ""; position: absolute; left: 0; top: .62em; width: 6px; height: 6px; border-radius: 50%; background: var(--heat); }
+.agents { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; margin-top: 8px; }
+.ag { background: var(--panel2); border-radius: 12px; padding: 12px; border-top: 3px solid var(--c); }
+.ag .nm { font-weight: 800; color: var(--c); display: flex; justify-content: space-between; align-items: baseline; gap: 6px; }
+.ag .nm span { color: var(--dim); font-size: 12px; font-weight: 600; }
+.ag p { margin-top: 6px; font-size: 14px; }
+.mood { font-size: 11px; font-weight: 800; }
+.mood.good { color: var(--ok); } .mood.mid { color: var(--mid); } .mood.bad { color: var(--bad); }
+table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 13px; }
+th, td { text-align: left; padding: 7px 8px; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { color: var(--muted); font-weight: 700; }
+td.n { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+.carry { color: var(--bad); font-size: 12px; display: block; margin-top: 2px; }
+.t-ok { color: var(--ok); } .t-mid { color: var(--mid); } .t-bad { color: var(--bad); }
+.dist li { display: grid; grid-template-columns: 96px minmax(0, 1fr) 46px; gap: 8px; align-items: center; margin-top: 6px; font-size: 13px; }
+.dist .track { height: 10px; border-radius: 5px; background: rgba(255,255,255,.08); overflow: hidden; }
+.dist .track i { display: block; height: 100%; background: var(--accent); }
+.dist .v { text-align: right; font-variant-numeric: tabular-nums; color: var(--muted); }
+.dist li.me { color: var(--accent); font-weight: 800; }
+.tabs { display: flex; gap: 6px; margin-top: 16px; }
+.tab { background: var(--panel); border: 1px solid var(--line); border-radius: 10px 10px 0 0; padding: 7px 16px; font-weight: 700; color: var(--muted); }
+.tab.on { color: var(--text); border-color: var(--accent); background: var(--accent-soft); }
+.dbt td, .dbt th { font-size: 12px; }
+.dbt tr.picked td:not([rowspan]) { background: var(--accent-soft); }
+.dbt details summary { cursor: pointer; color: var(--muted); white-space: nowrap; }
+.dbt details p { margin-top: 4px; min-width: 260px; }
+#meetTabs .pill { padding: 2px 9px; }
+.row-end { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+footer { color: var(--dim); font-size: 12px; margin-top: 18px; }
+@media (max-width: 900px) {
+  .grid2, .radarbox { grid-template-columns: minmax(0, 1fr); }
+  .agents { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .prow { grid-template-columns: minmax(0, 1fr); }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="eyebrow">STEEL MIND · 결과 보고서 프로토타입</p>
+  <h1>운영 결과 보고서</h1>
+  <p class="lead">틀과 숫자는 규칙으로 바로 계산하고, 문장 칸은 기본 문장으로 먼저 보여 준 뒤 백그라운드에서 LLM이 쓴 문장으로 바꿔 끼웁니다.</p>
+
+  <section class="picker" aria-label="경로 고르기">
+    <div class="picker-top">
+      <b>경로 고르기</b>
+      <span id="presets" style="display: contents"></span>
+      <span class="spacer"></span>
+      <button class="pill on" id="llmToggle" type="button" aria-pressed="true">LLM 사용</button>
+    </div>
+    <div class="rows" id="rows"></div>
+  </section>
+
+  <div class="job" id="job" role="status"><span class="dot"></span><span id="jobText">대기 중</span></div>
+
+  <div class="tabs" role="tablist">
+    <button class="tab on" type="button" role="tab" data-tab="report" aria-selected="true">보고서</button>
+    <button class="tab" type="button" role="tab" data-tab="db" aria-selected="false">선택 DB</button>
+  </div>
+
+  <article class="report" id="db" hidden>
+    <section class="card">
+      <p class="k">선택 DB · 사건 × 선택지</p>
+      <p class="typedesc" id="dbNote"></p>
+      <div style="overflow-x: auto"><table class="dbt"><thead><tr><th>사건</th><th>선택</th><th>추천</th><th>일어난 일</th><th class="n">생산</th><th class="n">품질</th><th class="n">안전</th><th class="n">비용</th><th class="n">합계</th><th>공장장 회의</th></tr></thead><tbody id="dbBody"></tbody></table></div>
+    </section>
+  </article>
+
+  <article class="report" id="report">
+    <div class="grid2">
+      <section class="card">
+        <p class="k">운영 성향</p>
+        <p class="typename" id="typeName"></p>
+        <p class="typedesc" id="typeDesc"></p>
+        <p class="warn" id="accident" hidden>이 판에서는 안전사고가 일어났습니다.</p>
+        <p class="idrow"><span class="k" style="font-family: inherit">결과 ID</span><span id="pathId"></span><button type="button" id="copyId">링크 복사</button></p>
+      </section>
+      <section class="card">
+        <p class="k">운영 효율</p>
+        <p class="eff" id="eff"></p>
+        <div class="bar" id="effBar"><i></i></div>
+        <p class="typedesc" id="rank"></p>
+        <ul class="facts" id="facts"></ul>
+      </section>
+    </div>
+
+    <section class="card radarbox">
+      <svg class="radar" id="radar" viewBox="0 0 230 210" role="img" aria-label="지표별 점수 레이더"></svg>
+      <div>
+        <div class="ai"><p class="k">한 줄 총평 <span class="badge" data-badge="headline"></span></p><p class="slot headline" data-slot="headline"></p></div>
+        <div class="ai" style="margin-top: 14px"><p class="k">결정적 순간 <span class="badge" data-badge="turning_points"></span></p><ul class="slot tp" data-slot="turning_points"></ul></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="row-end"><p class="k">사건별 공장장 회의 <span class="badge">규칙</span></p><span id="meetTabs"></span></div>
+      <p class="typedesc" id="meetHead"></p>
+      <div class="agents" id="meeting"></div>
+    </section>
+
+    <section class="card">
+      <p class="k">판 전체 공장장 한마디 <span class="badge" data-badge="agent_comments"></span></p>
+      <div class="agents" id="agents"></div>
+    </section>
+
+    <section class="card">
+      <p class="k">사건별 기록</p>
+      <table><thead><tr><th>사건</th><th>고른 행동</th><th>최선의 행동</th><th class="n">효율 손실</th></tr></thead><tbody id="log"></tbody></table>
+    </section>
+
+    <div class="grid2">
+      <section class="card">
+        <p class="k">다음 판 제안 <span class="badge" data-badge="next_try"></span></p>
+        <p class="slot" data-slot="next_try" style="font-size: 16px; font-weight: 700"></p>
+      </section>
+      <section class="card">
+        <div class="row-end"><p class="k">성과 · 누적 <span id="runCount" class="badge"></span></p>
+          <span><button class="pill on" type="button" id="saveRun">이 회차 마치고 다음 회차</button> <button class="pill" type="button" id="clearRuns">기록 지우기</button></span></div>
+        <ul class="facts" id="cum"></ul>
+        <ul class="dist" id="dist"></ul>
+        <table id="runs" style="margin-top: 12px"></table>
+      </section>
+    </div>
+  </article>
+
+  <footer>STEEL MIND · 팀 철든신입. 가상의 교육·체험 시뮬레이션이며, 수치는 게임 밸런스용으로 실제 제철소 기준이 아닙니다.</footer>
+</div>
+
+<script src="scenario.js"></script>
+<script>
+// ── 시나리오와 규칙(결말 로드맵 729.html과 같은 계산) ─────────────────
+// 사건 풀(POOL)에서 회차마다 RUN_SIZE개를 뽑는다. 앞 회차에 나온 사건은 풀을 한 바퀴 다 돌 때까지 다시 뽑지 않는다.
+const SC = window.SCENARIO, POOL = SC.events, RUN_SIZE = Math.min(6, SC.events.length);
+let EVENTS = [];
+const METRICS = [['production', '생산'], ['quality', '품질'], ['safety', '안전'], ['cost', '비용']];
+const AGENTS = [['production', '생산', 'var(--prod)'], ['quality', '품질', 'var(--qual)'], ['equipment', '설비', 'var(--equip)'], ['safety', '안전', 'var(--safe)']];
+const TYPES = {
+  balance: ['조율자', '상황마다 최선을 골라 네 부서의 목표를 함께 지켰습니다.'],
+  production: ['납기 수호자', '일정과 생산량을 가장 먼저 지켰습니다.'],
+  safety: ['원칙주의자', '위험이 보이면 먼저 멈췄습니다.'],
+  quality: ['장인', '제품 품질을 끝까지 챙겼습니다.'],
+  equipment: ['정비반장', '설비가 상하지 않게 먼저 손봤습니다.'],
+};
+const TIE = ['safety', 'quality', 'equipment', 'production'];
+const LIMIT = { headline: 60, turning_points: 120, agent: 80, next_try: 80 };
+const STORE = 'steelmind.report.runs';
+
+const lossOf = (l) => METRICS.reduce((t, [k]) => t + (l[k] || 0), 0);
+const tone = (loss) => 't-' + (loss === 0 ? 'ok' : loss <= 15 ? 'mid' : 'bad');
+const bestIdx = (ev) => ev.choices.findIndex((c) => c.best);
+const $ = (id) => document.getElementById(id);
+const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+// 사건 6개는 서로 독립 변수다. 앞 사건의 선택이 뒤 사건에 손실을 더하지 않는다(시나리오의 carry는 쓰지 않는다).
+// 그래서 한 판의 결과는 선택 DB(사건 × 선택지 = 18개 기록)에서 고른 6개 기록을 더한 값이다.
+function evaluate(picks) {
+  const total = { production: 0, quality: 0, safety: 0, cost: 0 };
+  const rows = EVENTS.map((ev, i) => {
+    const choice = ev.choices[picks[i]];
+    for (const [k] of METRICS) total[k] += choice.loss[k] || 0;
+    return { ev, choice, best: ev.choices[bestIdx(ev)], loss: lossOf(choice.loss) };
+  });
+  const drop = Math.min(100, lossOf(total));
+  return { rows, total, drop, efficiency: 100 - drop, accident: rows.some((r) => r.choice.flag === 'accident') };
+}
+
+// 729가지 경로를 한 번 계산해 순위와 레이더 기준(지표별 최대 손실)을 만든다.
+// 이번 회차 사건으로 가능한 모든 경로(선택지 3개면 3의 6승 = 729)를 계산해 순위와 레이더 기준을 만든다.
+let ALL = [], MAX_LOSS = {};
+function setEvents(list) {
+  EVENTS = list;
+  const out = [], p = new Array(EVENTS.length).fill(0);
+  (function walk(i) { if (i === EVENTS.length) { out.push(evaluate(p)); return; } for (let c = 0; c < EVENTS[i].choices.length; c++) { p[i] = c; walk(i + 1); } })(0);
+  ALL = out;
+  MAX_LOSS = Object.fromEntries(METRICS.map(([k]) => [k, Math.max(...ALL.map((r) => r.total[k])) || 1]));
+}
+const evKey = () => EVENTS.map((e) => POOL.indexOf(e).toString(36)).join('');
+
+function analyze(picks) {
+  const r = evaluate(picks);
+  const follow = {}, present = {};
+  for (const [a] of AGENTS) { follow[a] = 0; present[a] = 0; }
+  r.rows.forEach((row) => row.ev.agents.forEach((ag) => { present[ag.agent]++; if (ag.rec === row.choice.id) follow[ag.agent]++; }));
+  const bestCount = r.rows.filter((x) => x.choice.best).length;
+  let typeKey = 'balance';
+  if (bestCount < 5) typeKey = TIE.reduce((a, b) => (follow[b] / present[b] > follow[a] / present[a] ? b : a));
+  const rank = 1 + ALL.filter((x) => x.efficiency > r.efficiency).length;
+  const worst = r.rows.filter((x) => x.loss > 0).sort((a, b) => b.loss - a.loss).slice(0, 2);
+  return { ...r, picks: picks.slice(), follow, present, bestCount, typeKey, rank, topPct: Math.max(1, Math.ceil((rank / ALL.length) * 100)), worst,
+    pathId: `${SC.id.slice(0, 2).toUpperCase()}-${evKey()}-${picks.join('')}` };
+}
+
+// ── 기본 문장(규칙). AI가 실패한 칸은 이 문장이 남는다 ──────────────────
+const MOOD = (f, p) => (p === 0 ? 'mid' : f / p >= 0.5 ? 'good' : f / p >= 0.25 ? 'mid' : 'bad');
+const AGENT_LINES = {
+  production: { good: '일정을 지켜 주셔서 오늘 출하는 문제없겠습니다.', mid: '몇 번 멈춘 탓에 출하가 조금 밀렸습니다.', bad: '멈출 때마다 출하가 밀렸습니다. 다음엔 일정도 봐 주세요.' },
+  quality: { good: '표면과 치수 모두 기준 안에 들어왔어요.', mid: '대부분 괜찮지만 몇 코일은 다시 봐야 해요.', bad: '고객이 받지 않을 코일이 꽤 나왔어요.' },
+  equipment: { good: '설비 무리 없이 잘 넘겼습니다.', mid: '한두 군데 정비가 필요해 보입니다.', bad: '롤과 가이드가 꽤 상했습니다. 정비 일정을 잡아야 해요.' },
+  safety: { good: '사람이 다칠 뻔한 순간을 잘 막아 주셨습니다.', mid: '위험 신호를 한두 번 넘기셨습니다. 다음엔 먼저 멈춰 주세요.', bad: '위험 신호를 여러 번 넘기셨습니다. 이대로면 사고가 납니다.' },
+};
+function fallback(a) {
+  const [tn] = TYPES[a.typeKey];
+  const headline = a.drop === 0 ? `${tn}: 모든 사건에서 최선을 골라 효율을 지켰습니다.`
+    : a.accident ? `${tn}: 성과를 냈지만 현장 사고를 막지 못했습니다.`
+    : `${tn}: 가장 큰 손실은 「${a.worst[0].ev.title}」에서 나왔습니다.`;
+  const turning = a.worst.length ? a.worst.map((w) => `「${w.ev.title}」에서 '${w.choice.label}'을 골라 효율 ${w.loss}%를 잃었습니다. 최선은 '${w.best.label}'였습니다.`)
+    : ['여섯 사건 모두에서 최선의 행동을 골랐습니다.'];
+  const agent_comments = {};
+  for (const [k] of AGENTS) agent_comments[k] = k === 'safety' && a.accident ? '현장에서 사고가 났습니다. 이건 다른 성과로 덮을 수 없습니다.' : AGENT_LINES[k][MOOD(a.follow[k], a.present[k])];
+  const next_try = a.worst.length ? `「${a.worst[0].ev.title}」에서 '${a.worst[0].best.label}' 쪽을 골라 보세요.` : '같은 판을 다른 성향으로 플레이해 결말을 비교해 보세요.';
+  return { headline, turning_points: turning, agent_comments, next_try };
+}
+
+// ── 선택 뒤 공장장 회의(규칙) ────────────────────────────────────────
+// 그 사건에 의견을 낸 공장장마다 한 줄. 내 추천을 골랐으면 찬성(그 공장장의 why), 아니면 공장장별 불만 틀.
+// 시나리오 선택지에 직접 쓴 대사(reactions: agent·stance·line)가 있으면 그 대사를 먼저 쓴다.
+const GRIPE = {
+  production: (pick, rec) => `'${pick}' 쪽이면 출하가 밀립니다. 저는 '${rec}' 쪽을 말씀드렸는데요.`,
+  quality: (pick, rec) => `'${pick}' 쪽으로는 고객이 받을 제품이 안 나와요. '${rec}' 쪽이 맞았어요.`,
+  equipment: (pick, rec) => `'${pick}' 쪽이면 설비가 버티기 어렵습니다. '${rec}' 쪽으로 갔어야 해요.`,
+  safety: (pick, rec) => `'${pick}' 쪽은 현장이 위험합니다. 책임자님, 다음엔 '${rec}' 쪽부터 해 주세요.`,
+};
+function meeting(ev, choice) {
+  const order = AGENTS.map(([k]) => k);
+  return ev.agents.slice().sort((x, y) => order.indexOf(x.agent) - order.indexOf(y.agent)).map((ag) => {
+    const own = (choice.reactions || []).find((r) => r.agent === ag.agent);
+    if (own) return { agent: ag.agent, stance: own.stance, line: own.line, src: '시나리오 대사' };
+    if (ag.rec === choice.id) return { agent: ag.agent, stance: '찬성', line: `좋습니다, 책임자님. ${ag.why}`, src: '규칙' };
+    const rec = ev.choices.find((c) => c.id === ag.rec);
+    return { agent: ag.agent, stance: '불만', line: GRIPE[ag.agent](choice.label, rec ? rec.label : '다른 선택'), src: '규칙' };
+  });
+}
+const STANCE = { 찬성: 'good', 경고: 'mid', 불만: 'bad' };
+const agentOf = (k) => AGENTS.find(([x]) => x === k);
+
+// AI 문장 칸 검사: 비었거나, 너무 길거나, 숫자가 있으면 그 칸은 버린다.
+const okText = (t, max) => typeof t === 'string' && t.trim().length >= 4 && t.length <= max && !/[0-9０-９]/.test(t);
+function merge(fb, ai) {
+  const out = { ...fb, agent_comments: { ...fb.agent_comments } }, src = {};
+  src.headline = okText(ai.headline, LIMIT.headline) ? (out.headline = ai.headline.trim(), 'ai') : 'fb';
+  const tp = (ai.turning_points || []).filter((t) => okText(t, LIMIT.turning_points));
+  src.turning_points = tp.length ? (out.turning_points = tp, 'ai') : 'fb';
+  let agentOk = 0;
+  for (const [k] of AGENTS) if (okText((ai.agent_comments || {})[k], LIMIT.agent)) { out.agent_comments[k] = ai.agent_comments[k].trim(); agentOk++; }
+  src.agent_comments = agentOk === AGENTS.length ? 'ai' : agentOk ? 'part' : 'fb';
+  src.next_try = okText(ai.next_try, LIMIT.next_try) ? (out.next_try = ai.next_try.trim(), 'ai') : 'fb';
+  return { text: out, src };
+}
+
+// LLM에 보내는 판 기록. 숫자를 쓰지 않게 손실은 말로 바꿔 보낸다.
+function factsOf(a) {
+  const lvl = (n) => (n === 0 ? '손실 없음' : n <= 5 ? '작은 손실' : n <= 10 ? '큰 손실' : '매우 큰 손실');
+  const fl = (f, p) => (p === 0 ? '참여 안 함' : f / p >= 0.5 ? '자주 따름' : f > 0 ? '가끔 따름' : '따르지 않음');
+  return {
+    scenario_id: SC.id, scenario_title: SC.title, path_id: a.pathId, type: TYPES[a.typeKey][0], type_desc: TYPES[a.typeKey][1], accident: a.accident,
+    events: a.rows.map((r) => ({ title: r.ev.title, picked: r.choice.label, best: r.best.label, was_best: !!r.choice.best, outcome: r.choice.outcome, loss: lvl(r.loss) })),
+    worst_events: a.worst.map((w) => w.ev.title),
+    agents: Object.fromEntries(AGENTS.map(([k, n]) => [k, { name: n, followed: fl(a.follow[k], a.present[k]) }])),
+  };
+}
+
+// ── 그리기 ───────────────────────────────────────────────────────────
+function drawRadar(a) {
+  const axes = [...METRICS.map(([k, n]) => [n, 100 * (1 - a.total[k] / MAX_LOSS[k])]), ['최선 선택', (100 * a.bestCount) / EVENTS.length]];
+  const cx = 115, cy = 108, R = 76, N = axes.length;
+  const pt = (i, v) => { const t = -Math.PI / 2 + (2 * Math.PI * i) / N; return [cx + Math.cos(t) * R * v / 100, cy + Math.sin(t) * R * v / 100]; };
+  let s = '';
+  for (const lv of [25, 50, 75, 100]) s += `<polygon points="${axes.map((_, i) => pt(i, lv).join(',')).join(' ')}" fill="none" stroke="rgba(255,255,255,.1)"/>`;
+  axes.forEach(([n], i) => { const [x, y] = pt(i, 100), [lx, ly] = pt(i, 122); s += `<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="rgba(255,255,255,.1)"/><text x="${lx}" y="${ly + 4}" text-anchor="middle">${n}</text>`; });
+  s += `<polygon points="${axes.map(([, v], i) => pt(i, Math.max(4, v)).join(',')).join(' ')}" fill="rgba(108,195,176,.28)" stroke="var(--accent)" stroke-width="2"/>`;
+  $('radar').innerHTML = s;
+}
+
+function drawRules(a) {
+  const [tn, td] = TYPES[a.typeKey];
+  $('typeName').textContent = tn; $('typeDesc').textContent = td; $('accident').hidden = !a.accident;
+  $('pathId').textContent = a.pathId;
+  const t = tone(a.drop);
+  $('eff').innerHTML = `<span class="${t}">${a.efficiency}%</span>`;
+  $('effBar').className = 'bar ' + t; $('effBar').firstElementChild.style.width = a.efficiency + '%';
+  $('rank').textContent = `${ALL.length}가지 경로 중 ${a.rank}위 · 상위 ${a.topPct}% · 최선의 선택 ${a.bestCount}/${EVENTS.length}`;
+  $('facts').innerHTML = METRICS.map(([k, n]) => `<li>${n} 손실<b class="${a.total[k] ? tone(a.total[k]) : ''}">${a.total[k] ? '−' + a.total[k] : '0'}</b></li>`).join('');
+  drawRadar(a);
+  $('log').innerHTML = a.rows.map((r) => `<tr><td>${esc(r.ev.title)}</td><td>${esc(r.choice.label)}</td><td>${r.choice.best ? '<span class="t-ok">같음</span>' : esc(r.best.label)}</td><td class="n ${tone(r.loss)}">${r.loss ? '−' + r.loss + '%' : '0'}</td></tr>`).join('');
+}
+
+function drawText(a, text, src) {
+  const set = (key, html) => { const el = document.querySelector(`[data-slot="${key}"]`); el.innerHTML = html; el.classList.remove('swap'); void el.offsetWidth; el.classList.add('swap'); };
+  set('headline', esc(text.headline));
+  set('turning_points', text.turning_points.map((t) => `<li>${esc(t)}</li>`).join(''));
+  set('next_try', esc(text.next_try));
+  $('agents').innerHTML = AGENTS.map(([k, n, c]) => { const m = MOOD(a.follow[k], a.present[k]);
+    return `<div class="ag" style="--c:${c}"><p class="nm">${n} 공장장 <span>추천을 따른 사건 ${a.follow[k]}/${a.present[k]}</span></p><p class="mood ${m}">${{ good: '만족', mid: '보통', bad: '불만' }[m]}</p><p class="slot swap">${esc(text.agent_comments[k])}</p></div>`; }).join('');
+  for (const [key, s] of Object.entries(src)) {
+    const b = document.querySelector(`[data-badge="${key}"]`);
+    b.className = 'badge' + (s === 'ai' || s === 'part' ? ' ai' : s === 'wait' ? ' wait' : '');
+    b.textContent = { ai: 'AI 작성', part: '일부 AI 작성', wait: '기본 문장 · AI 작성 중', fb: '기본 문장', off: '기본 문장' }[s];
+  }
+}
+
+// 사건별 공장장 회의: 마지막으로 고친 사건의 회의를 보여 준다. 위 번호로 다른 사건을 볼 수 있다.
+let meetIdx = 0;
+function drawMeeting(a) {
+  const r = a.rows[meetIdx];
+  $('meetTabs').innerHTML = a.rows.map((x, i) => `<button class="pill${i === meetIdx ? ' on' : ''}" type="button" data-meet="${i}" title="${esc(x.ev.title)}">${i + 1}</button>`).join(' ');
+  $('meetHead').innerHTML = `${meetIdx + 1}. ${esc(r.ev.title)} → <b>${esc(r.choice.label)}</b>${r.choice.best ? ' <span class="t-ok">최선</span>' : ''}`;
+  $('meeting').innerHTML = meeting(r.ev, r.choice).map((m) => { const [, n, c] = agentOf(m.agent);
+    return `<div class="ag" style="--c:${c}"><p class="nm">${n} 공장장 <span>${m.src}</span></p><p class="mood ${STANCE[m.stance] || 'mid'}">${esc(m.stance)}</p><p>${esc(m.line)}</p></div>`; }).join('');
+}
+
+// ── 선택 DB: 사건 × 선택지 기록 전체. 지금 고른 선택은 강조한다 ─────────
+function drawDB(a) {
+  const n = POOL.reduce((t, e) => t + e.choices.length, 0), lines = POOL.reduce((t, e) => t + e.choices.length * e.agents.length, 0);
+  $('dbNote').textContent = `사건 ${POOL.length}개 × 선택지 = 기록 ${n}개 · 회의 대사 ${lines}줄. 사건끼리 영향을 주지 않으므로 한 판의 결과는 고른 기록 ${EVENTS.length}개의 합입니다. 판과 판 사이에는 회차 번호만 이어집니다.`;
+  const picked = new Map(a.rows.map((r) => [r.ev.id, r.choice.id]));
+  $('dbBody').innerHTML = POOL.map((ev) => ev.choices.map((c, ci) => {
+    const recs = ev.agents.filter((g) => g.rec === c.id).map((g) => agentOf(g.agent)[1]).join('·') || '-';
+    const m = meeting(ev, c), agree = m.filter((x) => x.stance === '찬성').length;
+    const on = picked.get(ev.id) === c.id;
+    return `<tr class="${on ? 'picked' : ''}">${ci === 0 ? `<td rowspan="${ev.choices.length}">${POOL.indexOf(ev) + 1}. ${esc(ev.title)}</td>` : ''}
+      <td>${esc(c.label)}${c.best ? ' <span class="t-ok">최선</span>' : ''}${on ? ' <span class="badge ai">선택함</span>' : ''}</td><td>${recs}</td>
+      <td style="color:var(--muted)">${esc(c.outcome)}</td>
+      ${METRICS.map(([k]) => `<td class="n">${c.loss[k] ? '−' + c.loss[k] : '0'}</td>`).join('')}<td class="n ${tone(lossOf(c.loss))}">${lossOf(c.loss) ? '−' + lossOf(c.loss) : '0'}</td>
+      <td><details><summary>찬성 ${agree} · 불만 ${m.length - agree}</summary>${m.map((x) => `<p><b style="color:${agentOf(x.agent)[2]}">${agentOf(x.agent)[1]}</b> <span class="mood ${STANCE[x.stance] || 'mid'}">${esc(x.stance)}</span> ${esc(x.line)}</p>`).join('')}</details></td></tr>`;
+  }).join('')).join('');
+}
+
+function setJob(cls, text) { $('job').className = 'job ' + cls; $('jobText').textContent = text; }
+
+// ── 백그라운드 LLM 작업 ──────────────────────────────────────────────
+let llmOn = true, epoch = 0, health = null;
+// 어디서 열든(파일, VS Code Live Server 등) 보고서 서버(8791)로 작업을 보낸다.
+const API = location.port === '8791' ? '' : 'http://localhost:8791/';
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+async function runLLM(a, fb) {
+  const my = ++epoch;
+  const keys = ['headline', 'turning_points', 'agent_comments', 'next_try'];
+  if (!llmOn) { drawText(a, fb, Object.fromEntries(keys.map((k) => [k, 'off']))); return setJob('', 'LLM 사용이 꺼져 있어 기본 문장으로 보여 줍니다.'); }
+  drawText(a, fb, Object.fromEntries(keys.map((k) => [k, 'wait'])));
+  const t0 = performance.now();
+  try {
+    const res = await fetch(API + 'api/report/jobs', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(factsOf(a)) });
+    let job = await res.json();
+    const jobId = job.job_id;
+    while (job.status === 'running') {
+      if (my !== epoch) return;
+      const sec = (performance.now() - t0) / 1000;
+      if (sec > 90) throw new Error('90초 안에 끝나지 않음');
+      setJob('run', `백그라운드에서 AI가 문장을 쓰는 중 · ${sec.toFixed(0)}초 (${health || 'LLM'})`);
+      await sleep(800);
+      job = await (await fetch(API + 'api/report/jobs/' + jobId)).json();
+    }
+    if (my !== epoch) return;
+    if (job.status !== 'done') throw new Error(job.error || job.status);
+    const { text, src } = merge(fb, job.report);
+    drawText(a, text, src);
+    const kept = Object.values(src).filter((s) => s === 'fb').length;
+    setJob('ok', `AI 문장 도착 · ${job.provider} · ${job.seconds}초${kept ? ` · 검사를 통과하지 못한 ${kept}칸은 기본 문장 유지` : ''}`);
+  } catch (e) {
+    if (my !== epoch) return;
+    drawText(a, fb, Object.fromEntries(keys.map((k) => [k, 'fb'])));
+    setJob('fail', `AI 문장을 받지 못해 기본 문장으로 보여 줍니다 (${e.message}). 보고서 서버가 꺼져 있다면 python llm/result-report/server.py 를 실행하세요.`);
+  }
+}
+
+// ── 회차와 성과(누적) ────────────────────────────────────────────────
+const USED = 'steelmind.report.used', CUR = 'steelmind.report.current';
+const load = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch (e) { return d; } };
+const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* 저장 불가: 이번 화면에서만 유지 */ } };
+const loadRuns = () => load(STORE, []);
+const shuffle = (a) => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+
+/** 아직 안 나온 사건에서 먼저 뽑고, 모자라면 이미 나온 사건으로 채운다. 공정 순서(풀 순서)대로 정렬한다. */
+function drawRun() {
+  const used = load(USED, []).filter((id) => POOL.some((e) => e.id === id));
+  const fresh = POOL.filter((e) => !used.includes(e.id));
+  const pick = fresh.length >= RUN_SIZE ? shuffle(fresh).slice(0, RUN_SIZE)
+    : [...fresh, ...shuffle(POOL.filter((e) => used.includes(e.id))).slice(0, RUN_SIZE - fresh.length)];
+  return pick.sort((x, y) => POOL.indexOf(x) - POOL.indexOf(y));
+}
+function finishRun() {
+  const runs = loadRuns();
+  runs.push({ no: runs.length + 1, type: current.typeKey, path: current.pathId, eff: current.efficiency, best: current.bestCount, n: EVENTS.length,
+    events: EVENTS.map((e) => e.id), titles: EVENTS.map((e) => e.title), accident: current.accident });
+  save(STORE, runs.slice(-100));
+  let used = [...new Set([...load(USED, []), ...EVENTS.map((e) => e.id)])];
+  if (used.length >= POOL.length) used = []; // 풀을 한 바퀴 다 돌면 새 순환
+  save(USED, used);
+  startRun(drawRun());
+}
+function drawCum(cur) {
+  const runs = loadRuns(), n = runs.length;
+  const seen = new Set(runs.flatMap((r) => r.events));
+  const avg = n ? Math.round(runs.reduce((t, r) => t + r.eff, 0) / n) : 0;
+  const bestRate = n ? Math.round((100 * runs.reduce((t, r) => t + r.best, 0)) / runs.reduce((t, r) => t + r.n, 0)) : 0;
+  $('runCount').textContent = `${n}회차 완료 · 지금 ${n + 1}회차`;
+  $('cum').innerHTML = [['평균 효율', n ? avg + '%' : '-'], ['최선 선택률', n ? bestRate + '%' : '-'], ['겪은 사건', `${seen.size}/${POOL.length}`], ['안전사고', `${runs.filter((r) => r.accident).length}회`]]
+    .map(([k, v]) => `<li>${k}<b>${v}</b></li>`).join('');
+  $('dist').innerHTML = Object.entries(TYPES).map(([k, [name]]) => { const c = runs.filter((r) => r.type === k).length, pct = n ? Math.round((c / n) * 100) : 0;
+    return `<li class="${k === cur ? 'me' : ''}"><span>${name}</span><span class="track"><i style="width:${pct}%"></i></span><span class="v">${pct}%</span></li>`; }).join('');
+  const note = POOL.length <= RUN_SIZE ? ` 지금 사건 풀이 ${POOL.length}개뿐이라 회차마다 같은 사건이 나옵니다. 풀이 늘면 회차마다 다른 사건이 나옵니다.` : '';
+  $('runs').innerHTML = n ? '<tr><th>회차</th><th>성향</th><th>사건</th><th class="n">효율</th></tr>' + runs.slice(-6).reverse().map((r) =>
+    `<tr><td>${r.no}</td><td>${TYPES[r.type][0]}</td><td style="color:var(--muted)">${esc(r.titles.join(' · '))}</td><td class="n ${tone(100 - r.eff)}">${r.eff}%</td></tr>`).join('')
+    : `<tr><td style="color:var(--dim)">아직 마친 회차가 없습니다. "이 회차 마치고 다음 회차"를 누르면 성과가 쌓이고 새 사건 ${RUN_SIZE}개가 나옵니다.${note}</td></tr>`;
+}
+
+// ── 경로 고르기 ──────────────────────────────────────────────────────
+let picks = [], current;
+const follow = (name) => EVENTS.map((ev) => { const ag = ev.agents.find((x) => x.agent === name); return ag ? ev.choices.findIndex((c) => c.id === ag.rec) : bestIdx(ev); });
+const PRESETS = [['최선만', () => EVENTS.map(bestIdx)], ['생산 의견만', () => follow('production')], ['품질 의견만', () => follow('quality')], ['설비 의견만', () => follow('equipment')], ['안전 의견만', () => follow('safety')], ['무작위', () => EVENTS.map((ev) => Math.floor(Math.random() * ev.choices.length))]];
+$('presets').innerHTML = PRESETS.map(([n], i) => `<button class="pill" type="button" data-preset="${i}">${n}</button>`).join('');
+
+function startRun(list, initial) {
+  setEvents(list);
+  save(CUR, list.map((e) => e.id));
+  picks = initial && initial.length === list.length ? initial : EVENTS.map(bestIdx);
+  meetIdx = 0;
+  $('rows').innerHTML = EVENTS.map((ev, i) => `<div class="prow"><span title="${esc(ev.title)}">${i + 1}. ${esc(ev.title)}</span>${ev.choices.map((c, k) => `<button class="opt" type="button" data-ev="${i}" data-c="${k}">${esc(c.label)}</button>`).join('')}</div>`).join('');
+  render();
+}
+
+function render() {
+  document.querySelectorAll('.opt').forEach((b) => b.classList.toggle('on', picks[+b.dataset.ev] === +b.dataset.c));
+  current = analyze(picks);
+  history.replaceState(null, '', `#e=${evKey()}&p=${picks.join('')}`);
+  drawRules(current);
+  drawMeeting(current);
+  drawDB(current);
+  drawCum(current.typeKey);
+  runLLM(current, fallback(current));
+}
+
+document.addEventListener('click', (e) => {
+  const o = e.target.closest('.opt'); if (o) { picks[+o.dataset.ev] = +o.dataset.c; meetIdx = +o.dataset.ev; return render(); }
+  const mt = e.target.closest('[data-meet]'); if (mt) { meetIdx = +mt.dataset.meet; return drawMeeting(current); }
+  const tb = e.target.closest('[data-tab]'); if (tb) {
+    document.querySelectorAll('[data-tab]').forEach((b) => { const on = b === tb; b.classList.toggle('on', on); b.setAttribute('aria-selected', on); });
+    $('report').hidden = tb.dataset.tab !== 'report'; $('db').hidden = tb.dataset.tab !== 'db'; return;
+  }
+  const p = e.target.closest('[data-preset]'); if (p) { picks = PRESETS[+p.dataset.preset][1](); return render(); }
+  if (e.target.id === 'llmToggle') { llmOn = !llmOn; e.target.classList.toggle('on', llmOn); e.target.setAttribute('aria-pressed', llmOn); return render(); }
+  if (e.target.id === 'saveRun') return finishRun();
+  if (e.target.id === 'clearRuns') { try { [STORE, USED, CUR].forEach((k) => localStorage.removeItem(k)); } catch (err) { /* 무시 */ } return startRun(drawRun()); }
+  if (e.target.id === 'copyId') { navigator.clipboard?.writeText(location.href).then(() => { e.target.textContent = '복사됨'; setTimeout(() => (e.target.textContent = '링크 복사'), 1200); }); }
+});
+
+// 링크(#e=사건&p=선택) → 저장된 진행 중 회차 → 새로 뽑기 순서로 시작한다.
+fetch(API + 'api/health').then((r) => r.json()).then((h) => { health = h.provider; }).catch(() => {});
+{
+  const hm = location.hash.match(/e=([0-9a-z]+)&p=([0-9]+)/);
+  const fromHash = hm && hm[1].split('').map((c) => POOL[parseInt(c, 36)]);
+  const stored = load(CUR, []).map((id) => POOL.find((e) => e.id === id));
+  if (fromHash && fromHash.every(Boolean)) startRun(fromHash, hm[2].split('').map(Number));
+  else if (stored.length && stored.every(Boolean)) startRun(stored);
+  else startRun(drawRun());
+}
+</script>
+</body>
+</html>
