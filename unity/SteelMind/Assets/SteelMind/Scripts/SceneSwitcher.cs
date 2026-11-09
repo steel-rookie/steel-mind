@@ -12,8 +12,7 @@ namespace SteelMind
         public void Load(int i)
         {
             if (i < 0 || i >= Scenes.Length || SceneManager.GetActiveScene().name == Scenes[i]) return;
-            Travel.from = SceneManager.GetActiveScene().name;
-            SceneManager.LoadScene(Scenes[i]);
+            SceneFade.Go(Scenes[i], 0.4f, 0.6f);
         }
 
         void Update()
