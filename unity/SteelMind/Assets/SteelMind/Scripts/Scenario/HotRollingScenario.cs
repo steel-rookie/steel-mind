@@ -11,7 +11,7 @@ namespace SteelMind.Scenario
 {
     /// <summary>
     /// 열간압연 테스트 시나리오. Rolling 장면이 열리면 스스로 생긴다(장면 파일은 건드리지 않음).
-    /// 사건 발생 → 설비 위 표시와 화면 가장자리 화살표로 길 안내 → 설비에 다가가면 가운데 회의 채팅방(아래 내 답장에서 A·B·C)
+    /// 사건 발생 → 설비 위 표시와 화면 가장자리 화살표로 길 안내 → 설비에 다가가면 미연시 회의(캐릭터가 한 명씩 말하고 가운데 선택지 A·B·C)
     /// → 결정 → Agent 반응(표정·감정 색) → 다음 사건 → 결과 화면. 끄려면 Enabled = false.
     /// </summary>
     public class HotRollingScenario : MonoBehaviour
@@ -154,33 +154,26 @@ namespace SteelMind.Scenario
             HideGuide();
         }
 
-        // 회의 채팅방: 한 명씩 입력 중 → 한 글자씩 → 다음 사람. 다 들으면 아래 내 답장에서 고른다.
+        // 미연시 회의: 경보 → Agent가 한 명씩 나와 말함(클릭·Space로 넘김) → 선택 → 내 말 → 반응
         IEnumerator EventChat(int i)
         {
             current = i; chatting = true; skip = false;
             var ev = def.events[i];
             int n = def.events.Length;
             SetFrozen(true);
-            SetStatus($"⚠ {ev.title} · 회의 중");
             OpenChat(ev, i, n);
-            int total = ev.agents.Length + 1, heard = 0;
-            yield return Wait(0.5f);
-            foreach (var a in ev.agents)
-            {
-                yield return Say(a.agent, null, a.say, a.why, false);
-                SetProgress(++heard, total);
-            }
-            yield return Say("chief", null, ev.chief, null, false);
-            SetProgress(++heard, total);
+            var alarm = $"⚠ {ev.title}\n{ev.desc}";
+            yield return Say(null, null, alarm, EfficiencyCalc.CarryApplies(ev, flags) ? ev.carry.note : null, false);
+            foreach (var a in ev.agents) yield return Say(a.agent, null, a.say, a.why, false);
+            yield return Say("chief", null, ev.chief + "\n어떻게 하시겠습니까?", null, false);
             UnlockChoices();
             deciding = true;
             while (deciding) yield return null;
 
             var c = ev.choices[picks[i]];
-            yield return Say("player", null, c.label, c.detail, true);
+            yield return Say("player", null, $"{c.label}.", c.detail, true);
             if (c.reactions != null)
                 foreach (var r in c.reactions) yield return Say(r.agent, r.stance, r.line, null, false);
-            yield return WaitNext(i + 1 < n ? "다음 사건으로" : "결과 보기");
             CloseChat();
             chatting = false;
             SetFrozen(false);
@@ -253,19 +246,6 @@ namespace SteelMind.Scenario
         {
             float t = 0;
             while (t < sec && !skip) { t += Time.deltaTime; yield return null; }
-        }
-
-        IEnumerator WaitNext(string label)
-        {
-            if (helpText) helpText.text = "Space로 넘기기";
-            ClearOptions();
-            var b = ReplyBubble("→", label, null);
-            Relayout(); ScrollToBottom();
-            bool clicked = false;
-            b.onClick.AddListener(() => clicked = true);
-            skip = false;
-            while (!clicked && !skip) yield return null;
-            skip = false;
         }
 
         void SetFrozen(bool frozen)
@@ -514,225 +494,223 @@ namespace SteelMind.Scenario
             var b = rt.gameObject.AddComponent<Button>(); b.targetGraphic = img;
             var t = AddText(rt, label, 18, fg, FontStyle.Bold, TextAnchor.MiddleCenter);
             var tr = t.rectTransform; tr.anchorMin = Vector2.zero; tr.anchorMax = Vector2.one; tr.offsetMin = tr.offsetMax = Vector2.zero;
-            Relayout();
             return b;
         }
 
-        // ── 회의 채팅방 (HTML 시안 H 그대로: 가운데 채팅방, 아래 '내 답장'에 A·B·C) ──
-        const float RoomW = 680, RoomH = 600, BubbleMax = 500;
+        // ── 미연시(비주얼 노벨) 회의 ──────────────────────────
+        RectTransform vn, vnChoices, vnLog, vnPlate, vnNext;
+        Image actorL, actorR, vnBadgeBg;
+        string whoL, whoR;
+        int nextSide;
+        Text vnName, vnPersona, vnBadge, vnLine, vnWhy, vnLogText;
+        bool fastAll;
+        readonly List<string> vnHistory = new List<string>();
 
         void OpenChat(ScenarioEvent ev, int index, int n)
         {
             CloseChat();
-            chat = NewRect("Chat", canvas.transform);
-            chat.anchorMin = chat.anchorMax = chat.pivot = new Vector2(0.5f, 0.5f);
-            chat.sizeDelta = new Vector2(RoomW, RoomH);
-            Round(chat.gameObject, Hex("#1F1F1F", 0.98f), 1.0f);
-            var sh = chat.gameObject.AddComponent<Shadow>(); sh.effectColor = new Color(0, 0, 0, 0.5f); sh.effectDistance = new Vector2(0, -10);
-            VLayout(chat.gameObject, 0, 0, 0);
+            fastAll = false; whoL = whoR = null; nextSide = 0;
+            vn = NewRect("VisualNovel", canvas.transform);
+            vn.anchorMin = Vector2.zero; vn.anchorMax = Vector2.one; vn.offsetMin = vn.offsetMax = Vector2.zero;
+            // 아래쪽을 살짝 어둡게
+            var shade = NewRect("Shade", vn); shade.anchorMin = Vector2.zero; shade.anchorMax = new Vector2(1, 0.55f); shade.offsetMin = shade.offsetMax = Vector2.zero;
+            shade.gameObject.AddComponent<Image>().color = new Color(0, 0, 0, 0.28f);
 
-            // 머리
-            var head = NewRect("Header", chat);
-            Round(head.gameObject, Hex("#262626"), 1.0f);
-            var hh = HLayout(head.gameObject, 10, TextAnchor.MiddleLeft); hh.padding = new RectOffset(18, 18, 12, 12);
-            LE(head.gameObject).flexibleHeight = 0;
-            var hav = NewRect("Avatar", head); var hai = hav.gameObject.AddComponent<Image>(); hai.sprite = LoadSprite("Portraits/chief"); hai.preserveAspect = true; LE(hav.gameObject, 30, 40);
-            var ht = AddText(head, $"<b>열연 2라인 긴급 회의 ({ev.agents.Length + 2})</b>", 17, Body, FontStyle.Normal, TextAnchor.MiddleLeft);
-            LE(ht.gameObject, -1, -1, 1);
-            var pill = NewRect("Pill", head);
-            Round(pill.gameObject, Hex("#5A1E1E", 0.9f), 1.3f);
+            // 위: 경보 알약
+            var pill = NewRect("Pill", vn); pill.anchorMin = pill.anchorMax = pill.pivot = new Vector2(0.5f, 1); pill.anchoredPosition = new Vector2(0, -16);
+            Round(pill.gameObject, Hex("#3C1616", 0.92f), 1.3f);
             var po = pill.gameObject.AddComponent<Outline>(); po.effectColor = Red; po.effectDistance = new Vector2(1, -1);
-            var ph = HLayout(pill.gameObject, 0, TextAnchor.MiddleCenter); ph.padding = new RectOffset(12, 12, 4, 4);
-            var pt = AddText(pill, $"<b>⚠ {ev.level} · 사건 {index + 1}/{n}</b>", 13, Hex("#FFD6D6"), FontStyle.Normal, TextAnchor.MiddleCenter);
+            var ph = HLayout(pill.gameObject, 0, TextAnchor.MiddleCenter); ph.padding = new RectOffset(16, 16, 6, 6);
+            var pf = pill.gameObject.AddComponent<ContentSizeFitter>(); pf.horizontalFit = pf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            var pt = AddText(pill, $"<b>⚠ {ev.level} · 사건 {index + 1}/{n} · {ev.title}</b>", 14, Hex("#FFE2E2"), FontStyle.Normal, TextAnchor.MiddleCenter);
             pt.horizontalOverflow = HorizontalWrapMode.Overflow;
-            var l1 = NewRect("Line", chat); l1.gameObject.AddComponent<Image>().color = Hex("#333333"); LE(l1.gameObject, -1, 1).flexibleHeight = 0;
 
-            // 대화
-            var view = NewRect("Viewport", chat);
-            view.gameObject.AddComponent<RectMask2D>();
-            var vle = LE(view.gameObject); vle.flexibleHeight = 1; vle.minHeight = 100;
-            msgs = NewRect("Messages", view);
-            msgs.anchorMin = new Vector2(0, 1); msgs.anchorMax = new Vector2(1, 1); msgs.pivot = new Vector2(0.5f, 1);
-            msgs.offsetMin = msgs.offsetMax = Vector2.zero;
-            VLayout(msgs.gameObject, 20, 16, 14);
-            msgs.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-            scroll = view.gameObject.AddComponent<ScrollRect>();
-            scroll.content = msgs; scroll.viewport = view; scroll.horizontal = false;
-            scroll.movementType = ScrollRect.MovementType.Clamped; scroll.scrollSensitivity = 30;
+            // 캐릭터 자리 (왼쪽·오른쪽)
+            actorL = Actor("ActorL", new Vector2(0.2f, 0)); actorR = Actor("ActorR", new Vector2(0.8f, 0));
 
-            // 경보 카드 (첫 메시지)
-            var sys = NewRect("Alert", msgs);
-            Round(sys.gameObject, Hex("#5A1E1E", 0.9f), 1.3f);
-            var so = sys.gameObject.AddComponent<Outline>(); so.effectColor = Red; so.effectDistance = new Vector2(1, -1);
-            VLayout(sys.gameObject, 16, 10, 2);
-            AddText(sys, $"<b>⚠ {ev.title}</b>", 17, Color.white, FontStyle.Normal, TextAnchor.UpperCenter);
-            AddText(sys, ev.desc, 15, Hex("#FFD6D6"), FontStyle.Normal, TextAnchor.UpperCenter);
-            if (EfficiencyCalc.CarryApplies(ev, flags)) AddText(sys, ev.carry.note, 14, Hex("#FF9A9A"), FontStyle.Normal, TextAnchor.UpperCenter);
+            // 대화창
+            var box = NewRect("Dialog", vn); box.anchorMin = new Vector2(0, 0); box.anchorMax = new Vector2(1, 0); box.pivot = new Vector2(0.5f, 0);
+            box.sizeDelta = new Vector2(0, 186); box.anchoredPosition = Vector2.zero;
+            box.gameObject.AddComponent<Image>().color = Hex("#111216", 0.94f);
+            var top = NewRect("TopLine", box); top.anchorMin = new Vector2(0, 1); top.anchorMax = new Vector2(1, 1); top.pivot = new Vector2(0.5f, 1); top.sizeDelta = new Vector2(0, 2);
+            top.gameObject.AddComponent<Image>().color = new Color(1, 1, 1, 0.18f);
+            var click = box.gameObject.AddComponent<Button>(); click.transition = Selectable.Transition.None; click.onClick.AddListener(() => skip = true);
 
-            // 내 답장
-            var l2 = NewRect("Line", chat); l2.gameObject.AddComponent<Image>().color = Hex("#333333"); LE(l2.gameObject, -1, 1).flexibleHeight = 0;
-            side = NewRect("Reply", chat);
-            Round(side.gameObject, Hex("#262626"), 1.0f);
-            var rv = VLayout(side.gameObject, 20, 12, 8); rv.childForceExpandWidth = false; rv.childAlignment = TextAnchor.UpperRight;
-            var rle = LE(side.gameObject); rle.flexibleHeight = 0; rle.minHeight = 64;
-            var labRow = NewRect("Label", side); LE(labRow.gameObject, -1, -1, 1); VLayout(labRow.gameObject, 0, 0, 0);
-            helpText = AddText(labRow, "의견을 듣는 중…", 13, Dim);
-            opts = NewRect("Options", side); var ov = VLayout(opts.gameObject, 0, 0, 8); ov.childForceExpandWidth = false; ov.childAlignment = TextAnchor.UpperRight;
-            LE(opts.gameObject, -1, -1, 1);
-            Relayout();
+            vnPlate = NewRect("NamePlate", box); vnPlate.anchorMin = vnPlate.anchorMax = new Vector2(0, 1); vnPlate.pivot = new Vector2(0, 0.5f);
+            vnPlate.anchoredPosition = new Vector2(150, 0);
+            Round(vnPlate.gameObject, Hex("#EEF0F3"), 2.4f);
+            var nh = HLayout(vnPlate.gameObject, 10, TextAnchor.MiddleCenter); nh.padding = new RectOffset(28, 28, 6, 6);
+            var nf = vnPlate.gameObject.AddComponent<ContentSizeFitter>(); nf.horizontalFit = nf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            vnName = AddText(vnPlate, "", 19, Hex("#24272D"), FontStyle.Bold, TextAnchor.MiddleCenter); vnName.horizontalOverflow = HorizontalWrapMode.Overflow;
+            vnPersona = AddText(vnPlate, "", 13, Hex("#6B7280"), FontStyle.Bold, TextAnchor.MiddleCenter); vnPersona.horizontalOverflow = HorizontalWrapMode.Overflow;
+            var badge = NewRect("Badge", vnPlate); vnBadgeBg = Round(badge.gameObject, Red, 1.8f);
+            var bh = HLayout(badge.gameObject, 0, TextAnchor.MiddleCenter); bh.padding = new RectOffset(10, 10, 2, 2);
+            vnBadge = AddText(badge, "", 13, Color.white, FontStyle.Bold, TextAnchor.MiddleCenter); vnBadge.horizontalOverflow = HorizontalWrapMode.Overflow;
+
+            var body = NewRect("Body", box); body.anchorMin = new Vector2(0.14f, 0); body.anchorMax = new Vector2(0.86f, 1); body.offsetMin = new Vector2(0, 20); body.offsetMax = new Vector2(0, -38);
+            VLayout(body.gameObject, 0, 0, 6);
+            vnLine = AddText(body, "", 22, Hex("#F3F4F6"));
+            vnWhy = AddText(body, "", 16, Hex("#A6ABB6"));
+            vnNext = NewRect("Next", box); vnNext.anchorMin = vnNext.anchorMax = new Vector2(1, 0); vnNext.anchoredPosition = new Vector2(-80, 30); vnNext.sizeDelta = new Vector2(18, 14);
+            var ni = vnNext.gameObject.AddComponent<Image>(); ni.sprite = triangle; ni.color = Color.white; vnNext.localRotation = Quaternion.Euler(0, 0, 180);
+
+            // 로그·스킵
+            CircleButton("☰\n로그", new Vector2(0, 1), new Vector2(46, -46), ToggleLog);
+            CircleButton("▶▶\n스킵", new Vector2(1, 1), new Vector2(-46, -46), () => { fastAll = true; skip = true; });
+            vnLog = NewRect("Log", vn); vnLog.anchorMin = new Vector2(0.12f, 0.08f); vnLog.anchorMax = new Vector2(0.88f, 0.92f); vnLog.offsetMin = vnLog.offsetMax = Vector2.zero;
+            Round(vnLog.gameObject, Hex("#0E0F13", 0.97f), 1.0f);
+            VLayout(vnLog.gameObject, 26, 22, 10);
+            AddText(vnLog, "<b>대화 기록</b>   <color=#8A8F99>(로그 버튼으로 닫기)</color>", 18, Body);
+            vnLogText = AddText(vnLog, "", 16, Body);
+            vnLog.gameObject.SetActive(false);
+            vnHistory.Clear();
         }
 
-        // 오른쪽 정렬 답장 말풍선 (A·B·C 동그라미 + 이름 + 설명 · 추천)
-        Button ReplyBubble(string key, string label, string detail)
+        Image Actor(string name, Vector2 anchor)
         {
-            var rt = NewRect("Option", opts);
-            var bg = Round(rt.gameObject, Hex("#2F3B39"), 1.0f);
-            var bo = rt.gameObject.AddComponent<Outline>(); bo.effectColor = Hex("#3F5551"); bo.effectDistance = new Vector2(1, -1);
-            var h = HLayout(rt.gameObject, 10, TextAnchor.MiddleLeft); h.padding = new RectOffset(14, 16, 10, 10);
-            var b = rt.gameObject.AddComponent<Button>(); b.targetGraphic = bg;
-            var cs = b.colors; cs.highlightedColor = Hex("#C8EFE6"); cs.pressedColor = Hex("#A8DCD0"); b.colors = cs;
-            var badge = NewRect("Badge", rt); Round(badge.gameObject, Teal, 1.3f); LE(badge.gameObject, 28, 28);
-            var bt = AddText(badge, $"<b>{key}</b>", 15, Hex("#0D2420"), FontStyle.Normal, TextAnchor.MiddleCenter);
-            var btr = bt.rectTransform; btr.anchorMin = Vector2.zero; btr.anchorMax = Vector2.one; btr.offsetMin = btr.offsetMax = Vector2.zero;
-            var col = NewRect("Col", rt); VLayout(col.gameObject, 0, 0, 1);
-            var lt = AddText(col, label, 17, Body); lt.horizontalOverflow = HorizontalWrapMode.Overflow;
-            if (!string.IsNullOrEmpty(detail)) { var dt = AddText(col, detail, 13, Dim); dt.horizontalOverflow = HorizontalWrapMode.Overflow; }
-            return b;
+            var rt = NewRect(name, vn); rt.anchorMin = rt.anchorMax = anchor; rt.pivot = new Vector2(0.5f, 0);
+            rt.anchoredPosition = new Vector2(0, 150); rt.sizeDelta = new Vector2(300, 400);
+            var img = rt.gameObject.AddComponent<Image>(); img.preserveAspect = true; img.color = new Color(1, 1, 1, 0);
+            return img;
         }
 
-        void SetLocked(bool locked) { }
+        void CircleButton(string label, Vector2 anchor, Vector2 pos, UnityEngine.Events.UnityAction onClick)
+        {
+            var rt = NewRect("Circle", vn); rt.anchorMin = rt.anchorMax = anchor; rt.anchoredPosition = pos; rt.sizeDelta = new Vector2(60, 60);
+            var img = Round(rt.gameObject, Hex("#E9EBEF"), 0.6f);
+            var b = rt.gameObject.AddComponent<Button>(); b.targetGraphic = img; b.onClick.AddListener(onClick);
+            var t = AddText(rt, $"<b>{label}</b>", 12, Hex("#2A2D33"), FontStyle.Normal, TextAnchor.MiddleCenter);
+            var tr = t.rectTransform; tr.anchorMin = Vector2.zero; tr.anchorMax = Vector2.one; tr.offsetMin = tr.offsetMax = Vector2.zero;
+        }
 
+        void ToggleLog()
+        {
+            if (!vnLog) return;
+            bool on = !vnLog.gameObject.activeSelf;
+            vnLog.gameObject.SetActive(on);
+            if (on) vnLogText.text = string.Join("\n\n", vnHistory);
+        }
+
+        // 말하는 캐릭터를 왼쪽·오른쪽에 번갈아 세우고, 말하는 쪽만 밝게
+        IEnumerator Place(string who)
+        {
+            if (who == null) { Tint(actorL, whoL != null, false); Tint(actorR, whoR != null, false); yield break; }
+            Image slot = whoL == who ? actorL : whoR == who ? actorR : null;
+            if (!slot)
+            {
+                slot = nextSide++ % 2 == 0 ? actorL : actorR;
+                if (slot == actorL) whoL = who; else whoR = who;
+                slot.sprite = LoadSprite($"Portraits/{who}");
+                var rt = slot.rectTransform; var home = new Vector2(0, 150); var from = home + new Vector2(slot == actorL ? -120 : 120, 0);
+                float t = 0;
+                while (t < 0.3f && !fastAll) { t += Time.deltaTime; float k = Mathf.SmoothStep(0, 1, t / 0.3f); rt.anchoredPosition = Vector2.Lerp(from, home, k); slot.color = new Color(1, 1, 1, k); yield return null; }
+                rt.anchoredPosition = home;
+            }
+            Tint(actorL, whoL != null, slot == actorL);
+            Tint(actorR, whoR != null, slot == actorR);
+        }
+
+        static void Tint(Image img, bool visible, bool talking)
+        {
+            if (!img) return;
+            float v = talking ? 1f : 0.45f;
+            img.color = visible ? new Color(v, v, v, 1) : new Color(1, 1, 1, 0);
+            img.rectTransform.localScale = talking ? new Vector3(1.04f, 1.04f, 1) : Vector3.one;
+        }
+
+        // 대사 한 줄: 이름표 → 한 글자씩 → ▼ → 클릭·Space로 다음
+        IEnumerator Say(string agent, string stance, string text, string sub, bool me)
+        {
+            if (!vn) yield break;
+            bool narr = agent == null;
+            yield return Place(narr ? null : agent);
+            vnPlate.gameObject.SetActive(!narr);
+            if (!narr)
+            {
+                var (name, color, persona) = Agents.TryGetValue(agent, out var v) ? v : (agent, "#EEF0F3", "");
+                vnName.text = name; vnPersona.text = persona;
+                bool hasBadge = stance != null && StanceBadge.TryGetValue(stance, out var bc);
+                vnBadgeBg.gameObject.SetActive(hasBadge);
+                if (hasBadge) { vnBadgeBg.color = StanceBadge[stance]; vnBadge.text = stance; }
+                LayoutRebuilder.ForceRebuildLayoutImmediate(vnPlate);
+            }
+            vnLine.alignment = narr ? TextAnchor.UpperCenter : TextAnchor.UpperLeft;
+            vnWhy.alignment = vnLine.alignment;
+            vnLine.color = narr ? Hex("#FFD7D7") : Hex("#F3F4F6");
+            vnWhy.text = "";
+            vnNext.gameObject.SetActive(false);
+            var who = narr ? "<color=#FF9A9A><b>경보</b></color>" : $"<b>{(Agents.TryGetValue(agent, out var a2) ? a2.name : agent)}</b>{(stance != null ? $" ({stance})" : "")}";
+            vnHistory.Add($"{who}  {text}");
+
+            skip = fastAll;
+            for (int i = 1; i <= text.Length && !skip; i++)
+            {
+                vnLine.text = text.Substring(0, i);
+                float c = 0; while (c < CharDelay && !skip) { c += Time.deltaTime; yield return null; }
+            }
+            vnLine.text = text;
+            vnWhy.text = sub ?? "";
+            vnNext.gameObject.SetActive(true);
+            skip = false;
+            if (fastAll) { yield return null; yield break; }
+            float bob = 0;
+            while (!skip)
+            {
+                bob += Time.deltaTime;
+                vnNext.anchoredPosition = new Vector2(-80, 30 - Mathf.Abs(Mathf.Sin(bob * 5f)) * 6f);
+                yield return null;
+            }
+            skip = false;
+        }
+
+        // 선택지: 화면을 어둡게 하고 가운데 큰 판 3개
         void UnlockChoices()
         {
             var ev = def.events[current];
-            if (helpText) helpText.text = "내 답장 · 클릭하거나 A·B·C 키";
+            fastAll = false;
+            vnChoices = NewRect("Choices", vn); vnChoices.anchorMin = Vector2.zero; vnChoices.anchorMax = Vector2.one; vnChoices.offsetMin = vnChoices.offsetMax = Vector2.zero;
+            vnChoices.gameObject.AddComponent<Image>().color = new Color(0, 0, 0, 0.4f);
+            var col = NewRect("Col", vnChoices); col.anchorMin = col.anchorMax = new Vector2(0.5f, 0.62f); col.pivot = new Vector2(0.5f, 0.5f); col.sizeDelta = new Vector2(760, 0);
+            VLayout(col.gameObject, 0, 0, 14);
+            col.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
             for (int k = 0; k < ev.choices.Length; k++)
             {
                 var c = ev.choices[k];
                 var recs = new List<string>();
-                foreach (var a in ev.agents)
-                    if (a.rec == c.id && Agents.TryGetValue(a.agent, out var v)) recs.Add(v.name);
-                var detail = c.detail + (recs.Count > 0 ? $" · {C(ColorHex(Teal), string.Join("·", recs) + " 추천")}" : "");
+                foreach (var a in ev.agents) if (a.rec == c.id && Agents.TryGetValue(a.agent, out var v)) recs.Add(v.name);
+                var rt = NewRect("Choice", col);
+                var bg = Round(rt.gameObject, Hex("#F4F5F7"), 2.2f);
+                var h = HLayout(rt.gameObject, 16, TextAnchor.MiddleLeft); h.padding = new RectOffset(20, 40, 12, 12);
+                var b = rt.gameObject.AddComponent<Button>(); b.targetGraphic = bg;
+                var cs = b.colors; cs.highlightedColor = Hex("#FFF4CC"); cs.pressedColor = Hex("#F2DE9A"); b.colors = cs;
+                var badge = NewRect("Key", rt); Round(badge.gameObject, Hex("#2A2D33"), 1.2f); LE(badge.gameObject, 34, 34);
+                var kt = AddText(badge, $"<b>{Abc[k]}</b>", 16, Color.white, FontStyle.Normal, TextAnchor.MiddleCenter);
+                var kr = kt.rectTransform; kr.anchorMin = Vector2.zero; kr.anchorMax = Vector2.one; kr.offsetMin = kr.offsetMax = Vector2.zero;
+                var tc = NewRect("Text", rt); VLayout(tc.gameObject, 0, 0, 2); LE(tc.gameObject, -1, -1, 1);
+                AddText(tc, $"<b>{c.label}</b>", 21, Hex("#262A31"), FontStyle.Normal, TextAnchor.MiddleCenter);
+                AddText(tc, c.detail + (recs.Count > 0 ? $"  ·  <color=#0F7A66><b>{string.Join("·", recs)} 추천</b></color>" : ""), 14, Hex("#5D636E"), FontStyle.Normal, TextAnchor.MiddleCenter);
                 int captured = k;
-                ReplyBubble(Abc[k], c.label, detail).onClick.AddListener(() => Choose(captured));
+                b.onClick.AddListener(() => Choose(captured));
             }
-            ScrollToBottom(); Relayout();
-        }
-
-        void ClearOptions()
-        {
-            if (!opts) return;
-            for (int i = opts.childCount - 1; i >= 0; i--) Destroy(opts.GetChild(i).gameObject);
+            LayoutRebuilder.ForceRebuildLayoutImmediate(col);
         }
 
         void MarkChosen(int k)
         {
-            ClearOptions();
-            if (helpText) helpText.text = "회의 중…";
-            Relayout();
-        }
-
-        void SetProgress(int heard, int total)
-        {
-            if (helpText && !deciding) helpText.text = heard < total ? $"의견을 듣는 중… ({heard}/{total})" : "의견을 다 들었어요";
+            if (vnChoices) Destroy(vnChoices.gameObject);
+            vnChoices = null;
         }
 
         void CloseChat()
         {
-            if (chat) Destroy(chat.gameObject);
-            chat = msgs = side = opts = null;
-        }
-
-        void ScrollToBottom()
-        {
-            if (!msgs) return;
-            Canvas.ForceUpdateCanvases();
-            LayoutRebuilder.ForceRebuildLayoutImmediate(msgs);
-            if (scroll) scroll.verticalNormalizedPosition = 0;
-        }
-
-        void Relayout()
-        {
-            Canvas.ForceUpdateCanvases();
-            if (chat) LayoutRebuilder.ForceRebuildLayoutImmediate(chat);
-        }
-
-        // 글이 다 들어갔을 때의 폭으로 말풍선 너비를 정한다(최대 BubbleMax)
-        float FitWidth(Text t, string full, float pad, int size = 0)
-        {
-            var settings = t.GetGenerationSettings(new Vector2(BubbleMax - pad, 0));
-            settings.horizontalOverflow = HorizontalWrapMode.Overflow;
-            if (size > 0) settings.fontSize = Mathf.RoundToInt(size * Mathf.Max(t.pixelsPerUnit, 0.01f));
-            float w = t.cachedTextGeneratorForLayout.GetPreferredWidth(full, settings) / Mathf.Max(t.pixelsPerUnit, 0.01f);
-            return Mathf.Min(BubbleMax, w + pad);
-        }
-
-        // 말풍선 하나: 입력 중 점 → 한 글자씩. 반응이면 이름 옆에 감정 배지(색 동그라미 안 흰 글씨).
-        IEnumerator Say(string agent, string stance, string text, string sub, bool me)
-        {
-            if (!msgs) yield break;
-            var (name, color, persona) = Agents.TryGetValue(agent, out var v) ? v : (agent, "#EEF0F3", "");
-            var row = NewRect("Msg", msgs);
-            var rh = HLayout(row.gameObject, 12, me ? TextAnchor.UpperRight : TextAnchor.UpperLeft);
-            if (!me)
-            {
-                var ava = NewRect("Avatar", row);
-                var ai = ava.gameObject.AddComponent<Image>(); ai.sprite = LoadSprite($"Portraits/{agent}"); ai.preserveAspect = true;
-                LE(ava.gameObject, 56, 75);
-            }
-            var bub = NewRect("Bubble", row);
-            Round(bub.gameObject, me ? Hex("#2B6F63") : Hex("#303030"), 0.85f);
-            VLayout(bub.gameObject, 18, 12, 3);
-            if (!me)
-            {
-                var hr = NewRect("Head", bub); HLayout(hr.gameObject, 8, TextAnchor.MiddleLeft);
-                var nm = AddText(hr, $"<b>{name}</b>", 16, Hex(color), FontStyle.Normal, TextAnchor.MiddleLeft);
-                nm.horizontalOverflow = HorizontalWrapMode.Overflow;
-                if (!string.IsNullOrEmpty(persona)) { var pe = AddText(hr, persona, 13, Dim, FontStyle.Normal, TextAnchor.MiddleLeft); pe.horizontalOverflow = HorizontalWrapMode.Overflow; }
-                if (stance != null && StanceBadge.TryGetValue(stance, out var badge)) Chip(hr, stance, badge, Color.white, true);
-            }
-            var t = AddText(bub, "", me ? 17 : 18, me ? Color.white : Body, me ? FontStyle.Bold : FontStyle.Normal);
-            float width = FitWidth(t, text, 36);
-            if (!string.IsNullOrEmpty(sub)) width = Mathf.Max(width, FitWidth(t, sub, 36, 14));
-            width = Mathf.Max(width, me ? 120 : 200);
-            LE(bub.gameObject, width, -1, 0);
-            ScrollToBottom();
-
-            float w = 0; skip = false;
-            while (w < (me ? 0.25f : TypingDots) && !skip)
-            {
-                int d = Mathf.FloorToInt(w / 0.2f) % 3 + 1;
-                t.text = C(me ? "#CFEAE4" : "#8A8F99", new string('●', d));
-                w += Time.deltaTime; yield return null;
-            }
-            for (int i = 1; i <= text.Length && !skip; i++)
-            {
-                t.text = text.Substring(0, i) + C(me ? "#CFEAE4" : ColorHex(Teal), "▍");
-                if (i % 4 == 0) ScrollToBottom();
-                float c = 0; while (c < CharDelay && !skip) { c += Time.deltaTime; yield return null; }
-            }
-            t.text = text;
-            if (!string.IsNullOrEmpty(sub)) AddText(bub, sub, 14, me ? Hex("#CFEAE4") : Dim);
-            ScrollToBottom();
-            skip = false;
-            yield return Wait(NextSpeaker);
-            skip = false;
+            if (vn) Destroy(vn.gameObject);
+            vn = vnChoices = vnLog = null;
         }
 
         static readonly Dictionary<string, Color> StanceBadge = new Dictionary<string, Color>
         {
             { "불만", Hex("#E5533D") }, { "찬성", Hex("#3BAA6E") }, { "경고", Hex("#E0A020") },
         };
-
-        // 작은 알약 모양 표시 (페르소나, 감정)
-        void Chip(Transform parent, string label, Color bg, Color fg, bool bold)
-        {
-            var c = NewRect("Chip", parent);
-            Round(c.gameObject, bg, 1.8f);
-            var h = HLayout(c.gameObject, 0, TextAnchor.MiddleCenter); h.padding = new RectOffset(8, 8, 2, 2);
-            var t = AddText(c, bold ? $"<b>{label}</b>" : label, 12, fg, FontStyle.Normal, TextAnchor.MiddleCenter);
-            t.horizontalOverflow = HorizontalWrapMode.Overflow;
-        }
 
         // ── 결과 화면 (게임 결과 연출) ─────────────────────────
         IEnumerator ResultScreen()
