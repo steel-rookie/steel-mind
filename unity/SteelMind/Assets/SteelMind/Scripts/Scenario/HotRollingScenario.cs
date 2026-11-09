@@ -94,7 +94,90 @@ namespace SteelMind.Scenario
             triangle = MakeTriangleSprite(48);
             BuildCanvas();
             SetupMusic();
+            session = FindFirstObjectByType<SessionState>();
+            if (!session) { session = new GameObject("SteelMindSession").AddComponent<SessionState>(); DontDestroyOnLoad(session.gameObject); }
+            if (session.titleShown) Restart();
+            else StartCoroutine(TitleThenIntro());
+        }
+
+        // ── 메인 화면과 인트로 (플레이할 때 한 번만) ─────────────
+        SessionState session;
+        RectTransform title;
+
+        IEnumerator TitleThenIntro()
+        {
+            SetFrozen(true);
+            if (line) { line.ClearWarnings(); line.SetRunning(true); }
+            BuildTitle();
+            float t = 0;
+            var hint = title.Find("Hint")?.GetComponent<Text>();
+            while (true)
+            {
+                t += Time.deltaTime;
+                if (hint) hint.color = new Color(1, 1, 1, 0.45f + 0.55f * Mathf.Abs(Mathf.Sin(t * 2.5f)));
+                var k = Keyboard.current;
+                if (titleClicked || (k != null && (k.spaceKey.wasPressedThisFrame || k.enterKey.wasPressedThisFrame))) break;
+                yield return null;
+            }
+            // 메인 화면이 서서히 사라짐
+            var group = title.gameObject.AddComponent<CanvasGroup>();
+            for (float f = 0; f < 0.4f; f += Time.deltaTime) { group.alpha = 1 - f / 0.4f; yield return null; }
+            Destroy(title.gameObject); title = null;
+            yield return Intro();
+            session.titleShown = true;
             Restart();
+        }
+
+        bool titleClicked;
+
+        void BuildTitle()
+        {
+            title = NewRect("Title", canvas.transform);
+            title.anchorMin = Vector2.zero; title.anchorMax = Vector2.one; title.offsetMin = title.offsetMax = Vector2.zero;
+            title.gameObject.AddComponent<Image>().color = new Color(0.04f, 0.04f, 0.05f, 0.72f);
+            var click = title.gameObject.AddComponent<Button>(); click.transition = Selectable.Transition.None; click.onClick.AddListener(() => titleClicked = true);
+            var col = NewRect("Col", title); col.anchorMin = col.anchorMax = new Vector2(0.5f, 0.56f); col.pivot = new Vector2(0.5f, 0.5f); col.sizeDelta = new Vector2(1000, 0);
+            var v = VLayout(col.gameObject, 0, 0, 10); v.childAlignment = TextAnchor.UpperCenter;
+            col.gameObject.AddComponent<ContentSizeFitter>().verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            AddText(col, "<b>POSCO K-뉴딜 아카데미 해커톤 · 팀 철든신입</b>", 16, Orange, FontStyle.Normal, TextAnchor.UpperCenter);
+            var logo = AddText(col, "<b>STEEL MIND</b>", 104, Color.white, FontStyle.Normal, TextAnchor.UpperCenter);
+            var sh = logo.gameObject.AddComponent<Shadow>(); sh.effectColor = new Color(0.94f, 0.63f, 0.29f, 0.55f); sh.effectDistance = new Vector2(0, -6);
+            AddText(col, "AI Agent들의 회의로 운영하는 제철소", 26, Hex("#E6E9F0"), FontStyle.Normal, TextAnchor.UpperCenter);
+            var gap = NewRect("Gap", col); LE(gap.gameObject, -1, 18);
+            var cast = NewRect("Cast", col); var ch = HLayout(cast.gameObject, 36, TextAnchor.MiddleCenter); ch.childForceExpandWidth = false;
+            foreach (var a in ReportBuilder.AgentOrder)
+            {
+                var (name, color, persona) = Agents[a];
+                var m = NewRect("Member", cast); var mv = VLayout(m.gameObject, 0, 0, 4); mv.childAlignment = TextAnchor.UpperCenter; LE(m.gameObject, 120);
+                var pic = NewRect("Pic", m); var img = pic.gameObject.AddComponent<Image>(); img.sprite = LoadSprite($"Portraits/{a}"); img.preserveAspect = true; LE(pic.gameObject, 96, 128);
+                AddText(m, $"<b>{name}</b>", 18, Hex(color), FontStyle.Normal, TextAnchor.UpperCenter);
+                AddText(m, persona, 13, Dim, FontStyle.Normal, TextAnchor.UpperCenter);
+            }
+            var hint = NewRect("Hint", title); hint.anchorMin = hint.anchorMax = new Vector2(0.5f, 0.12f); hint.sizeDelta = new Vector2(600, 40);
+            var ht = AddText(hint, "<b>SPACE를 눌러 시작</b>", 26, Color.white, FontStyle.Normal, TextAnchor.MiddleCenter);
+            ht.rectTransform.anchorMin = Vector2.zero; ht.rectTransform.anchorMax = Vector2.one; ht.rectTransform.offsetMin = ht.rectTransform.offsetMax = Vector2.zero;
+            Destroy(ht.gameObject); hint.gameObject.AddComponent<Text>();
+            var hintText = hint.GetComponent<Text>(); hintText.font = font; hintText.fontSize = 26; hintText.alignment = TextAnchor.MiddleCenter; hintText.supportRichText = true; hintText.text = "<b>SPACE를 눌러 시작</b>";
+            var foot = NewRect("Foot", title); foot.anchorMin = foot.anchorMax = new Vector2(0.5f, 0.04f); foot.sizeDelta = new Vector2(900, 24);
+            var ft = AddText(foot, "가상의 교육·체험 시뮬레이션입니다. 모든 값은 데모용이며 실제 제철소 기준이 아닙니다.", 13, Dim, FontStyle.Normal, TextAnchor.MiddleCenter);
+            ft.rectTransform.anchorMin = Vector2.zero; ft.rectTransform.anchorMax = Vector2.one; ft.rectTransform.offsetMin = ft.rectTransform.offsetMax = Vector2.zero;
+            LayoutRebuilder.ForceRebuildLayoutImmediate(col);
+        }
+
+        IEnumerator Intro()
+        {
+            chatting = true; skip = false;
+            OpenVN("열연 2라인 · 야간 교대 시작", false);
+            yield return Say(null, null, "열연 2라인, 야간 교대.\n오늘 당신은 처음으로 이 라인의 운영 책임자를 맡았습니다.", null, false);
+            yield return Say(null, null, "이 공장에는 부서마다 AI Agent가 있습니다.\n모두 맞는 말을 하지만, 서로 다른 것을 지키려 합니다.", null, false);
+            yield return Say("production", null, "생산 담당 AI입니다. 납기와 물량은 제가 챙깁니다. 라인은 멈추면 안 돼요.", null, false);
+            yield return Say("quality", null, "품질 담당이에요. 0.01mm라도 어긋나면 불량입니다. 조건부터 잡아 주세요.", null, false);
+            yield return Say("equipment", null, "설비 담당입니다. 롤 소리만 들어도 상태를 알죠. 무리하면 결국 더 오래 멈춥니다.", null, false);
+            yield return Say("safety", null, "안전 담당입니다. 사람이 먼저입니다. 그건 타협 못 합니다.", null, false);
+            yield return Say(null, null, "사건이 터지면 화살표를 따라 그 설비로 가세요.\nAI들의 의견을 듣고, 최종 결정은 당신이 내립니다.", "WASD로 이동 · Space로 대화 넘기기 · A·B·C로 선택", false);
+            yield return Say(null, null, "같은 선택은 언제나 같은 결과를 냅니다.\n교대가 끝나면 운영 결과 보고서를 받게 됩니다.", null, false);
+            CloseChat();
+            chatting = false;
         }
 
         void OnDestroy() { if (canvas) Destroy(canvas.gameObject); }
@@ -505,7 +588,9 @@ namespace SteelMind.Scenario
         bool fastAll;
         readonly List<string> vnHistory = new List<string>();
 
-        void OpenChat(ScenarioEvent ev, int index, int n)
+        void OpenChat(ScenarioEvent ev, int index, int n) => OpenVN($"⚠ {ev.level} · 사건 {index + 1}/{n} · {ev.title}", true);
+
+        void OpenVN(string pillText, bool alarm)
         {
             CloseChat();
             fastAll = false; whoL = whoR = null; nextSide = 0;
@@ -517,11 +602,11 @@ namespace SteelMind.Scenario
 
             // 위: 경보 알약
             var pill = NewRect("Pill", vn); pill.anchorMin = pill.anchorMax = pill.pivot = new Vector2(0.5f, 1); pill.anchoredPosition = new Vector2(0, -16);
-            Round(pill.gameObject, Hex("#3C1616", 0.92f), 1.3f);
-            var po = pill.gameObject.AddComponent<Outline>(); po.effectColor = Red; po.effectDistance = new Vector2(1, -1);
+            Round(pill.gameObject, alarm ? Hex("#3C1616", 0.92f) : Hex("#1F2A28", 0.92f), 1.3f);
+            var po = pill.gameObject.AddComponent<Outline>(); po.effectColor = alarm ? Red : Teal; po.effectDistance = new Vector2(1, -1);
             var ph = HLayout(pill.gameObject, 0, TextAnchor.MiddleCenter); ph.padding = new RectOffset(18, 18, 7, 7);
             var pf = pill.gameObject.AddComponent<ContentSizeFitter>(); pf.horizontalFit = pf.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
-            var pt = AddText(pill, $"<b>⚠ {ev.level} · 사건 {index + 1}/{n} · {ev.title}</b>", 17, Hex("#FFE2E2"), FontStyle.Normal, TextAnchor.MiddleCenter);
+            var pt = AddText(pill, $"<b>{pillText}</b>", 17, alarm ? Hex("#FFE2E2") : Hex("#DFF6F0"), FontStyle.Normal, TextAnchor.MiddleCenter);
             pt.horizontalOverflow = HorizontalWrapMode.Overflow;
 
             // 캐릭터 자리 (왼쪽·오른쪽)
